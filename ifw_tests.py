@@ -1,6 +1,17 @@
 import unittest
 import filter_wheel_control as fwc
 
+"""
+ This script will contain all the unit test for the filter_wheel_control script. Currently it only has
+ test for one function, but more will be added. Also current plan is to have unit tests for focuser and
+ filter wheel in separate files, which will then be run from a master file -- not worked out how to do this
+ yet....
+ 
+ Can run the test how they currently are in terminal using
+	> python ifw_tests.py
+	
+"""
+
 class test_config_port_values(unittest.TestCase):
 	
 	# No exceptions if all working
@@ -68,16 +79,16 @@ class test_config_port_values(unittest.TestCase):
 		#expect a keyError to be raised
 		with self.assertRaises(KeyError):
 			fwc.check_config_port_values_for_ifw(test_dict_noPar)
-"""
-class SerialTestObject(object):
-	""" A mock serial port test class"""
-	def __init__(self)
-	""" creates a mock serial port which is a loopback object"""
-	self._port = 'loop://'
-	self.timepout = 0
-	self._baudrate = 19200
-	self.serialPort = serial.serial_for_url
-"""
+#"""
+#class SerialTestObject(object):
+#	""" A mock serial port test class"""
+#	def __init__(self)
+#	""" creates a mock serial port which is a loopback object"""
+#	self._port = 'loop://'
+#	self.timepout = 0
+#	self._baudrate = 19200
+#	self.serialPort = serial.serial_for_url
+#"""
 """
 class test_port_initialisation(unittest.TestCase):
 
