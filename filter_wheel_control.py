@@ -24,7 +24,8 @@ import serial
 import logging
 
 
-logging.basicConfig(filename = 'logfiles/filter_wheel.log',level=logging.INFO, format='%(asctime)s %(message)s')
+logging.basicConfig(filename = 'logfiles/filter_wheel.log',filemode='w',level=logging.INFO,
+		    format='%(asctime)s %(levelname)s %(message)s')
 
 def check_config_port_values_for_ifw(config_dict):
 	"""
