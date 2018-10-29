@@ -1,5 +1,7 @@
 import unittest
 import filter_wheel_control as fwc
+import dummy_serial #not anaconda, part of minimalmodbus, installed with pip3?
+
 
 """
  This script will contain all the unit test for the filter_wheel_control script. Currently it only has
@@ -13,6 +15,9 @@ import filter_wheel_control as fwc
 """
 
 class test_config_port_values(unittest.TestCase):
+	"""
+	Tests for the checking the baud_rate, stop_bit etc supplied by the config file.
+	"""
 	
 	# No exceptions if all working
 	def test_baud_rate_present_correct(self):
@@ -23,12 +28,11 @@ class test_config_port_values(unittest.TestCase):
 
 	#if there is a baud rate, but wrong number
 	def test_baud_rate_present_but_wrong_value(self):
-		
 		test_dict_wrongBD = dict({'baud_rate':192000,'data_bits':8, 'stop_bits':1, 'parity':'N'})
-		
 		with self.assertRaises(ValueError):
 			# need self.test_dict... to refer to a property defined in the other function
 			fwc.check_config_port_values_for_ifw(test_dict_wrongBD)
+
 	
 	# not baud rate present
 	def test_baud_rate_not_present(self):
@@ -79,30 +83,307 @@ class test_config_port_values(unittest.TestCase):
 		#expect a keyError to be raised
 		with self.assertRaises(KeyError):
 			fwc.check_config_port_values_for_ifw(test_dict_noPar)
-#"""
-#class SerialTestObject(object):
-#	""" A mock serial port test class"""
-#	def __init__(self)
-#	""" creates a mock serial port which is a loopback object"""
-#	self._port = 'loop://'
-#	self.timepout = 0
-#	self._baudrate = 19200
-#	self.serialPort = serial.serial_for_url
-#"""
+
 """
 class test_port_initialisation(unittest.TestCase):
 
 	# Setup the dictionary to be used in all the other unit tests
 	def setUp(self):
 		# self. is needed otherwise the function will forget itself at the end
-		self.test_dict = dict({'baud_rate':19200,'data_bits':8, 'stop_bits':1, 'parity':'N'})
+		self.master,self.slave = pty.openpty()
+		port1 = dummy_serial.Serial()#os.ttyname(self.slave)
+		self.test_dict = dict({'baud_rate':19200,'data_bits':8, 'stop_bits':1, 'parity':'N', 'port_name':port1})
+		port1.RESPONSES
+	
+
+#	def test_open_port
 
 	def test_initialise_no_errors(self):
 		open_port = fwc.initialise_ifw_serial_connection(self.test_dict)
-"""
+#"""
+
+class test_filter_names_to_string(unittest.TestCase):
+	"""
+	Tests to check the form_filter_names_string_from_config function.
+	"""
+
+	def setUp(self):
+		self.test_dict = {'A':'RED','B':'GREEN','C':'BLUE','D':'WHITE','E':'INFRARED'}
+		self.test_dict_bad_character = {'A':'R£D','B':'GREEN','C':'BLUE','D':'WHITE','E':'INFRARED'}
+		self.test_dict_too_long = {'A':'REDDDDDDDD','B':'GREEN','C':'BLUE','D':'WHITE','E':'INFRARED'}
+		self.test_dict_bad_ID = {'A':'RED','B':'GREEN','F':'BLUE','D':'WHITE','E':'INFRARED'}
+
+	def test_form_string(self):
+		resulting_string = fwc.form_filter_names_string_from_config_dict(self.test_dict)
+		resulting_length = len(resulting_string)
+		
+		expected_string = 'RED     GREEN   BLUE    WHITE   INFRARED'
+		expected_length = 40
+		
+		self.assertEqual(resulting_string, expected_string)
+		self.assertEqual(resulting_length, expected_length)
+
+	def test_bad_char(self):
+		with self.assertRaises(ValueError):
+			fwc.form_filter_names_string_from_config_dict(self.test_dict_bad_character)
+
+	def test_name_too_long(self):
+		with self.assertRaises(ValueError):
+			fwc.form_filter_names_string_from_config_dict(self.test_dict_too_long)
+
+	def test_incorrect_ID(self):
+		with self.assertRaises(ValueError):
+			fwc.form_filter_names_string_from_config_dict(self.test_dict_bad_ID)
 
 
+class test_pass_filternames(unittest.TestCase):
+	
+	"""
+	Tests to check the pass_filter_names function
+	"""
+	
+	def setUp(self):
+		
+		self.name_string = 'RED     GREEN   BLUE    WHITE   INFRARED'
+		self.bad_name_string = 'TESTING1 2 3 4'
+		self.good_ID = 'A'
+		self.bad_ID = 'G'
+		
+		#Pretend a serial port has already been opened has been initialised using dummy_serial
+		self.dummy_port = dummy_serial.Serial(port='test_port', timeout=0.0001)
+		# Setup up the expected responses
+		dummy_serial.RESPONSES = {
+			'WLOAD' + self.good_ID + '*'+ self.name_string: '!\r\n',
+			 'WLOAD' + self.bad_ID + '*'+ self.name_string: 'ER=3\r\n'}
+	
+	def test_invalid_ID(self):
 
+		"""
+		Check error is logged if invalid filter ID is passed
+		"""
+		with self.assertLogs(level='ERROR') as cm:
+			fwc.logging.getLogger().error(fwc.pass_filter_names(self.name_string, self.dummy_port, wheel_ID=self.bad_ID))
+			logging_actual_response = cm.output[0].split(':')[0]
+		self.assertEqual(logging_actual_response, 'ERROR')
+
+	def test_correct_success_message(self):
+		with self.assertLogs(level='INFO') as cm:
+			fwc.logging.getLogger().error(fwc.pass_filter_names(self.name_string, self.dummy_port, wheel_ID=self.good_ID))
+			logging_actual_response = cm.output[0].split(':')[0]
+		self.assertEqual(logging_actual_response, 'INFO')
+
+	def test_unexpected_response(self):
+		with self.assertLogs(level='CRITICAL') as cm:
+			fwc.logging.getLogger().critical(fwc.pass_filter_names(self.bad_name_string, self.dummy_port, wheel_ID=self.good_ID))
+			logging_actual_response = cm.output[0].split(':')[0]
+		self.assertEqual(logging_actual_response, 'CRITICAL')
+
+	def tearDown(self):
+		#close the dummy_port
+		self.dummy_port.close()
+
+
+class test_get_stored_filter_names(unittest.TestCase):
+	""" 
+	Test for the get_stored_filter_names function
+	"""
+	def setUp(self):
+		
+		#Pretend a serial port has already been opened has been initialised using dummy_serial
+		self.dummy_port = dummy_serial.Serial(port='test_port', timeout=0.0001)
+		# Setup up the expected responses
+		dummy_serial.RESPONSES = {
+			'WREAD': 'RED     GREEN   BLUE    WHITE   INFRARED'}
+
+	def test_just_return_string_of_names(self):
+
+		expected = 'RED     GREEN   BLUE    WHITE   INFRARED'
+		actual = fwc.get_stored_filter_names(self.dummy_port, formatted_dict=False)
+		self.assertEqual(actual, expected)
+
+	def test_get_dict_of_names(self):
+		expected = {'A':'RED','B':'GREEN','C':'BLUE','D':'WHITE','E':'INFRARED'}
+		actual = fwc.get_stored_filter_names(self.dummy_port, formatted_dict=True)
+		self.assertEqual(actual,expected)
+
+	def tearDown(self):
+		#close the dummy_port
+		self.dummy_port.close()
+
+class test_get_current_position(unittest.TestCase):
+	""" 
+	Test for the get_current_position function
+	"""
+	def setUp(self):
+		
+		#Pretend a serial port has already been opened has been initialised using dummy_serial
+		self.dummy_port = dummy_serial.Serial(port='test_port', timeout=0.0001)
+		# Setup up the expected responses
+		dummy_serial.RESPONSES = {
+			'WFILTR': '1'}
+
+	def test_response(self):
+
+		expected = 1
+		actual = fwc.get_current_position(self.dummy_port)
+		self.assertEqual(actual, expected)
+
+	def tearDown(self):
+		#close the dummy_port
+		self.dummy_port.close()
+
+class test_get_current_ID(unittest.TestCase):
+	"""
+	Test for the get_current_ID function
+	"""
+	def setUp(self):
+		
+		#Pretend a serial port has already been opened has been initialised using dummy_serial
+		self.dummy_port = dummy_serial.Serial(port='test_port', timeout=0.0001)
+		# Setup up the expected responses
+		dummy_serial.RESPONSES = {
+			'WIDENT': 'A'}
+
+	def test_response(self):
+	
+		expected = 'A'
+		actual = fwc.get_current_ID(self.dummy_port)
+		self.assertEqual(actual, expected)
+	
+	def tearDown(self):
+		#close the dummy_port
+		self.dummy_port.close()
+
+class test_get_both_pos_ID(unittest.TestCase):
+	"""
+	Test for the get_current_filter_position_and_ID function
+	"""
+	def setUp(self):
+		
+		#Pretend a serial port has already been opened has been initialised using dummy_serial
+		self.dummy_port = dummy_serial.Serial(port='test_port', timeout=0.00001)
+		# Setup up the expected responses
+		dummy_serial.RESPONSES = {
+			'WIDENT': 'A','WFILTR': '1'}
+
+	def test_response(self):
+	
+		expected = ['A', 1]
+		actual = fwc.get_current_filter_position_and_ID(self.dummy_port)
+		self.assertEqual(actual, expected)
+	
+	def tearDown(self):
+		#close the dummy_port
+		self.dummy_port.close()
+
+
+class test_goto_home_position(unittest.TestCase):
+	"""
+	Test for the get_currrent_filter_position_and_ID function
+	"""
+	def setUp(self):
+		
+		#Pretend a serial port has already been opened has been initialised using dummy_serial
+		self.dummy_port = dummy_serial.Serial(port='test_port', timeout=0.00001)
+		# Setup up the expected responses
+		dummy_serial.RESPONSES = {
+			'WHOME': 'A'}
+	def test_return_message_if_true(self):
+
+		expected = 'A'
+		actual = fwc.goto_home_position(self.dummy_port, return_home_id = True)
+		self.assertEqual(actual,expected)
+
+	def test_log_errors(self):
+		dummy_serial.RESPONSES = {'WHOME': 'ER=3'}
+		with self.assertLogs(level='ERROR') as cm:
+			fwc.logging.getLogger().error(fwc.goto_home_position(self.dummy_port, ))
+			logging_actual_response = cm.output[0].split('.')[0]
+		self.assertEqual(logging_actual_response, 'ERROR:root:ER=3')
+
+		dummy_serial.RESPONSES = {'WHOME': 'ER=1'}
+		with self.assertLogs(level='ERROR') as cm:
+			fwc.logging.getLogger().error(fwc.goto_home_position(self.dummy_port, ))
+			logging_actual_response = cm.output[0].split('.')[0]
+		self.assertEqual(logging_actual_response, 'ERROR:root:ER=1')
+
+	def test_log_errors(self):
+		dummy_serial.RESPONSES = {'WHOME': 'ERROR TEST'}
+		with self.assertLogs(level='ERROR') as cm:
+			fwc.logging.getLogger().critical(fwc.goto_home_position(self.dummy_port, ))
+			logging_actual_response = cm.output[0].split(':')[0]
+		self.assertEqual(logging_actual_response, 'CRITICAL')
+
+	def tearDown(self):
+		#close the dummy_port
+		self.dummy_port.close()
+
+class test_goto_filter_position(unittest.TestCase):
+	"""
+	Tests for the goto_filter_position function
+	"""
+	def setUp(self):
+		
+		#Pretend a serial port has already been opened has been initialised using dummy_serial
+		self.dummy_port = dummy_serial.Serial(port='test_port', timeout=0.00001)
+		# Setup up the expected responses
+		dummy_serial.RESPONSES = {'WGOTO1': '*','WGOTO6':'ER=5'}
+
+	def test_ok_position(self):
+		with self.assertLogs(level='INFO') as cm:
+			fwc.logging.getLogger().info(fwc.goto_filter_position(1,self.dummy_port))
+			logging_actual_response = cm.output[0].split(':')[0]
+		self.assertEqual(logging_actual_response, 'INFO')
+
+	def test_bad_position(self):
+		with self.assertLogs(level='ERROR') as cm:
+			fwc.logging.getLogger().error(fwc.goto_filter_position(6,self.dummy_port))
+			logging_actual_response = cm.output[0].split('.')[0]
+		self.assertEqual(logging_actual_response, 'ERROR:root:ER=5')
+
+	def test_other_errors(self):
+		dummy_serial.RESPONSES = {'WGOTO1': 'ER=4'}
+		with self.assertLogs(level='ERROR') as cm:
+			fwc.logging.getLogger().error(fwc.goto_filter_position(1,self.dummy_port))
+			logging_actual_response = cm.output[0].split('.')[0]
+		self.assertEqual(logging_actual_response, 'ERROR:root:ER=4')
+
+		dummy_serial.RESPONSES = {'WGOTO1': 'ER=6'}
+		with self.assertLogs(level='ERROR') as cm:
+			fwc.logging.getLogger().error(fwc.goto_filter_position(1,self.dummy_port))
+			logging_actual_response = cm.output[0].split('.')[0]
+		self.assertEqual(logging_actual_response, 'ERROR:root:ER=6')
+
+		dummy_serial.RESPONSES = {'WGOTO1': 'TEST ERROR'}
+		with self.assertLogs(level='CRITICAL') as cm:
+			fwc.logging.getLogger().critical(fwc.goto_filter_position(1,self.dummy_port))
+			logging_actual_response = cm.output[0].split(':')[0]
+		self.assertEqual(logging_actual_response, 'CRITICAL')
+
+	def tearDown(self):
+		#close the dummy_port
+		self.dummy_port.close()
+
+class test_end_serial_commnication_close_port(unittest.TestCase):
+
+	def setUp(self):
+		#Pretend a serial port has already been opened has been initialised using dummy_serial
+		self.dummy_port = dummy_serial.Serial(port='test_port', timeout=0.00001)
+		# Setup up the expected responses
+		dummy_serial.RESPONSES = {'WEXITS': 'END'}
+
+	def test_close_port(self):
+		with self.assertLogs(level='INFO') as cm:
+			fwc.logging.getLogger().info(fwc.end_serial_communication_close_port(self.dummy_port))
+			logging_actual_response = cm.output[0].split(':')[0]
+		self.assertEqual(logging_actual_response, 'INFO')
+
+	def test_not_close_port(self):
+		dummy_serial.RESPONSES = {'WEXITS': 'TEST ERROR'}
+		with self.assertLogs(level='WARNING') as cm:
+			fwc.logging.getLogger().warning(fwc.end_serial_communication_close_port(self.dummy_port))
+			logging_actual_response = cm.output[0].split(':')[0]
+		self.assertEqual(logging_actual_response, 'WARNING')
 
 
 if __name__ =='__main__':
