@@ -8,5 +8,7 @@ logfiles - Where logfiles from the different scripts are stored. (currently only
 
 ## Files
 filter_wheel_control.py - contains basic serial port command functions for the filter wheels.  
-ifw_test.py - contains unitest for filter wheel control functions (only one function is tested so far). In a terminal use "python ifw_test.py" to run.  
+focuser_control.py - basic serial port commands for the focusers.  
+ifw_test.py - contains unitest for filter wheel control functions (All functions tested apart from initialisation function). In a terminal use "python ifw_test.py" to run.  
+test_focuser_control.py - Unit tests for the focuser_control functions (only get_start_end_char tested so far).  
 common.py - contains function that are useful to both focuser and filter wheel control.                
