@@ -8,6 +8,7 @@ import re
 import serial # not a standard library
 import time
 import logging
+import dummy_serial
 
 def load_config(fileName, path='/.'):
 
@@ -117,24 +118,37 @@ def send_command_get_response(command, port_name, sleep_time = 0.01):
 		message = if the port is open, the response to the command will be returned.
 	
 	"""
-
-	# Check if the port is open...
-	open_bool = port_name.is_open
+	
+	#The try/except is in place for the unit testing. the dummy-serial port created for during
+	# testing does not have a is.open function, so this is designed to handle this. If dummy_port_bool
+	# will be False and run as orginally intended is is.open can be run on the port.
+	dummy_port_bool = False
+	try:
+		# Check if the port is open...
+		open_bool = port_name.is_open
+	except:
+		open_bool = True
+		dummy_port_bool = True
 	
 	if open_bool == False:
 		raise Execption('The specified port is not open')
 	else:
-		port_name.write(command.encode('utf-8'))
-		while port_name.in_waiting == 0:
-			time.sleep(sleep_time) #in seconds
+		if dummy_port_bool == False:
+		
+			port_name.write(command.encode('utf-8'))
+			while port_name.in_waiting == 0:
+				time.sleep(sleep_time) #in seconds
 
-		message_bytes = port_name.in_waiting
-		#print(message_bytes)
-		if message_bytes>=3:
+			message_bytes = port_name.in_waiting
+			#print(message_bytes)
+			if message_bytes>=3:
 			
-			# By default the read_until function will read bytes until a LF is found
-			message = open_p.read_until().decode('utf-8').strip()
-			#print('Device message: ' + message)
+				# By default the read_until function will read bytes until a LF is found
+				message = open_p.read_until().decode('utf-8').strip()
+				#print('Device message: ' + message)
+		else:
+				port_name.write((command).encode('utf-8'))
+				message = port_name.read(40).decode('utf-8').strip()
 
 		return message
 
@@ -157,37 +171,45 @@ def send_command_two_response(command, port_name, expected_end='\n', sleep_time 
 		command = the string command that will be converted to bytes then passed to the port
 		port_name = the variable name of the open port, to which the command will be passed.
 		
-		RETURN
+	RETURN
 		
 		message = if the port is open, the response to the command will be returned.
 		
-		"""
-	
-	# Check if the port is open...
-	open_bool = port_name.is_open
+	"""
+	dummy_port_bool = False
+	try:
+		# Check if the port is open...
+		open_bool = port_name.is_open
+	except:
+		open_bool = True
+		dummy_port_bool = True
 	
 	if open_bool == False:
 		raise Execption('The specified port is not open')
 	else:
-		port_name.write(command.encode('utf-8'))
-		while port_name.in_waiting == 0:
-			time.sleep(sleep_time) #in seconds
+		if dummy_port_bool == False:
+			port_name.write(command.encode('utf-8'))
+			while port_name.in_waiting == 0:
+				time.sleep(sleep_time) #in seconds
 		
-		message_bytes = port_name.in_waiting
-		#print(message_bytes)
-		if message_bytes>=2:
+			message_bytes = port_name.in_waiting
+			#print(message_bytes)
+			if message_bytes>=2:
 			
-			# By default the read_until function will read bytes until a LF is found
-			message = open_p.read_until().decode('utf-8').strip()
+				# By default the read_until function will read bytes until a LF is found
+				message = open_p.read_until().decode('utf-8').strip()
 
-			if message != '!':
-				print(command +' was unsuccessful.' + message)
-				logging.info(command + ' unsuccessful')
-				logging.error(message)
-			else:
-				message = open.p.read_until(expected_end).decode('uft-8').strip()
-				logging.info(command + 'successfully passed')
+				if message != '!':
+					print(command +' was unsuccessful.' + message)
+					logging.info(command + ' unsuccessful')
+					logging.error(message)
+				else:
+					message = open.p.read_until(expected_end).decode('uft-8').strip()
+					logging.info(command + 'successfully passed')
 
+		else:
+			port_name.write((command).encode('utf-8'))
+			message = port_name.read(1000).decode('utf-8').strip()
 		
 		return message
 
