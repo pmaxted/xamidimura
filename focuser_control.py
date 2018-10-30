@@ -1,5 +1,5 @@
 """
-filter_wheel_control.py
+focuser_control.py
 Jessica A. Evans
 22/10/18
 
@@ -33,35 +33,39 @@ def check_config_port_values_for_focuser(config_dict):
 	# BAUD RATE
 	if 'baud_rate' in config_dict.keys():
 		if config_dict['baud_rate'] != 115200:
-			print('Baud rate found: ' + str(config_dict['baud_rate']))
-			raise ValueError('Unexpected baud rate for ifw filter wheels, 19200 is expected')
+			logging.critical('Unexpected baud rate for focuser, 115200 is expected')
+			raise ValueError('Unexpected baud rate for focuser, 115200 is expected')
 	else:
-		print('No baud rate found in config file')
+		logging.critical('No baud rate found in config file.')
+		raise KeyError('No baud rate found in config file.')
 	
 	# DATA BITS
 	if 'data_bits' in config_dict.keys():
 		if config_dict['data_bits'] != 8:
-			print('Number of data bits: ' + str(config_dict['data_bits']))
+			logging.critical('Unexpected number for data bits, 8 is expected')
 			raise ValueError('Unexpected number for data bits, 8 is expected')
 	else:
-		print('No data bits number found in config file')
+		logging.critical('No data bits number found in config file')
+		raise KeyError('No data bits number found in config file')
 	
 	# STOP BITS
 	if 'stop_bits' in config_dict.keys():
 		if config_dict['stop_bits'] != 1:
-			print('Number of stop bits: ' + str(config_dict['stop_bits']))
+			logging.critical('Unexpected number for stop bits, 1 is expected')
 			raise ValueError('Unexpected number for stop bits, 1 is expected')
 	else:
-		print('No stop bits number found in config file')
+		logging.critical('No stop bits number found in config file')
+		raise KeyError('No stop bits number found in config file')
 	
 	
 	# PARITY
 	if 'parity' in config_dict.keys():
 		if config_dict['parity'] != 'N':
-			print('Parity stored: ' + str(config_dict['parity']))
+			logging.critical('Unexpected parity values, "N" is expected')
 			raise ValueError('Unexpected parity values, "N" is expected')
 	else:
-		print('No parity values found in config file')
+		logging.critical('No parity values found in config file')
+		raise KeyError('No parity values found in config file')
 
 
 def get_start_end_char(command):
