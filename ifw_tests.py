@@ -4,9 +4,7 @@ import dummy_serial #not anaconda, part of minimalmodbus, installed with pip3?
 
 
 """
- This script will contain all the unit test for the filter_wheel_control script. Currently it only has
- test for one function, but more will be added. Also current plan is to have unit tests for focuser and
- filter wheel in separate files, which will then be run from a master file -- not worked out how to do this
+ This script will contain all the unit test for the filter_wheel_control script. Contains test for most functions, but not the filterwheel setup or initialisation.Also current plan is to have unit tests for focuser and filter wheel in separate files, which will then be run from a master file -- not worked out how to do this
  yet....
  
  Can run the test how they currently are in terminal using
@@ -385,6 +383,53 @@ class test_end_serial_commnication_close_port(unittest.TestCase):
 			logging_actual_response = cm.output[0].split(':')[0]
 		self.assertEqual(logging_actual_response, 'WARNING')
 
+
+"""
+class test_initial_filter_wheel_setup(unittest.TestCase):
+
+	def setUp(self):
+		#self.test_dict_ok = dict({'baud_rate':19200,'data_bits':8, 'stop_bits':1, 'parity':'N',
+		#	'A':'RX', 'B':'GX','C':'BX','D':'WX', 'E':'IX'})
+		#Pretend a serial port has already been opened has been initialised using dummy_serial
+		self.dummy_port = dummy_serial.Serial(port='test_port', timeout=0.00001)
+		# Setup up the expected responses
+		dummy_serial.RESPONSES = {'WEXITS': 'END'}
+"""
+
+class test_change_filter(unittest.TestCase):
+
+	def setUp(self):
+		self.test_dict_ok = dict({'baud_rate':19200,'data_bits':8, 'stop_bits':1, 'parity':'N',
+		'A':'RX', 'B':'GX','C':'BX','D':'WX', 'E':'IX'})
+		#Pretend a serial port has already been opened has been initialised using dummy_serial
+		self.dummy_port = dummy_serial.Serial(port='test_port', timeout=0.00001)
+		# Setup up the expected responses
+		dummy_serial.RESPONSES = {'WGOTO1': '*','WIDENT': 'A','WFILTR': '1'}
+
+	def test_same_filter(self):
+		
+		with self.assertLogs(level='WARNING') as cm:
+			fwc.logging.getLogger().warning(fwc.change_filter(1, self.dummy_port, self.test_dict_ok))
+			logging_actual_response = cm.output[0].split(':')[0]
+		self.assertEqual(logging_actual_response, 'WARNING')
+
+	def tearDown(self):
+		#close the dummy_port
+		self.dummy_port.close()
+
+class test_filter_wheel_shutdown(unittest.TestCase):
+
+	def setUp(self):
+		#Pretend a serial port has already been opened has been initialised using dummy_serial
+		self.dummy_port = dummy_serial.Serial(port='test_port', timeout=0.00001)
+		# Setup up the expected responses
+		dummy_serial.RESPONSES = {'WEXITS': 'END','WHOME': 'A'}
+
+	def test_for_log_message(self):
+		with self.assertLogs(level='INFO') as cm:
+			fwc.logging.getLogger().info(fwc.filter_wheel_shutdown(self.dummy_port))
+			logging_actual_response = cm.output[0].split(':')[0]
+		self.assertEqual(logging_actual_response, 'INFO')
 
 if __name__ =='__main__':
 	unittest.main()

@@ -51,6 +51,9 @@ def load_config(fileName, path='/.'):
 	#  a string.
 	for param_name in config_dict:
 		
+		if config_dict[param_name] == 'True':
+			config_dict[param_name] = True
+		
 		#Make sure that comment (marked by '#') are removed before trying to convert
 		try: 
 			config_dict[param_name] = config_dict[param_name].split('#')[0].strip()
@@ -62,7 +65,13 @@ def load_config(fileName, path='/.'):
 		except:
 			try: #If it can't try to convert to float
 				config_dict[param_name]=float(config_dict[param_name])
-			except: # If neither work, leave it how it was read in
+			except: # If neither work, try to check if its a boolean in string format, otherwise
+						# leave it how it was read in
+				if config_dict[param_name] == 'True':
+					config_dict[param_name] = True
+				if config_dict[param_name] == 'False':
+					config_dict[param_name] = False
+				
 				pass
 	
 	return config_dict
@@ -204,12 +213,23 @@ def send_command_two_response(command, port_name, expected_end='\n', sleep_time 
 					logging.info(command + ' unsuccessful')
 					logging.error(message)
 				else:
-					message = open.p.read_until(expected_end).decode('uft-8').strip()
-					logging.info(command + 'successfully passed')
+					message = open_p.read_until(expected_end).decode('utf-8').strip()
+					logging.info(command + ' successfully passed')
 
 		else:
 			port_name.write((command).encode('utf-8'))
-			message = port_name.read(1000).decode('utf-8').strip()
+			message = port_name.read(2).decode('utf-8').strip()
+			#print('First Line' + message)
+
+			if message != '!':
+				#print(command +' was unsuccessful.' + message)
+				logging.info(command + ' unsuccessful')
+				logging.error(message)
+			else:
+				message = port_name.read(1000)
+				#print('Second: '+message)
+				message = message.decode('utf-8').strip()
+				#logging.info(command + ' successfully passed')
 		
 		return message
 
