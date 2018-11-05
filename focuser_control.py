@@ -5,6 +5,67 @@ Jessica A. Evans
 
  29/10/18 - Contains all the serial-port control functions for the focusers, currently excludes the commands that set various configuration settings. Need to decide if these will be needed...
 
+
+	CURRENT FUNCTIONS:
+	----------------------------------------------------------------------
+	Focuser Control
+	----------------------------------------------------------------------
+	- check_config_port_values_for_focuser(config_dict)
+	
+	- get_start_end_chars(command)
+	
+	- check_focuser_no(x)
+	
+	- get_focuser_name(x, port)
+	
+	- halt_focuser(x, port)
+	
+	- home_focuser(x, port)
+	
+	- center_focuser(x, port)
+	
+	- move_to_position(pos, x, port)
+	
+	- move_focuser_in(x, port, move_speed=1)
+	
+	- move_focuser_out(x, port, move_speed=1)
+	
+	- end_relative_move(x, port)
+
+	----------------------------------------------------------------------
+	Focuser Configuration/Status Functions
+	----------------------------------------------------------------------
+
+	- get_focuser_status(x, port)
+	
+	- get_focuser_stored_config(x, port)
+	
+	- set_device_name(x, port, device_name)
+	
+	- set_device_type(x, port, device_type = 'OB')
+	
+	- set_temp_comp(x, port, temp_comp=False)
+	
+	- set_temp_comp_mode(x, port, mode='A')
+	
+	- set_temp_comp_coeff(x, port, mode, temp_coeff_val)
+	
+	- set_temp_comp_start_state(x, port, temp_comp_start = False)
+	
+	- set_backlash_comp(x, port, backlash_comp = False)
+	
+	- set_backlash_steps(x, port, backlash_steps = 10)
+	
+	- set_LED_brightness(brightness, port)
+	
+	----------------------------------------------------------------------
+	Group Observing Functions
+	----------------------------------------------------------------------
+	
+	- focuser_initial_configuration(config_file_name, config_file_loc = 'configs/')
+	
+	- startup_focuser(config_file_name, config_file_loc = 'configs/')
+	
 """
 """
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -147,6 +208,8 @@ def halt_focuser(x, port):
 
 	if message == 'HALTED':
 		logging.info('Motion of Focuser '+str(x)+' HALTED')
+	else:
+		logging.error('Response:'+message)
 
 def home_focuser(x, port):
 	"""
@@ -167,7 +230,8 @@ def home_focuser(x, port):
 
 	if message == 'H':
 		logging.info('Focuser '+str(x)+ ' moving to home')
-
+	else:
+		logging.error('Response:'+message)
 
 def center_focuser(x, port):
 
@@ -188,7 +252,8 @@ def center_focuser(x, port):
 
 	if message == 'M':
 		logging.info('Focuser '+str(x)+ ' moving to center')
-
+	else:
+		logging.error('Response:'+message)
 
 def move_to_position(pos, x, port):
 
@@ -222,6 +287,8 @@ def move_to_position(pos, x, port):
 
 	if message == 'M':
 		logging.info('Focuser '+str(x)+ ' moving to position: '+ format_pos)
+	else:
+		logging.error('Response:'+message)
 
 def move_focuser_in(x, port, move_speed=1):
 	"""
@@ -248,7 +315,8 @@ def move_focuser_in(x, port, move_speed=1):
 
 		if message == 'M':
 			logging.info('Focuser '+str(x)+ ' moving inwards')
-
+		else:
+			logging.error('Response:'+message)
 
 def move_focuser_out(x, port, move_speed=1):
 	"""
@@ -276,6 +344,9 @@ def move_focuser_out(x, port, move_speed=1):
 		if message == 'M':
 			logging.info('Focuser '+str(x)+ ' moving outwards')
 
+		else:
+			logging.error('Response:'+message)
+
 def end_relative_move(x, port):
 
 	"""
@@ -294,6 +365,9 @@ def end_relative_move(x, port):
 		
 	if message == 'STOPPED':
 		logging.info('Focuser '+str(x)+ ' motion stopped.')
+
+	else:
+		logging.error('Response:'+message)
 
 def get_focuser_status(x, port):
 	"""
@@ -392,19 +466,419 @@ def set_device_name(x, port, device_name):
 
 	# check the length of the new device nickname
 	name_length = len(device_name)
-	if name_length > 16 or name_length < 0:
+	if name_length > 16 or name_length <= 0:
 		logging.error('Invalid device name given')
 		raise ValueError('Invalid device name given')
 
 	else:
-		x = str(check_focuser_no)
+		x = str(check_focuser_no(x))
 		command = get_start_end_char('F'+ x +'SCNN'+str(device_name))
 		message = common.send_command_two_response(command, port)
 
 		if message == 'SET':
 			logging.info('Name for Focuser '+str(x)+ ' set as: ' + str(device_name))
 
+		else:
+			logging.error('Response:'+message)
+
+
+def set_device_type(x, port, device_type = 'OB'):
+
+	"""
+	Use this to specify the type of focuser attached. The controller uses this information to determine the correct speed and motor power to use. An incorrest value could damage a focuser. Valid settings are shown in Appendix A of the user manual, and are also listed here. The controller will respond with
+		'SET' once complete.
+	
+	
+	Available Types:
+	
+		OA: Optec TCF-Lynx 2”
+		OB: Optec TCF-Lynx 3”
+		OC: Optec TCF-Lynx 2” with Extended Travel
+		OD: Optec Fast Focus Secondary Focuser
+		OE: Optec TCF-S Classic converted (original unipolar motor)
+		OF: Optec TCF-S3 Classic converted (original unipolar motor)
+		OG: Optec Gemini (reserved for future use)
+		FA: FocusLynx QuickSync FT Hi-Torque
+		FB: FocusLynx QuickSync FT Hi-Speed
+	
+	*** 2/11/18 ***
+	I think the focuser are TCF-S 3" so device type OB, but need to check.
+	
+	PARAMETERS:
+	
+		x = 1 or 2 depending on the which focuser the command is for
+		
+		port = the open port for communicating with the focuser
+		
+		device_type = string, 2 characters in length to set what type of focuser is connected to the
+			control box. Valid options: OA, OB, OC, OD, OE, OF, OG, FA, and FB. See Appendix A of 
+			controller manual for more info.
+
+	
+	"""
+
+	valid_device_types = ['OA', 'OB', 'OC', 'OD', 'OE', 'OF', 'OG', 'FA', 'FB']
+
+	if device_type not in valid_device_types:
+
+		logging.error(str(device_type) + ' is not a valid device type.')
+		raise ValueError(str(device_type) + ' is not a valid device type.')
+
+	else:
+		x = str(check_focuser_no(x))
+		command = get_start_end_char('F'+ x +'SCDT'+str(device_type))
+		message = common.send_command_two_response(command, port)
+
+		if message == 'SET':
+			logging.info('Device Type for Focuser '+str(x)+ ' set as: ' + str(device_type))
+
+		else:
+			logging.error('Response:'+message)
+
+
+
+def set_temp_comp(x, port, temp_comp = False):
+	"""
+	Use to enabled/disable the temperature compensation feature for focuser 'x'. Controller will respond with 'SET' once complete.
+	
+	PARAMETERS:
+	
+		x = 1 or 2 depending on the which focuser the command is for
+		port = the open port for communicating with the focuser
+		temp_comp = True/False. True will enabled the temperature compensation feature, False will disable
+
+
+	"""
+	if temp_comp == True:
+		tc_state = 'ENABLED'
+		setno = str(1)
+	
+	elif temp_comp == False:
+		tc_state = 'DISABLED'
+		setno = str(0)
+	else:
+		#print(temp_comp)
+		#print(type(temp_comp))
+		logging.error('Invalid input for temperature compensation control. True=Enable, False=Disable')
+		raise ValueError('Invalid input for temperature compensation control. True=Enable, False=Disable')
+
+	x = str(check_focuser_no(x))
+	#print(temp_comp)
+	command = get_start_end_char('F'+ x +'SCTE'+str(setno))
+	message = common.send_command_two_response(command, port)
+
+	if message == 'SET':
+		logging.info('Temperature compensation ' + tc_state + ' for focuser '+str(x))
+
+	else:
+		logging.error('Response:'+message)
+
+def set_temp_comp_mode(x, port, mode='A'):
+
+	"""
+	Use this to set the mode used when the temperature compensation mode is set. For example, selecting
+		mode 'C' will mean that temperature coefficient 'C' will be used. The controller will respond with 
+		'SET' once complete.
+		
+		PARAMETERS:
+	
+		x = 1 or 2 depending on the which focuser the command is for
+		port = the open port for communicating with the focuser
+		mode = Mode to be selected for the temperature compensation. Suitable values are: A, B, C, D or E.
+	
+	"""
+
+	valid_modes = ['A','B','C','D','E']
+	if mode not in valid_modes:
+		logging.error(str(mode)+ ' is not a valid mode for the temperature compensation.')
+		raise ValueError(str(mode) + ' is not a valid mode for the temperature compensation.')
+
+	else:
+		x = str(check_focuser_no(x))
+		command = get_start_end_char('F'+ x +'SCTM'+str(mode))
+		message = common.send_command_two_response(command, port)
+
+		if message == 'SET':
+			logging.info('Temperature compensation mode ' + str(mode) + ' set for focuser '+str(x))
+
+		else:
+			logging.error('Response:'+message)
+
+def set_temp_comp_coeff(x, port, mode, temp_coeff_val):
+
+	"""
+	Use this function to set the temperature coefficients for each of the modes, for each focuser.
+	
+	PARAMETERS:
+	
+		x = 1 or 2 depending on the which focuser the command is for
+		port = the open port for communicating with the focuser
+		mode = Mode to be selected for the temperature compensation. Suitable values are: A, B, C, D or E.
+		temp_coeff_val = integer (in steps per degree) to be used for the coefficient. Between -9999 and 9999.
+	
+	"""
+
+	valid_modes = ['A','B','C','D','E']
+	if mode not in valid_modes:
+		logging.error(str(mode)+ ' is not a valid mode for the temperature compensation.')
+		raise ValueError(str(mode) + ' is not a valid mode for the temperature compensation.')
+
+
+	if isinstance(temp_coeff_val, int) == False:
+		logging.error('Temperature compensation coefficient must be an integer')
+	else:
+
+		if temp_coeff_val < -9999 or temp_coeff_val > 9999:
+			logging.error('Invalid value enter for the temperature compensation coefficient')
+
+		else:
+
+			x = str(check_focuser_no(x))
+			formatted_coeff = '{0:=+05}'.format(temp_coeff_val)
+			command = get_start_end_char('F'+ x +'SCTC'+str(mode)+formatted_coeff)
+			message = common.send_command_two_response(command, port)
+
+			if message == 'SET':
+				logging.info('Temperature compensation coefficient set as ' + formatted_coeff +
+				' for mode: '+ str(mode) + 'and for focuser '+str(x))
+
+			else:
+				logging.error('Response:'+message)
+
+
+def set_temp_comp_start_state(x, port, temp_comp_start = False):
+
+	"""
+	Enable or disable the 'Temperature Compensation at Start' feature on the controller. When enabled, the controller will perform a temperature compensation move when the device is first switched on, using
+		the temperature recorded last time the compensation feature was switched on. Controller will respond
+		with 'SET' once complete.
+	
+	PARAMETERS:
+	
+		x = 1 or 2 depending on the which focuser the command is for
+		port = the open port for communicating with the focuser
+		temp_comp_start = True/False. True will enabled the 'temperature compensation at start' feature, False will disable it.
+	
+	"""
+	if temp_comp_start == False:
+		tcs_state = 'DISABLED'
+		set_no = 0
+	elif temp_comp_start == True:
+		tcs_state = 'ENABLED'
+		set_no =1
+	else:
+		logging.error('Invalid input for "temperature compensation at start" control. True=Enable, False=Disable')
+		raise ValueError('Invalid input for "temperature compensation at start" control. True=Enable, False=Disable')
+
+
+	x = str(check_focuser_no(x))
+	command = get_start_end_char('F'+ x +'SCTS'+str(set_no))
+	message = common.send_command_two_response(command, port)
+
+	if message == 'SET':
+		logging.info('"Temperature compensation at start" state set to ' + tcs_state + ' for focuser '+str(x))
+
+	else:
+		logging.error('Response:'+message)
+
+
+def set_backlash_comp(x, port, backlash_comp = False):
+
+	"""
+	Enable or disable the 'Backlash Compensation as Start' feature on the controller. When enabled, the controller will move the focus pass the target position (by a number of steps that is set using
+		the set_backlash_steps() function) and then return to the target position. This is so the focuser
+		always approaches the target postition to try to avoid mechanical backlash. Backlash compensation
+		is caried out on all outward moves (never on inward moves) Controller will respond
+		with 'SET' once complete.
+	
+	PARAMETERS:
+	
+		x = 1 or 2 depending on the which focuser the command is for
+		port = the open port for communicating with the focuser
+		backlash_comp = True/False. True will enabled the backlash compensation feature, False will disable it.
+	
+	"""
+	if backlash_comp == False:
+		bl_state = 'DISABLED'
+		set_no = 0
+	elif backlash_comp == True:
+		bl_state = 'ENABLED'
+		set_no =1
+	else:
+		logging.error('Invalid input for backlash compensation control. True=Enable, False=Disable')
+		raise ValueError('Invalid input for backlash compensation control. True=Enable, False=Disable')
+
+
+	x = str(check_focuser_no(x))
+	command = get_start_end_char('F'+ x +'SCBE'+str(set_no))
+	message = common.send_command_two_response(command, port)
+
+	if message == 'SET':
+		logging.info('Backlash compensation state set to ' + bl_state + ' for focuser '+str(x))
+
+	else:
+		logging.error('Response:'+message)
+
+def set_backlash_steps(x, port, backlash_steps = 10):
+
+	"""
+	Use to set the number of steps the focuser will move past the target position whilst carrying out a backlash compensation move. Backlash compensation is caried out on all outward moves (never on 
+		inward moves) Controller will respond with 'SET' once complete.
+		
+	PARAMETERS:
+	
+		x = 1 or 2 depending on the which focuser the command is for
+		port = the open port for communicating with the focuser
+		backlash_steps = Integer between 0-99, for the number of steps past the target point the focuser
+			will move.
+	
+	"""
+	#make sure value is an integer
+	if isinstance(backlash_steps, int) == False:
+		logging.error('Backlash steps value must be an integer.')
+		
+	else:
+		if backlash_steps<=0 or backlash_steps >99:
+			logging.error('Backlash steps must be between 0 and 99')
+
+		else:
+			x = str(check_focuser_no(x))
+			formatted_steps = '{0:>02}'.format(backlash_steps)
+			command = get_start_end_char('F'+ x +'SCBS'+str(formatted_steps))
+			message = common.send_command_two_response(command, port)
+
+			if message == 'SET':
+				logging.info('Backlash steps set to ' + formatted_steps + ' for focuser '+str(x))
+
+			else:
+				logging.error('Response:'+message)
+
+def set_LED_brightness(brightness, port):
+
+	"""
+	Use 'brightness' to change the brightness of the LED on the controller enclosure. 0 will turn off the
+	 LED. Controller will respond with 'SET' once complete.
+	
+	PARAMETERS:
+	
+	brightness = An integer between 0 and 100. 0 will turn off the LED.
+	port = the open port for communicating with the focuser
+	
+	"""
+	
+	try:
+		brightness = int(brightness)
+	except:
+		logging.error('Check value entered for brightness setting.')
+	else:
+	
+		if brightness > 100 or brightness < 0:
+			logging.error(str(brightness)+ ' is an invalid value for brightness setting.')
+
+		format_bright = '{0:>03}'.format(brightness)
+
+		command = get_start_end_char('FHSCLB'+format_bright)
+
+		message = common.send_command_two_response(command, port)
+
+		if message == 'SET':
+			logging.info('LED brightness set to: ' + str(format_bright))
+		else:
+			logging.error('Response:'+message)
+
+
+"""
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Group OBSERVING FUNCTIONS
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+"""
+
+def focuser_initial_configuration(config_file_name, config_file_loc = 'configs/'):
+#def focuser_initial_configuration(open_p, config_file_name, config_file_loc = 'configs/'):
+	"""
+	***** NEEDS TESTING *****
+	
+	THis function will set all the settings needed to run a focuser. The settings will be
+	 loaded from a configuration file, and passed to the relavent control functions.
+	 
+	 Don't think this will need to be done everytime the focuser is run, just when first
+	  setup unless you'd like to change the settings.
+	  
+	  General description of function:
+	   - Load configuration file and check serial port connection settings.
+	   - Open a serial port connection to the focuser
+	   - Set the device name and type in the onboard focuser configuration.
+	   - Set the LED brightness.
+	   - Set everything required for the temperature compensation, even if it is not used
+	   - Set everything for the backlash compensation, even if it is not used.
+	   - Close the port.
+	  
+	  PARAMETERS:
+	  
+	  config_file_name = name of the file containing configuration setting for the focuser
+	  config_file_loc = directory to find the configuration file
+	  
+	"""
+
+	config_dict = common.load_config(config_file_name, path = config_file_loc)
+	check_config_port_values_for_focuser(config_dict)
+	open_p = common.open_port_from_config_param(config_dict)
+
+	focuser_no = config_dict['focuser_no']
+	#start loading the settings
+	set_device_name(focuser_no, open_p, config_dict['focuser_name'])
+	set_device_type(focuser_no, open_p, config_dict['device_type'])
+	set_LED_brightness(config_dict['LED_brightness'], open_p)
+
+	#set temperature compensation setings:
+	set_temp_comp(focuser_no, open_p, config_dict['temp_compen'])
+	set_temp_comp_start_state(focuser_no, open_p, config_dict['temp_compen_at_start'])
+	set_temp_comp_coeff(focuser_no, open_p, 'A', config_dict['temp_coeffA'])
+	set_temp_comp_coeff(focuser_no, open_p, 'B', config_dict['temp_coeffB'])
+	set_temp_comp_coeff(focuser_no, open_p, 'C', config_dict['temp_coeffC'])
+	set_temp_comp_coeff(focuser_no, open_p, 'D', config_dict['temp_coeffD'])
+	set_temp_comp_coeff(focuser_no, open_p, 'E', config_dict['temp_coeffE'])
+	set_temp_comp_mode(focuser_no, open_p, config_dict['temp_compen_mode'])
+
+	#Set backlash settings:
+	set_backlash_comp(focuser_no, open_p, config_dict['backlash_compen'])
+	set_backlash_steps(focuser_no, open_p, config_dict['backlash_steps'])
+
+	#close the port
+	common.close_port(open_p)
+
+def startup_focuser(config_file_name, config_file_loc = 'configs/'):
+	"""
+	***** NEEDS TESTING *****
+	
+	THis function will perform any startup operations, to make it so the focuser is ready to
+	 work. This includes homing the focuser and return the open port ready for sending further
+	 instructions.
+	 
+	PARAMETERS:
+	  
+	  config_file_name = name of the file containing configuration setting for the focuser
+	  config_file_loc = directory to find the configuration file
+	  
+	RETURN
+	
+		focuser_no = Number of the focuser that has been started up
+		open_p = the serial port that has been opened for future communication.
+	  
+	"""
+	config_dict = common.load_config(config_file_name, path = config_file_loc)
+	check_config_port_values_for_focuser(config_dict)
+	open_p = common.open_port_from_config_param(config_dict)
+	focuser_no = config_dict['focuser_no']
+
+	home_focuser(focuser_no, open_p)
+
+	return focuser_no, open_p
+
+
 """
 	#Might be used for testing the status setup
 	STATUS1\nTemp(C)  = +21.7\nCurr Pos = 108085\nTarg Pos = 000000\nIsMoving = 1\nIsHoming = 1\nIsHomed  = 0\nFFDetect = 0\nTmpProbe = 1\nRemoteIO = 0\nHnd Ctlr = 0\nEND
+	
+	CONFIG\nNickname = FocusLynx Foc2\nMax Pos = 125440\nDevTyp =OE\nTComp ON = 0\nTempCo A = +0086\nTempCo B = +0086\nTempCo C = +0086\nTempCo D = +0000\nTempCo E = +0000\nTCMode =A\nBLC En =0\nBLC Stps = +40\nLED Brt = 075\nTC@Start = 0\nEND
 """

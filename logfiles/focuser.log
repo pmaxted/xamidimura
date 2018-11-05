@@ -1,12 +1,44 @@
-2018-10-29 15:57:40,260  CRITICAL No baud rate found in config file.
-2018-10-29 15:57:40,260  CRITICAL Unexpected baud rate for ifw filter wheels, 19200 is expected.
-2018-10-29 15:57:40,261  CRITICAL No data bits number found in config file
-2018-10-29 15:57:40,261  CRITICAL Unexpected number for data bits, 8 is expected
-2018-10-29 15:57:40,261  CRITICAL No parity values found in config file
-2018-10-29 15:57:40,261  CRITICAL Unexpected parity values, "N" is expected
-2018-10-29 15:57:40,261  CRITICAL No stop bits number found in config file
-2018-10-29 15:57:40,261  CRITICAL Unexpected number for stop bits, 1 is expected
-2018-10-29 15:57:40,262  ERROR £ in the name R£D is not a valid character. Please only use "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ=.#/-% or a space"
-2018-10-29 15:57:40,262  ERROR Filter wheel ID not in config file.
-2018-10-29 15:57:40,262  ERROR One of the names is too long or too short. Must be  <8 but >0
-2018-10-29 15:57:40,265  INFO Filter ID: A set as home position, at position 1
+2018-11-05 10:48:02,825  ERROR 6 is not a valid focuser number.
+2018-11-05 10:48:02,826  ERROR 6 is not a valid focuser number.
+2018-11-05 10:48:02,826  ERROR 1.2 is not a valid focuser number.
+2018-11-05 10:48:02,826  ERROR 1 is not a valid focuser number.
+2018-11-05 10:48:02,826  ERROR hi is not a valid focuser number.
+2018-11-05 10:48:02,826  CRITICAL No baud rate found in config file.
+2018-11-05 10:48:02,826  CRITICAL Unexpected baud rate for focuser, 115200 is expected
+2018-11-05 10:48:02,826  CRITICAL No data bits number found in config file
+2018-11-05 10:48:02,827  CRITICAL Unexpected number for data bits, 8 is expected
+2018-11-05 10:48:02,827  CRITICAL No parity values found in config file
+2018-11-05 10:48:02,827  CRITICAL Unexpected parity values, "N" is expected
+2018-11-05 10:48:02,827  CRITICAL No stop bits number found in config file
+2018-11-05 10:48:02,827  CRITICAL Unexpected number for stop bits, 1 is expected
+2018-11-05 10:48:02,828  ERROR 6 is not a valid focuser number.
+2018-11-05 10:48:02,829  ERROR 6 is not a valid focuser number.
+2018-11-05 10:48:02,829  ERROR 6 is not a valid focuser number.
+2018-11-05 10:48:02,830  ERROR 6 is not a valid focuser number.
+2018-11-05 10:48:02,831  ERROR 3 is not a valid move speed. 0 = High, 1 = low.
+2018-11-05 10:48:02,831  ERROR -0.3 is not a valid move speed. 0 = High, 1 = low.
+2018-11-05 10:48:02,831  ERROR hi is not a valid move speed. 0 = High, 1 = low.
+2018-11-05 10:48:02,832  ERROR 6 is not a valid focuser number.
+2018-11-05 10:48:02,832  ERROR 3 is not a valid move speed. 0 = High, 1 = low.
+2018-11-05 10:48:02,832  ERROR -0.3 is not a valid move speed. 0 = High, 1 = low.
+2018-11-05 10:48:02,833  ERROR hi is not a valid move speed. 0 = High, 1 = low.
+2018-11-05 10:48:02,833  ERROR 6 is not a valid focuser number.
+2018-11-05 10:48:02,834  ERROR 6 is not a valid focuser number.
+2018-11-05 10:48:02,835  ERROR Invalid input for backlash compensation control. True=Enable, False=Disable
+2018-11-05 10:48:02,835  ERROR 6 is not a valid focuser number.
+2018-11-05 10:48:02,836  ERROR 6 is not a valid focuser number.
+2018-11-05 10:48:02,837  ERROR Invalid device name given
+2018-11-05 10:48:02,837  ERROR Invalid device name given
+2018-11-05 10:48:02,837  ERROR 6 is not a valid focuser number.
+2018-11-05 10:48:02,837  ERROR BC is not a valid device type.
+2018-11-05 10:48:02,838  ERROR 0.12 is not a valid device type.
+2018-11-05 10:48:02,838  ERROR 5 is not a valid focuser number.
+2018-11-05 10:48:02,840  ERROR 3 is not a valid focuser number.
+2018-11-05 10:48:02,840  ERROR hiiii is not a valid mode for the temperature compensation.
+2018-11-05 10:48:02,840  ERROR 0.323 is not a valid mode for the temperature compensation.
+2018-11-05 10:48:02,840  ERROR N is not a valid mode for the temperature compensation.
+2018-11-05 10:48:02,840  ERROR 3 is not a valid focuser number.
+2018-11-05 10:48:02,841  ERROR 6 is not a valid focuser number.
+2018-11-05 10:48:02,841  ERROR Invalid input for "temperature compensation at start" control. True=Enable, False=Disable
+2018-11-05 10:48:02,842  ERROR 6 is not a valid focuser number.
+2018-11-05 10:48:02,842  ERROR Invalid input for temperature compensation control. True=Enable, False=Disable

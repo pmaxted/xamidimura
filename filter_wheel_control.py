@@ -4,14 +4,56 @@ filter_wheel_control.py
 Jessica A. Evans
 15/10/18
 
-	Numerous function to control the operations of the filter wheels. 
+	Numerous function to control the operations of the filter wheels. Note, these functions are
+	 designed to work with a 5-position filter wheels.
 	
-	22/10/18 - So far has all the commands that are laid out in the manual for the ifw filter wheel.
-			 - Some functions need checking
-			 - Want to integrate some form of logging into the functions, currently just print to screen
-			 - Need to create some test to make sure it all works
-			 - Make sure that it's raising suitable errors/logging them - I think sometimes its just printing
-				to screen
+	01/11/18
+	 - So far has all the commands that are laid out in the manual for the ifw filter wheel, and startup/change filter/shutdown functions
+	 - Make sure that it's raising suitable errors/logging them
+	 - Initialisation, change filter and start up function don't have any unit testing - need
+		actual connection to device, or change to initialisation function to handle a dummy
+		port.
+				
+	
+	CURRENT FUNCTIONS:
+	----------------------------------------------------------------------
+	Filter Wheel Control
+	----------------------------------------------------------------------
+	
+	- check_config_port_values_for_ifw(config_dict)
+	
+	- initialise_ifw_serial_connection(config_dict)
+	
+	- form_filter_names_string_from_config_dict(config_dict)
+	
+	- pass_filter_names(str_of_40chars, initialised_port, wheel_ID)
+	
+	- get_stored_filter_names(initialised_port, formated_dict=True)
+	
+	- get_current_position(initialised_port)
+	
+	- get_current_ID(initialised_port)
+	
+	- get_current_filter_position_and_ID(initialised_port)
+	
+	- goto_home_position(initialised_port, return_home_ID = False)
+	
+	- goto_filter_position(new_position, initialised_port)
+	
+	- end_serial_communication_close_port(initialised_port)
+	
+	----------------------------------------------------------------------
+	Group Observing Functions
+	----------------------------------------------------------------------
+	- initial_filter_wheel_setup(config_file_name, config_file_loc = 'configs/')
+	
+	- filter_wheel_startup(config_file_name, config_file_loc = 'configs/')
+	
+	- change_filter(new_filter, open_port, config_dict)
+	
+	- filter_wheel_shutdown(open_port)
+	
+	
 """
 """
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -379,11 +421,11 @@ def goto_filter_position(new_position, initialised_port):
 	
 	move_command = 'WGOTO'+str(new_position)
 	expected_return = '*'
-#	valid_positions = [1,2,3,4,5]
+	valid_positions = [1,2,3,4,5]
 	
-#	if new_position not in valid_positions:
-#		logging.error(str(new_position) +' is not a valid position number')
-#	else:
+	#if new_position not in valid_positions:
+	#	logging.error(str(new_position) +' is not a valid position number')
+	#else:
 	return_message = common.send_command_get_response(move_command,initialised_port)
 		
 	if return_message == expected_return:
@@ -423,3 +465,129 @@ def end_serial_communication_close_port(initialised_port):
 Group OBSERVING FUNCTIONS
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 """
+
+def initial_filter_wheel_setup(config_file_name, config_file_loc = 'configs/'):
+
+	""" 
+	This function should only be needed when the filter wheels are first being setup. It is 
+	 used to set the names for the filter wheel. Could also be used if you wanted to change the
+	 names.
+	 
+	General description of what the function will do:
+		- Load the configuration file and check the serial port connection values
+		   are set properly for the filter wheel.
+		- Open and initialise the serial port connection.
+		- Get the names from the config file
+		- Check what names are currently stored on the filter wheel.
+		- Pass new name string if the new names are different if not, stay the same.
+		- End the serial port communication.
+		
+	 
+	 PARAMETERS:
+	 
+		config_file_loc - directory to of configuration file to be loaded.
+		config_file_name - name of configuration file. This will be different for each focuser.
+	
+	"""
+
+	loaded_dict = common.load_config(config_file_name, path=config_file_loc)
+	check_config_port_values_for_ifw(loaded_dict)
+	open_port = initialise_ifw_serial_connection(loaded_dict)
+	config_names = form_filter_names_string_from_config_dict(loaded_dict)
+	currently_stored = get_stored_filter_names(open_port, formatted_dict = False)
+
+	if currently_stored != config_names:
+		pass_filter_names(config_names, open_port)
+
+	else:
+		logging.WARNING('Stored filter names not changed')
+
+
+def filter_wheel_startup(config_file_name, config_file_loc = 'configs/'):
+
+	""" 
+	This function would be used at the start of the night, to setup the filter wheel ready for
+	 observations.
+	 
+	General description of what the function will do:
+		- load the configuration file and check that the serial port setting are
+		   suitable for the filter wheel
+		- Open and initialise a serial port connection to the filter wheel.
+		- Set the filter wheel to the home position.
+		
+		The Communication port will be left open, read for further communicaton during observations.
+	
+	
+	PARAMETERS:
+	 
+		config_file_loc - directory to of configuration file to be loaded.
+		config_file_name - name of configuration file. This will be different for each focuser.
+		
+	RETURN:
+		
+		open_port = the communication port to be used during observing
+		loaded_dict = the configuration dictionary which relates an ID to a position no
+	 
+	"""
+
+	loaded_dict = common.load_config(config_file_name, path=config_file_loc)
+	check_config_port_values_for_ifw(loaded_dict)
+	open_port = initialise_ifw_serial_connection(loaded_dict)
+	goto_home_position(open_port)
+
+	logging.info('Filter wheel startup complete.')
+
+	return open_port, loaded_dict
+
+
+def change_filter(new_filter, open_port, config_dict):
+	"""
+	This function would be called to carry out any filter changes during observing. It will check what the current position is and then decide if a change is needed.
+	
+	An open communication port is required, and it is left open at the end of the filter change.
+	
+	******
+	Currently (1/11/18) assume the filter request is sent as '1,2,3,4 or 5' as appropriate. Maybe in future a name will be sent and the corresponding letter will need to be looked
+		up.
+	******
+	
+	PARAMETERS:
+	
+		new_filter = The filter to change to, if a change is needed.
+		open_port = a serial port connection to the filter wheel, which has been opened and initialised.
+		
+		config_dict = the configuration dictionary with the mapping showing the name associated
+			with each filter position.
+	
+	"""
+
+
+
+	info = get_current_filter_position_and_ID(open_port)
+	id = info[0]
+	pos = info[1]
+	
+	filter_name = config_dict[id]
+
+	if new_filter != pos:
+		goto_filter_position(new_filter, open_port)
+
+	else:
+		logging.warning('Filter not changed. Current position: '+ str(filter_name))
+
+
+def filter_wheel_shutdown(open_port):
+	""" 
+	To be run at the end of an observing session to shutdown communication with the filter 
+		wheel. This function will first home the filter wheel and then close the serial port.
+
+	PARAMETERS:
+	
+		open_port = a serial port connection to the filter wheel, which has been opened and initialised.
+	
+	"""
+
+	goto_home_position(open_port)
+	end_serial_communication_close_port(open_port)
+
+	logging.info('Filter wheel shutdown.')
