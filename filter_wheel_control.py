@@ -67,6 +67,7 @@ FILTER WHEEL CONTROL FUNCTIONS
 import common
 import serial
 import logging
+import numpy
 
 
 logging.basicConfig(filename = 'logfiles/filter_wheel.log',filemode='w',level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
@@ -548,8 +549,8 @@ def change_filter(new_filter, open_port, config_dict):
 	An open communication port is required, and it is left open at the end of the filter change.
 	
 	******
-	Currently (1/11/18) assume the filter request is sent as '1,2,3,4 or 5' as appropriate. Maybe in future a name will be sent and the corresponding letter will need to be looked
-		up.
+	Currently (14/11/18) assumes the filter request is sent as a name, e.g. RX, GX, BX...
+		if make multiple matches it is set to go to the first position that matches.
 	******
 	
 	PARAMETERS:
@@ -561,8 +562,12 @@ def change_filter(new_filter, open_port, config_dict):
 			with each filter position.
 	
 	"""
-
-
+	
+	keyArr = numpy.array(list(config_dict))
+	# look for cases where the requested filter match the IDs, just pick one if more
+	#  than one match
+	matchFilt = keyArr[numpy.array([config_dict[i] == new_filter for i in config_dict])][0]
+	matchedPos = keyArr[numpy.array([config_dict[i] == matchFilt for i in config_dict])][0]
 
 	info = get_current_filter_position_and_ID(open_port)
 	id = info[0]
@@ -570,8 +575,8 @@ def change_filter(new_filter, open_port, config_dict):
 	
 	filter_name = config_dict[id]
 
-	if new_filter != pos:
-		goto_filter_position(new_filter, open_port)
+	if matchedPos != pos:
+		goto_filter_position(matchedPos, open_port)
 
 	else:
 		logging.warning('Filter not changed. Current position: '+ str(filter_name))

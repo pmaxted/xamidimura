@@ -5,7 +5,12 @@ observing.py
 	*** Very much still work-in-progress, and may not permenantly remain under this name. ***
 	
 	Purpose of this script is to carry out the functions required for observing, e.g. startup instruments 
-		and carry out the required initialisation, obtain target infomation for a scheduled target
+		and carry out the required initialisation, obtain target infomation for a scheduled target.
+		
+	CURRENTLY the obslog2 table in the database is overwritten each time the main() function is run,
+		because I did want to fill the database with rubbish while testing.
+		
+	Unittests and proper logging will needed to be put in place throughout
 	
 	
 	CURRENT CLASSES
@@ -34,13 +39,14 @@ observing.py
 	
 	- get_obslog_info(fits_info_dict, CCDno, IMAGE_ID = 1)
 	
+	- get_next_file_number(CCDno, fits_file_dir = 'fits_file_tests/')
+	
 	----------------------------------------------------------------------
 	Main Function
 	----------------------------------------------------------------------
 
 	- main()
 
-06/11/2018
 
 """
 
@@ -53,13 +59,13 @@ from astropy.io import fits
 from astropy import time
 import subprocess
 import os
+import fnmatch
+import logging
 
-
+logging.basicConfig(filename = 'logfiles/observingScript.log',filemode='w',level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
 observe_log_DBtable = 'obslog2'
 
-"""
-So somehow, currently don't know how, the TCS PC will send a command to a CCD to take an image. Is that image going to be save on the TCS? held in memory until something happens?
-"""
+
 def get_current_UTC_time_in_isot_format():
 
 	"""
@@ -81,7 +87,7 @@ class exposure_obj(object):
 		To be used to get all the information for a particular exposure in one
 		 place, information such as exposure time, filter, etc.
 	"""
-	def __init__(self,exptime, filter_name,image_type, CCD_no, filter_wheel_name):
+	def __init__(self,exptime, filter_name,image_type, CCD_no, filter_wheel_name,file_num):
 		"""
 		Set up the object
 		"""
@@ -90,6 +96,7 @@ class exposure_obj(object):
 		self.image_type = image_type
 		self.CCD = CCD_no
 		self.filter_wheel_name = filter_wheel_name
+		self.file_num = file_num
 
 	def set_start_time(self):
 		"""
@@ -284,7 +291,7 @@ def get_fits_header_info(focuser_config,focuser_position, weather_list, expose_i
 	return fits_info_dict
 
 
-def get_obslog_info(fits_info_dict, CCDno, IMAGE_ID = 1):
+def get_obslog_info(fits_info_dict, CCDno, IMAGE_ID,status):
 
 	"""
 	This function will gather all the info needed for the entry into the observation log
@@ -321,13 +328,13 @@ def get_obslog_info(fits_info_dict, CCDno, IMAGE_ID = 1):
 	'IMAG_DEC' : fits_info_dict['IMAG-DEC'][0],#"FITS header",
 	'INSTRUME': fits_info_dict['INSTRUME'][0],#"FITS header",
 	'FOCUSER' : fits_info_dict['FOCUSER'][0],#"FITS header",
-	'STATUS'  : 0
+	'STATUS'  : status
 	}
 
 	return obslog_dict
 
 
-def sort_all_logging_info(exposure_class, target_class, focuser_info, conn, curs):
+def sort_all_logging_info(exposure_class, target_class, focuser_info, conn, curs,status):
 
 	"""
 	
@@ -349,7 +356,7 @@ def sort_all_logging_info(exposure_class, target_class, focuser_info, conn, curs
 	#focus_status_dict = fc.get_focuser_status(focuser_info[0],focuser_info[1],return_dict=True)
 	focus_status_dict = {'Temp(C)': '+21.7', 'Curr Pos': '108085', 'Targ Pos': '000000', 'IsMoving': '1', 'IsHoming': '1', 'IsHomed': '0', 'FFDetect': '0', 'TmpProbe': '1', 'RemoteIO': '0', 'Hnd Ctlr': '0'}
 	
-	telescope_RA_DEC = '???','???' #Eventually function to get RA/DEC from telescope
+	telescope_RA_DEC = '???','???' """Eventually function to get RA/DEC from telescope"""
 	
 	
 	# Get weather
@@ -365,7 +372,7 @@ def sort_all_logging_info(exposure_class, target_class, focuser_info, conn, curs
 	primaryHDU = fits.PrimaryHDU(header =image_header)
 	
 	# Fetch Observing log info
-	obs_dict = get_obslog_info(fits_dict,exposure_class.CCD)
+	obs_dict = get_obslog_info(fits_dict,exposure_class.CCD, IMAGE_ID=exposure_class.file_num,status=status)
 
 	# these format the dictionary keys and value to put into the SQL request..
 	aa = ','.join(obs_dict.keys())
@@ -378,6 +385,42 @@ def sort_all_logging_info(exposure_class, target_class, focuser_info, conn, curs
 	#save fits header
 	primaryHDU.writeto('fits_file_tests/'+obs_dict['FILE'], overwrite=True)
 
+	return exposure_class.file_num + 1
+
+def get_next_file_number(CCDno, fits_file_dir = 'fits_file_tests/'):
+
+	"""
+	Will get a list of fits files that match the CCD number. Take the last file, extract the file number.
+	 if the
+	
+	PARAMETERS:
+	
+		CCDno = 1 or 2, to represent which CCD you want the file number for.
+	
+	RETURN
+	
+		next_file_no = The number of the last file for a particular CCD. If no files present,
+			will return 1
+	"""
+	
+	if CCDno not in [1,2]:
+		logging.error('Invalid CCD number')
+	
+	else:
+
+		file_list = os.listdir(fits_file_dir)#
+		matched = fnmatch.filter(file_list, 'CCD'+str(CCDno)+'_*.fits')
+	
+		try:
+			last_file = matched[-1]
+			next_file_no = int(last_file[5:-5]) + 1
+	
+		except:
+			print('No file in current directory. Starting from File No: 1')
+			next_file_no =  1
+
+
+		return next_file_no
 
 def main():
 
@@ -391,8 +434,8 @@ def main():
 	
 	#Load focuserNo and open port communication to the focusers - the homing can take up 20s to
 	#  complete
-#	focuser_no1, focuser1_port = fc.startup('focuser1-south.cfg')
-#	focuser_no2, focuser2_port = fc.startup('focuser2-north.cfg')
+#	focuser_no1, focuser1_port = fc.startup('focuser1-south.cfg') #proper
+#	focuser_no2, focuser2_port = fc.startup('focuser2-north.cfg') #proper
 	focuser_no1, focuser1_port = 1, 'port' #Just temporary
 	
 	# Want to load the current focuser configuration settings so don't have to
@@ -400,16 +443,15 @@ def main():
 	#  Might need to update this if the config setting get updated during the night
 	#  but this probably unlikely
 
-#	focuser1_config_dict = fc.get_focuser_stored_config(1, port, return_dict = False)
-#	focuser2_config_dict = fc.get_focuser_stored_config(2, port, return_dict = False)
+#	focuser1_config_dict = fc.get_focuser_stored_config(1, port, return_dict = False) #proper
+#	focuser2_config_dict = fc.get_focuser_stored_config(2, port, return_dict = False) #proper
 	focuser1_config_dict = {'Nickname': 'FocusLynx Foc2', 'Max Pos': '125440', 'DevTyp': 'OE', 'TComp ON': '0', 'TempCo A': '+0086', 'TempCo B': '+0086', 'TempCo C': '+0086', 'TempCo D': '+0000', 'TempCo E': '+0000', 'TCMode': 'A', 'BLC En': '0', 'BLC Stps': '+40', 'LED Brt': '075', 'TC@Start': '0'} #Just temporary
 	
 	# Run startup for filterwheels
-	#ifw1_port, ifw1_config = fwc.filter_wheel_startup('ifw1-south.cfg')
-	#ifw2_port, ifw2_config = fwc.filter_wheel_startup('ifw2-north.cfg')
-	ifw1_port, ifw1_config = 'port_ifw', common.load_config('ifw1-south.cfg', path='configs/') #Just temporary
-	
-	
+	#ifw1_port, ifw1_config = fwc.filter_wheel_startup('ifw1-south.cfg') #proper
+	#ifw2_port, ifw2_config = fwc.filter_wheel_startup('ifw2-north.cfg') #proper
+	ifw1_port, ifw1_config = 'port_ifw1', common.load_config('ifw1-south.cfg', path='configs/') #Just temporary
+	ifw2_port, ifw2_config = 'port_ifw2', common.load_config('ifw2-north.cfg', path='configs/')
 	#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
@@ -422,30 +464,59 @@ def main():
 	dbcurs.execute('CREATE TABLE obslog2 (IMAGE_ID INTEGER, CCD_ID INTERGER, FILE text, TAR_NAME text, TAR_TYPE text, DATE_OBS text, MJD_OBS real, IMAGETYP text, FILT_NAM text, EXPTIME real, OBJ_RA text, OBJ_DEC text, TEL_RA text, TEL_DEC text, IMAG_RA text, IMAG_DEC text, INSTRUME text, FOCUSER text, STATUS INTEGER);')
 	dbconn.commit()
 	#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-
-
+	#Get next file number for each ccd
 	#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	#THen this will be part of the loop that runs when taking exposures
-	#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	
-	#create exposure object
-	exp_obj = exposure_obj(4,'RX','SCIENCE',1, ifw1_config['name'])
+	next_no1 = get_next_file_number(1)
+	next_no2 = get_next_file_number(2)
 
-	# Set start time and set exposure command
-	exp_obj.set_start_time()
-	"""
-	SEND EXPOSURE COMMAND TO TCS - get status depending on response
-	
-	"""
-	status = 0 #FUNCTION return appropriate response??
 
-	#Do observing log and fits header
-	sort_all_logging_info(exp_obj,'target_class',[focuser_no1,focuser1_port,focuser1_config_dict],
-		 dbconn,dbcurs)
+	"""
+	Run Scheduler to find target - return target info from target list database
+	
+		- Target info should provide:
+			RA/DEC of target
+			Name
+			List of filters
+			List of exposure times in sec
+			image_type
+			
+	"""
+	filter_list = ['RX','GX','BX']
+	exposure_times = [2,4,6]
+	image_type ='SCIENCE'
+	
+	
+	for j in range(len(filter_list)):
+	
+
+		#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+		#THen this will be part of the loop that runs when taking exposures
+		#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	
+		#create exposure object
+		exp_obj1 = exposure_obj(exposure_times[j],filter_list[j],image_type,1, ifw1_config['name'], next_no1)
+		#exp_obj2 = exposure_obj(4,'RX','SCIENCE',2, ifw2_config['name'], next_no2)
+	
+		#change filter wheel to appropriate filter if need be:
+		# uncomment when open port available
+		#fwc.change_filter(exp_obj1, ifw1_port, ifw1_config)
+
+		# Set start time and set exposure command
+		exp_obj1.set_start_time()
+		"""
+		SEND EXPOSURE COMMAND TO TCS - get status depending on response
+		
+		"""
+		status = 0 #FUNCTION return appropriate response??
+
+		#Do observing log and fits header
+		next_no1 = sort_all_logging_info(exp_obj1,'target_class',[focuser_no1,focuser1_port,focuser1_config_dict],
+		 dbconn,dbcurs,status)
+	
+	
 	#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	#This is testing stuff to show all the rows in the obslog2 table
-	connect_database.show_all_rows_in_table('obslog2',dbcurs)
+	connect_database.show_all_rows_in_table(observe_log_DBtable,dbcurs)
 	connect_database.close_connection(dbconn,dbcurs)
 	#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
