@@ -106,17 +106,17 @@ class test_filter_names_to_string(unittest.TestCase):
 	"""
 
 	def setUp(self):
-		self.test_dict = {'A':'RED','B':'GREEN','C':'BLUE','D':'WHITE','E':'INFRARED'}
-		self.test_dict_bad_character = {'A':'R£D','B':'GREEN','C':'BLUE','D':'WHITE','E':'INFRARED'}
-		self.test_dict_too_long = {'A':'REDDDDDDDD','B':'GREEN','C':'BLUE','D':'WHITE','E':'INFRARED'}
-		self.test_dict_bad_ID = {'A':'RED','B':'GREEN','F':'BLUE','D':'WHITE','E':'INFRARED'}
+		self.test_dict = {'A':'RED','B':'GREEN','C':'BLUE','D':'WHITE','E':'INFRARED','F':'BLANK','G':'BLANK','H':'BLANK'}
+		self.test_dict_bad_character = {'A':'R£D','B':'GREEN','C':'BLUE','D':'WHITE','E':'INFRARED','F':'BLANK','G':'BLANK','H':'BLANK'}
+		self.test_dict_too_long = {'A':'REDDDDDDDD','B':'GREEN','C':'BLUE','D':'WHITE','E':'INFRARED','F':'BLANK','G':'BLANK','H':'BLANK'}
+		self.test_dict_bad_ID = {'A':'RED','B':'GREEN','F':'BLUE','D':'WHITE','E':'INFRARED','F':'BLANK','G':'BLANK','H':'BLANK'}
 
 	def test_form_string(self):
 		resulting_string = fwc.form_filter_names_string_from_config_dict(self.test_dict)
 		resulting_length = len(resulting_string)
 		
-		expected_string = 'RED     GREEN   BLUE    WHITE   INFRARED'
-		expected_length = 40
+		expected_string = 'RED     GREEN   BLUE    WHITE   INFRAREDBLANK   BLANK   BLANK   '
+		expected_length = 64
 		
 		self.assertEqual(resulting_string, expected_string)
 		self.assertEqual(resulting_length, expected_length)
@@ -142,17 +142,17 @@ class test_pass_filternames(unittest.TestCase):
 	
 	def setUp(self):
 		
-		self.name_string = 'RED     GREEN   BLUE    WHITE   INFRARED'
+		self.name_string = 'RED     GREEN   BLUE    WHITE   INFRAREDBLANK   BLANK   BLANK   '
 		self.bad_name_string = 'TESTING1 2 3 4'
 		self.good_ID = 'A'
-		self.bad_ID = 'G'
+		self.bad_ID = 'K'
 		
 		#Pretend a serial port has already been opened has been initialised using dummy_serial
 		self.dummy_port = dummy_serial.Serial(port='test_port', timeout=0.0001)
 		# Setup up the expected responses
 		dummy_serial.RESPONSES = {
-			'WLOAD' + self.good_ID + '*'+ self.name_string: '!\r\n',
-			 'WLOAD' + self.bad_ID + '*'+ self.name_string: 'ER=3\r\n'}
+			'WLOAD' + self.good_ID + '*'+ self.name_string: '!',
+			 'WLOAD' + self.bad_ID + '*'+ self.name_string: 'ER=3'}
 	
 	def test_invalid_ID(self):
 
@@ -168,6 +168,7 @@ class test_pass_filternames(unittest.TestCase):
 		with self.assertLogs(level='INFO') as cm:
 			fwc.logging.getLogger().error(fwc.pass_filter_names(self.name_string, self.dummy_port, wheel_ID=self.good_ID))
 			logging_actual_response = cm.output[0].split(':')[0]
+
 		self.assertEqual(logging_actual_response, 'INFO')
 
 	def test_unexpected_response(self):
@@ -191,16 +192,17 @@ class test_get_stored_filter_names(unittest.TestCase):
 		self.dummy_port = dummy_serial.Serial(port='test_port', timeout=0.0001)
 		# Setup up the expected responses
 		dummy_serial.RESPONSES = {
-			'WREAD': 'RED     GREEN   BLUE    WHITE   INFRARED'}
+			'WREAD': 'RED     GREEN   BLUE    WHITE   INFRAREDBLANK   BLANK   BLANK   '}
+
 
 	def test_just_return_string_of_names(self):
 
-		expected = 'RED     GREEN   BLUE    WHITE   INFRARED'
+		expected = 'RED     GREEN   BLUE    WHITE   INFRAREDBLANK   BLANK   BLANK   '
 		actual = fwc.get_stored_filter_names(self.dummy_port, formatted_dict=False)
 		self.assertEqual(actual, expected)
 
 	def test_get_dict_of_names(self):
-		expected = {'A':'RED','B':'GREEN','C':'BLUE','D':'WHITE','E':'INFRARED'}
+		expected = {'A':'RED','B':'GREEN','C':'BLUE','D':'WHITE','E':'INFRARED','F':'BLANK','G':'BLANK','H':'BLANK'}
 		actual = fwc.get_stored_filter_names(self.dummy_port, formatted_dict=True)
 		self.assertEqual(actual,expected)
 
@@ -325,7 +327,7 @@ class test_goto_filter_position(unittest.TestCase):
 		#Pretend a serial port has already been opened has been initialised using dummy_serial
 		self.dummy_port = dummy_serial.Serial(port='test_port', timeout=0.00001)
 		# Setup up the expected responses
-		dummy_serial.RESPONSES = {'WGOTO1': '*','WGOTO6':'ER=5'}
+		dummy_serial.RESPONSES = {'WGOTO1': '*','WGOTO9':'ER=5'}
 
 	def test_ok_position(self):
 		with self.assertLogs(level='INFO') as cm:
@@ -335,7 +337,7 @@ class test_goto_filter_position(unittest.TestCase):
 
 	def test_bad_position(self):
 		with self.assertLogs(level='ERROR') as cm:
-			fwc.logging.getLogger().error(fwc.goto_filter_position(6,self.dummy_port))
+			fwc.logging.getLogger().error(fwc.goto_filter_position(9,self.dummy_port))
 			logging_actual_response = cm.output[0].split('.')[0]
 		self.assertEqual(logging_actual_response, 'ERROR:root:ER=5')
 
@@ -400,7 +402,7 @@ class test_change_filter(unittest.TestCase):
 
 	def setUp(self):
 		self.test_dict_ok = dict({'baud_rate':19200,'data_bits':8, 'stop_bits':1, 'parity':'N',
-		'A':'RX', 'B':'GX','C':'BX','D':'WX', 'E':'IX'})
+		'A':'RX', 'B':'GX','C':'BX','D':'WX', 'E':'IX','F':'BLANK','G':'BLANK','H':'BLANK'})
 		#Pretend a serial port has already been opened has been initialised using dummy_serial
 		self.dummy_port = dummy_serial.Serial(port='test_port', timeout=0.00001)
 		# Setup up the expected responses
