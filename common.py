@@ -157,7 +157,10 @@ def send_command_get_response(command, port_name, sleep_time = 0.01):
 				#print('Device message: ' + message)
 		else:
 				port_name.write((command).encode('utf-8'))
-				message = port_name.read(40).decode('utf-8').strip()
+				message = port_name.read(64).decode('utf-8').strip('\n')
+				#message = port_name.read(64).decode('utf-8')#
+				#print(message+'!')
+				#message = message#.strip('\n')
 
 		return message
 
