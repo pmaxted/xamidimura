@@ -369,7 +369,7 @@ def end_relative_move(x, port):
 	else:
 		logging.error('Response:'+message)
 
-def get_focuser_status(x, port):
+def get_focuser_status(x, port, return_dict=False):
 	"""
 	***** NEEDS TESTING *****
 	
@@ -404,15 +404,39 @@ def get_focuser_status(x, port):
 		
 		x = 1 or 2 depending on the which focuser the command is for
 		port = the open port for communicating with the focuser
+		return_dict = True/False, set to true to get the config values returned as a dictionary
+		
+	
+	RETURN
+	
+		message = The configuration message returned as a long string.
+		message_dict = if return_dict is True, the message will be turned into a python dictionary
+			so parameters can be called to return values.
 		
 	"""
 	x = str(check_focuser_no(x))
 	command = get_start_end_char('F'+ x +'GETSTATUS')
 	message = common.send_command_two_response(command, port, expected_end='END\n')
 
-	return message
+	if return_dict == False:
+		return message
+	else:
+		#Convert string to python dictionary, as this will be easier to work with in other parts of the code.
 
-def get_focuser_stored_config(x, port):
+		#cut of the config + end bits, split into rows, and then split at equals
+		message_dict = dict(row.split('=') for row in message[8:-4].split('\n'))
+		
+		#Need to put the keys into a list, otherwise not all keys are looped because the keys
+		#  change during the loop. Was only doing half the keys.
+		dict_key_list = list(message_dict.keys())
+		# as it is there lots of spaces at the start/end of name and values, this will remove them
+		for name in dict_key_list:
+			message_dict[name] = message_dict[name].strip()
+			message_dict[name.strip()] = message_dict.pop(name)
+
+		return message_dict
+
+def get_focuser_stored_config(x, port, return_dict = False):
 	"""
 	***** NEEDS TESTING *****
 	
@@ -442,6 +466,15 @@ def get_focuser_stored_config(x, port):
 	
 		x = 1 or 2 depending on the which focuser the command is for
 		port = the open port for communicating with the focuser
+		return_dict = True/False, set to true to get the config values returned as a dictionary
+		
+	
+	RETURN
+	
+		message = The configuration message returned as a long string.
+		message_dict = if return_dict is True, the message will be turned into a python dictionary
+			so parameters can be called to return values.
+		
 	
 	"""
 	
@@ -449,7 +482,24 @@ def get_focuser_stored_config(x, port):
 	command = get_start_end_char('F'+ x +'GETCONFIG')
 	message = common.send_command_two_response(command, port, expected_end='END\n')
 	
-	return message
+	if return_dict == False:
+		return message
+	else:
+		#Convert string to python dictionary, as this will be easier to work with in other parts of the code.
+
+		#cut of the config + end bits, split into rows, and then split at equals
+		message_dict = dict(row.split('=') for row in message[7:-4].split('\n'))
+		
+		#Need to put the keys into a list, otherwise not all keys are looped because the keys
+		#  change during the loop. Was only doing half the keys.
+		dict_key_list = list(message_dict.keys())
+		# as it is there lots of spaces at the start/end of name and values, this will remove them
+		for name in dict_key_list:
+			message_dict[name] = message_dict[name].strip()
+			message_dict[name.strip()] = message_dict.pop(name)
+
+
+		return message_dict
 
 
 def set_device_name(x, port, device_name):

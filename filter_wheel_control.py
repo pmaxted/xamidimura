@@ -5,7 +5,7 @@ Jessica A. Evans
 15/10/18
 
 	Numerous function to control the operations of the filter wheels. Note, these functions are
-	 designed to work with a 5-position filter wheels.
+	 designed to work with a 8-position filter wheels.
 	
 	01/11/18
 	 - So far has all the commands that are laid out in the manual for the ifw filter wheel, and startup/change filter/shutdown functions
@@ -13,6 +13,9 @@ Jessica A. Evans
 	 - Initialisation, change filter and start up function don't have any unit testing - need
 		actual connection to device, or change to initialisation function to handle a dummy
 		port.
+		
+	12/11/18
+	 - Changed it so it works with a 8-position filter wheel
 				
 	
 	CURRENT FUNCTIONS:
@@ -189,14 +192,14 @@ def form_filter_names_string_from_config_dict(config_dict):
 				   'E','F','G','H','I','J','K','L','M','N','O','P','Q','R',
 				   'S','T','U','V','W','X','Y','Z','=','.','#','/','-','%', ' ']
 	
-	valid_config_letters = ['A','B','C','D','E']
+	valid_config_letters = ['A','B','C','D','E','F','G','H']
 	
 	if False in [i in config_dict for i in valid_config_letters]:
 		logging.error('Filter wheel ID not in config file.')
 		raise ValueError('Filter wheel ID not in config file.')
 	else:
 		#So far this creates a tuple of names assign to each ID from the config file.
-		extracted_names = [config_dict['A'], config_dict['B'],config_dict['C'], config_dict['D'], config_dict['E']]
+		extracted_names = [config_dict['A'], config_dict['B'],config_dict['C'], config_dict['D'], config_dict['E'], config_dict['F'], config_dict['G'], config_dict['H']]
 				   
 	final_string = str()
 				   
@@ -220,39 +223,37 @@ def form_filter_names_string_from_config_dict(config_dict):
 
 
 
-def pass_filter_names(str_of_40chars, initialised_port, wheel_ID = 'A'):
+def pass_filter_names(str_of_64chars, initialised_port, wheel_ID = 'A'):
 	"""
 		****************************
 		**** NEEDS TO BE TESTED ****
 		****************************
 		
-	Pass a formatted string of 40 characters (which contains the names for the filters) to the EEPROM
+	Pass a formatted string of 64 characters (which contains the names for the filters) to the EEPROM
 	 on board the filter wheel.
 	 
 	 Must wait at least 10 ms for the names to be stored before another command can be sent, that will
 	 be handle by this function. A '!' character is return if the names are successfully received
 	 and stored.
 	 
-	 If ER=3 is returned, it means an invalid wheel ID was received. (Valid options: 'A','B','C','D','E')
+	 If ER=3 is returned, it means an invalid wheel ID was received. (Valid options: 'A','B','C','D','E','F','G','H')
 	 
 	 PARAMETERS
 	 
-		str_of_40chars = A string of 40 chars containing the 5 filter names, in groups of 8 chars.
+		str_of_64chars = A string of 40 chars containing the 5 filter names, in groups of 8 chars.
 		wheel_ID = **NOT TOO SURE** Indicates what position the names will be applied from. Is 'A'
 		by default because of how the from_filter_names_string_from_config_dict() function extracts
 		the names
 		
 		
 		"""
-	valid_wheel_ID = ['A','B','C','D','E']
+	valid_wheel_ID = ['A','B','C','D','E','F','G','H']
 	if wheel_ID not in valid_wheel_ID:
-		logging.error('Invalid wheel ID. Please select A,B,C,D or E')
+		logging.error('Invalid wheel ID. Please select A,B,C,D,E,F,G or H')
 	else:
 		
-		issue_command = 'WLOAD'+wheel_ID+'*'+str_of_40chars#+'\n'
+		issue_command = 'WLOAD'+wheel_ID+'*'+str_of_64chars#+'\n'
 		expected_return = '!'
-		#print(issue_command)
-		#print(expected_return)
 		
 		message = common.send_command_get_response(issue_command, initialised_port)
 		
@@ -271,20 +272,20 @@ def get_stored_filter_names(initialised_port, formatted_dict = True):
 		**** NEEDS TO BE TESTED ****
 		****************************
 		
-	Will read the 40 character string containing the filter names from the filter wheel, and either returned
-		as a dictionary with the names assign to the keys A,B,C,D,E or return as the 40 char string
+	Will read the 64 character string containing the filter names from the filter wheel, and either returned
+		as a dictionary with the names assign to the keys A,B,C,D,E,F,G,H or return as the 64 char string
 		
 	PARAMETERS
 		
 		initialised_port = the opened initialised port to the filter wheel.
 	
-		formatted_dict = If true, the names will be returned as a dictionary, otherwise just a string of 40
+		formatted_dict = If true, the names will be returned as a dictionary, otherwise just a string of 64
 			characters
 		
 	REUTRN
 		
 		new_dict or name_string depending on 'formatted_dict' parameter
-				will be 40 char string if formatted_dict is False
+				will be 64 char string if formatted_dict is False
 				and a dictionary if it's se to True
 		
 	"""
@@ -293,8 +294,9 @@ def get_stored_filter_names(initialised_port, formatted_dict = True):
 	name_string = common.send_command_get_response(issue_command, initialised_port)
 	
 	if formatted_dict == True:
+
 		name_list = [name_string[i:i+8].strip() for i in range(0,len(name_string), 8)]
-		key_letters = ['A','B','C','D','E']
+		key_letters = ['A','B','C','D','E','F','G','H']
 		new_dict = {}
 		for n in range(0,len(key_letters)):
 			new_dict[key_letters[n]] = name_list[n]
@@ -310,7 +312,7 @@ def get_current_position(initialised_port):
 		****************************
 		**** NEEDS TO BE TESTED ****
 		****************************
-	Will return the current position of the filter wheel (i.e. 1,2,3,4,5)
+	Will return the current position of the filter wheel (i.e. 1,2,3,4,5,6,7,8)
 		
 	PARAMETERS
 		
@@ -331,7 +333,7 @@ def get_current_ID(initialised_port):
 		****************************
 		**** NEEDS TO BE TESTED ****
 		****************************
-	Will return the current filter ID (i.e A,B,C,D,E)
+	Will return the current filter ID (i.e A,B,C,D,E,F,G,H)
 		
 	PARAMETER
 		
@@ -339,7 +341,7 @@ def get_current_ID(initialised_port):
 		
 	RETURN
 		
-		filter_id = A,B,C,D or E as appropriate.
+		filter_id = A,B,C,D,E,F,G or H as appropriate.
 		
 	"""
 	id_command = 'WIDENT'
@@ -349,14 +351,13 @@ def get_current_ID(initialised_port):
 
 def get_current_filter_position_and_ID(initialised_port):
 	"""
-	Use this to return the current position of the filter wheel (1,2,3,4,5) and the identity of the
-	 filter wheel (A,B,C,D,E)
+	Use this to return the current position of the filter wheel (1,2,3,4,5,6,7,8) and the identity of the filter wheel (A,B,C,D,E,F,G,H)
 	 
 	 PARAMETERS
 		initialised_port = A serial port to the filter wheel that has been opened and initialised.
 		
 	RETURN
-		[identity, position] = list containing the filter-ID (A,B,C,D, or E) and filter position
+		[identity, position] = list containing the filter-ID (A,B,C,D,E,F,G,H) and filter position
 	
 	"""
 	identity = get_current_ID(initialised_port)
@@ -380,7 +381,7 @@ def goto_home_position(initialised_port, return_home_id = False):
 		initialised_port = an open initialised port to the filter wheel
 		
 	"""
-	valid_wheel_ID = ['A','B','C','D','E']
+	valid_wheel_ID = ['A','B','C','D','E','F','G','H']
 	
 	home_command = 'WHOME'
 	return_message = common.send_command_get_response(home_command,initialised_port) #will need to check this is waiting a good amount of time.
@@ -421,7 +422,7 @@ def goto_filter_position(new_position, initialised_port):
 	
 	move_command = 'WGOTO'+str(new_position)
 	expected_return = '*'
-	valid_positions = [1,2,3,4,5]
+	valid_positions = [1,2,3,4,5,6,7,8]
 	
 	#if new_position not in valid_positions:
 	#	logging.error(str(new_position) +' is not a valid position number')

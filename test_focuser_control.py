@@ -404,6 +404,12 @@ class test_get_status(unittest.TestCase):
 		expected = 'STATUS1\nTemp(C)  = +21.7\nCurr Pos = 108085\nTarg Pos = 000000\nIsMoving = 1\nIsHoming = 1\nIsHomed  = 0\nFFDetect = 0\nTmpProbe = 1\nRemoteIO = 0\nHnd Ctlr = 0\nEND'
 		actual = fc.get_focuser_status(1,self.dummy_port)
 		self.assertEqual(actual,expected)
+	
+	def test_return_status_dict(self):
+	
+		expected = {'Temp(C)': '+21.7', 'Curr Pos': '108085','Targ Pos': '000000', 'IsMoving': '1', 'IsHoming': '1', 'IsHomed': '0', 'FFDetect': '0', 'TmpProbe': '1', 'RemoteIO': '0', 'Hnd Ctlr': '0'}
+		actual = fc.get_focuser_status(1,self.dummy_port, return_dict=True)
+		self.assertEqual(actual,expected)
 
 	def tearDown(self):
 		self.dummy_port.close()
@@ -422,6 +428,13 @@ class test_get_config(unittest.TestCase):
 		expected = 'CONFIG\nNickname = FocusLynx Foc2\nMax Pos = 125440\nDevTyp =OE\nTComp ON = 0\nTempCo A = +0086\nTempCo B = +0086\nTempCo C = +0086\nTempCo D = +0000\nTempCo E = +0000\nTCMode =A\nBLC En =0\nBLC Stps = +40\nLED Brt = 075\nTC@Start = 0\nEND'
 		actual = fc.get_focuser_stored_config(1,self.dummy_port)
 		self.assertEqual(actual,expected)
+	
+	def test_return_config_mess_dict(self):
+	
+		expected = {'Nickname': 'FocusLynx Foc2', 'Max Pos': '125440', 'DevTyp': 'OE', 'TComp ON': '0', 'TempCo A': '+0086', 'TempCo B': '+0086', 'TempCo C': '+0086', 'TempCo D': '+0000', 'TempCo E': '+0000', 'TCMode': 'A', 'BLC En': '0', 'BLC Stps': '+40', 'LED Brt': '075', 'TC@Start': '0'}
+		actual = fc.get_focuser_stored_config(1,self.dummy_port, return_dict=True)
+		self.assertEqual(actual,expected)
+	
 
 	def tearDown(self):
 		self.dummy_port.close()
