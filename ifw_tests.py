@@ -336,29 +336,37 @@ class test_goto_filter_position(unittest.TestCase):
 		self.assertEqual(logging_actual_response, 'INFO')
 
 	def test_bad_position(self):
-		with self.assertLogs(level='ERROR') as cm:
-			fwc.logging.getLogger().error(fwc.goto_filter_position(9,self.dummy_port))
-			logging_actual_response = cm.output[0].split('.')[0]
-		self.assertEqual(logging_actual_response, 'ERROR:root:ER=5')
+		with self.assertRaises(ValueError):
+			fwc.goto_filter_position(9,self.dummy_port)
+		#with self.assertLogs(level='ERROR') as cm:
+		#	fwc.logging.getLogger().error(fwc.goto_filter_position(9,self.dummy_port))
+		#	logging_actual_response = cm.output[0].split('.')[0]
+		#self.assertEqual(logging_actual_response, 'ERROR:root:ER=5')
 
 	def test_other_errors(self):
 		dummy_serial.RESPONSES = {'WGOTO1': 'ER=4'}
-		with self.assertLogs(level='ERROR') as cm:
-			fwc.logging.getLogger().error(fwc.goto_filter_position(1,self.dummy_port))
-			logging_actual_response = cm.output[0].split('.')[0]
-		self.assertEqual(logging_actual_response, 'ERROR:root:ER=4')
+		with self.assertRaises(fwc.FilterwheelError):
+			fwc.goto_filter_position(1,self.dummy_port)
+		#with self.assertLogs(level='ERROR') as cm:
+		#	fwc.logging.getLogger().error(fwc.goto_filter_position(1,self.dummy_port))
+		#	logging_actual_response = cm.output[0].split('.')[0]
+		#self.assertEqual(logging_actual_response, 'ERROR:root:ER=4')
 
 		dummy_serial.RESPONSES = {'WGOTO1': 'ER=6'}
-		with self.assertLogs(level='ERROR') as cm:
-			fwc.logging.getLogger().error(fwc.goto_filter_position(1,self.dummy_port))
-			logging_actual_response = cm.output[0].split('.')[0]
-		self.assertEqual(logging_actual_response, 'ERROR:root:ER=6')
+		with self.assertRaises(fwc.FilterwheelError):
+			fwc.goto_filter_position(1,self.dummy_port)
+		#with self.assertLogs(level='ERROR') as cm:
+		#	fwc.logging.getLogger().error(fwc.goto_filter_position(1,self.dummy_port))
+		#	logging_actual_response = cm.output[0].split('.')[0]
+		#self.assertEqual(logging_actual_response, 'ERROR:root:ER=6')
 
 		dummy_serial.RESPONSES = {'WGOTO1': 'TEST ERROR'}
-		with self.assertLogs(level='CRITICAL') as cm:
-			fwc.logging.getLogger().critical(fwc.goto_filter_position(1,self.dummy_port))
-			logging_actual_response = cm.output[0].split(':')[0]
-		self.assertEqual(logging_actual_response, 'CRITICAL')
+		with self.assertRaises(fwc.FilterwheelError):
+			fwc.goto_filter_position(1,self.dummy_port)
+		#with self.assertLogs(level='CRITICAL') as cm:
+		#	fwc.logging.getLogger().critical(fwc.goto_filter_position(1,self.dummy_port))
+		#	logging_actual_response = cm.output[0].split(':')[0]
+		#self.assertEqual(logging_actual_response, 'CRITICAL')
 
 	def tearDown(self):
 		#close the dummy_port
@@ -410,10 +418,10 @@ class test_change_filter(unittest.TestCase):
 
 	def test_same_filter(self):
 		
-		with self.assertLogs(level='WARNING') as cm:
-			fwc.logging.getLogger().warning(fwc.change_filter(1, self.dummy_port, self.test_dict_ok))
+		with self.assertLogs(level='INFO') as cm:
+			fwc.logging.getLogger().info(fwc.change_filter(1, self.dummy_port, self.test_dict_ok))
 			logging_actual_response = cm.output[0].split(':')[0]
-		self.assertEqual(logging_actual_response, 'WARNING')
+		self.assertEqual(logging_actual_response, 'INFO')
 
 	def tearDown(self):
 		#close the dummy_port
