@@ -9,6 +9,7 @@ import serial # not a standard library
 import time
 import logging
 import dummy_serial
+import numpy as np
 
 def load_config(fileName, path='/.'):
 
@@ -30,7 +31,6 @@ def load_config(fileName, path='/.'):
 	"""
 	# Join the path and file name
 	direct = os.path.join(path,fileName)
-
 
 	#Check the path and file exists, throw OSError is not
 	path_bool = os.path.isdir(path)
@@ -71,8 +71,23 @@ def load_config(fileName, path='/.'):
 					config_dict[param_name] = True
 				if config_dict[param_name] == 'False':
 					config_dict[param_name] = False
+
+				# Try to identify lists by splitting on commas. Even single entries will succeed but will
+				#	only have one value e.g. ['target_name']. If more than one found try to convert to ints
+				#	or floats etc, and leave a a list of strings if not.
 				
-				pass
+				comma_split_list = config_dict[param_name].split(',')
+
+				if len(comma_split_list)>1:
+					try:
+						config_dict[param_name] = np.array(comma_split_list,dtype=int)
+					except:
+						try:
+							config_dict[param_name] = np.array(comma_split_list,dtype=float)
+						except:
+							config_dict[param_name] = np.array(comma_split_list)
+				else:
+					pass
 	
 	return config_dict
 """

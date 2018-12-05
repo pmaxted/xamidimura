@@ -72,6 +72,18 @@ import numpy
 
 logging.basicConfig(filename = 'logfiles/filter_wheel.log',filemode='w',level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
 
+class Error( Exception ):
+	"""Base class for exceptions in the script"""
+	pass
+
+class FilterwheelError(Error):
+	"""
+	Exception raised when there is an issue with there is a problem with the filter wheel
+	"""
+	def __init__(self, message):
+		#self.expression = expression
+		self.message = message
+
 def check_config_port_values_for_ifw(config_dict):
 	"""
 	Check that the values specified in the config file match what is expected by the filter wheel manual,
@@ -432,14 +444,19 @@ def goto_filter_position(new_position, initialised_port):
 		
 	if return_message == expected_return:
 			logging.info('Filter change successful. Current position: '+str(new_position))
+	
 	elif return_message == 'ER=4':
 			logging.error('ER=4. Wheel stuck in position, or moving slowly.')
+			raise FilterwheelError('ER=4. Wheel stuck in position, or moving slowly.')
 	elif return_message == 'ER=5':
-			logging.error('ER=5. Invalid position supplied')
+			logging.error('ER=5. Invalid filter position supplied')
+			raise ValueError('ER=5. Invalid filter position supplied')
 	elif return_message == 'ER=6':
 			logging.error('ER=6. WARNING! wheel slipping and taking too many step to next position')
+			raise FilterwheelError('ER=6. WARNING! wheel slipping and taking too many step to next position')
 	else:
 			logging.critical('Unexpected Error: ' + return_message)
+			raise FilterwheelError('Unexpected Error: ' + return_message)
 
 def end_serial_communication_close_port(initialised_port):
 	"""
@@ -566,6 +583,7 @@ def change_filter(new_filter, open_port, config_dict):
 	keyArr = numpy.array(list(config_dict))
 	# look for cases where the requested filter match the IDs, just pick one if more
 	#  than one match
+	a =[config_dict[i] == new_filter for i in config_dict]
 	matchFilt = keyArr[numpy.array([config_dict[i] == new_filter for i in config_dict])][0]
 	matchedPos = keyArr[numpy.array([config_dict[i] == matchFilt for i in config_dict])][0]
 
@@ -579,7 +597,7 @@ def change_filter(new_filter, open_port, config_dict):
 		goto_filter_position(matchedPos, open_port)
 
 	else:
-		logging.warning('Filter not changed. Current position: '+ str(filter_name))
+		logging.info('No Filter change required..')
 
 
 def filter_wheel_shutdown(open_port):
