@@ -31,7 +31,7 @@ Documentation and software for the Xamidimura telescopes
 
 
 #### Unit test scripts	  
-* **ifw_test.py** - contains unitest for filter wheel control functions (All functions tested apart from initialisation function). In a terminal use "python ifw_test.py" to run.  
+* **ifw_test.py** - contains unitest for filter wheel control functions (All functions tested apart from initialisations function). In a terminal use "python ifw_test.py" to run.  
 	
 * **test_focuser_control.py** - Unit tests for the focuser_control functions.  
                
@@ -51,7 +51,7 @@ Documentation and software for the Xamidimura telescopes
  then the RX filter will have an exposure time of 1 seconds, the GX filter an exposure time of 2 seconds and the BX filter an exposure time of 3 seconds.  
 * **FOCUS_POS** - A list of ideal focus positions for each filter. (works same way as exposure times)  
 
-* **N_PATT** - Use (array) element number to reference the pattern of filters to be used for the north telescope. e.g. if '''FILTERS RX, GX, BX  N_PATT 0,0,0,1,1,1,2,2,2'''  
+* **N_PATT** - Use (array) element number to reference the pattern of filters to be used for the north telescope. e.g. if ```FILTERS RX, GX, BX  N_PATT 0,0,0,1,1,1,2,2,2```  
 	the observing pattern will be [RX,RX,RX,GX,GX,GX,BX,BX,BX].  
 * **S_PATT** - Same as N_PATT but for south telescope.
 
@@ -64,33 +64,38 @@ As mentioned will contain the main functions to carry out the observing, and oth
 ### Things it will currently do
 - Currently can create fits file with only header information, store an observing record in the obslog2 table in the xamidimura database. The next file number is obtained by looking for the last used number in the directory where files are saved and adding 1.  
 
-- When the observing recipe is loaded, it takes the User defined patterns (N_PATT, S_PATT) and populates it with the require filters, exposure times, focus positions. Thought this would be the least effort for a user.  
+- When the observing recipe is loaded, it takes the User defined patterns (N_PATT, S_PATT) and populates it with the required filters, exposure times, focus positions. Thought this would be the least effort for a user.  
 
 - Image type is decided based on the first 4 letters of the target name e.g. BIAS, FLAT, DARK. If it doesn't match these three then it will assume it is a science frame. This way can have multiple BIAS/FLAT/DARK targets in the target info database and observing recipes.  
 
 - For one 'pattern' of exposures, i.e. one complete loop of N_PATT or S_PATT, the code will send request for an exposure to each telescope and get a status flag as a response. It uses asynchronous running to send the exposures, so one telescope does not need to wait for the other telescope to finish it's exposure before sending the new exposure request. During a pattern loop each telescope can take exposures independently. Need to workout how best to repeat the pattern.  
 
-- ** The code to change filter is not currently active + needs testing **  
+- **The code to change filter is not currently active + needs testing**  
 
 - The code waits for a response from the TCS after initially sending the exposure command, and then waits for the require exposure time. Need to do it this way, otherwise the function would time out for long exposures.  
 
 - Timeout on TCS is currently 60 seconds.  
 
-- ** Need to put in code to actually send TCS exposure request **  
+- **Need to put in code to actually send TCS exposure request**  
 
 - Valid response code from TCS are: 
-	'''0 = message received, exposure started  
-	   1 = exposure started, but ccd temperature is greater that -20 degrees.
-	   -3 = message received by TCS but exposure not started''' 
+	``` 
+	0 = message received, exposure started  
+	1 = exposure started, but ccd temperature is greater that -20 degrees.
+	-3 = message received by TCS but exposure not started
+	```  
 	   
 - If no response is received from the TCS, status is set to -5
 
 - Other status flags:  
-''' -1 = Exposure interupted from weather alert
+	``` 
+	-1 = Exposure interupted from weather alert
 	-2 = Exposure interupted non weather reason
 	-4 = Unexpected response from TCS
-	-6 = Problem with filter wheel (code not active)''
-	The code for the interuptions need to be written.  
+	-6 = Problem with filter wheel (code not active)
+	```  
+
+The code for the interuptions need to be written.  
 	
 - Exposure requests that are not completed (due to weather alert, TCS timeout etc) are noted in the observing log table, by fits headers are not saved.  
 
