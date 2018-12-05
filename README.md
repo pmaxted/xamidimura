@@ -53,8 +53,12 @@ Documentation and software for the Xamidimura telescopes
  then the RX filter will have an exposure time of 1 seconds, the GX filter an exposure time of 2 seconds and the BX filter an exposure time of 3 seconds.  
 * **FOCUS_POS** - A list of ideal focus positions for each filter. (works same way as exposure times)  
 
-* **N_PATT** - Use (array) element number to reference the pattern of filters to be used for the north telescope. e.g. if ```FILTERS RX, GX, BX  N_PATT 0,0,0,1,1,1,2,2,2```  
-	the observing pattern will be ```RX,RX,RX,GX,GX,GX,BX,BX,BX```  
+* **N_PATT** - Use (array) element number to reference the pattern of filters to be used for the north telescope. e.g. if
+	```
+	FILTERS RX, GX, BX
+	N_PATT 0,0,0,1,1,1,2,2,2
+	```  
+	the observing pattern will be ```RX,RX,RX,GX,GX,GX,BX,BX,BX```. The exposures and focus position will also do something similar.  
 	
 * **S_PATT** - Same as N_PATT but for south telescope.
 
