@@ -47,7 +47,7 @@ Documentation and software for the Xamidimura telescopes
 * **FILTERS** - A list of the filter names to be used in the observing pattern for either telescope.  
 * **EXPTIME** - A list of exposure times that correspond to each filter, e.g. if 
  ```FILTERS RX, GX, BX  
- EXPTIME 1, 2, 3```  
+	EXPTIME 1, 2, 3```  
  then the RX filter will have an exposure time of 1 seconds, the GX filter an exposure time of 2 seconds and the BX filter an exposure time of 3 seconds.  
 * **FOCUS_POS** - A list of ideal focus positions for each filter. (works same way as exposure times)  
 
