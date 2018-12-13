@@ -9,9 +9,11 @@ Documentation and software for the Xamidimura telescopes
 
 * **fits_file_tests** - A location to store the fits headers that are created. Again location can be moved later if necessary.  
 	
-* **logfiles** - Where logfiles from the different scripts are stored. (logfiles currently overwritten each time scripts are run.) Now contains weather.log as an example of how the weather information will be stored.  
+* **logfiles** - Where logfiles from the different scripts are stored. (logfiles currently overwritten each time scripts are run.) Now contains weather.log as an example of how the weather information will be stored. Also a plc.log file, which stores all messages which are generate by the plc communications.  
 
 * **obs_recipes** - Suggestion for where the observing recipes are kept.  
+
+* **plc_scripts** - Contains scripts which will be equivalent to the PHP scripts currently on the Gateway machine. These scripts will open/close the roof, get the roof/rain/plc status, swap to/from main/battery power etc. They use the roof_control_functions.py and PLC_interaction_function.py scripts. Also one of the first line of each script puts the these scripts in the PATH, so it can import the functions. Currently that path will need to set when the scripts are in the right place on the 'observer' machine.  
 
 
 ## Files
@@ -25,9 +27,11 @@ Documentation and software for the Xamidimura telescopes
 
 * **observing.py** - Will contain the main functions to carry out the observing, and other functions required by this main function. Currently can create fits file with only header information, store an observing record in the obslog2 table in the xamidimura database. No unit tests created yet.  
 
+* **PLC_interaction_functions.py** - Contains functions will will open/close the roof, get the roof/rain/plc status, swap to/from main/battery power etc. These functions can log message and print messages if required. **CURRENTLY just a copy of the old script. No new functions have been added, so the new tilt checks etc are not in place**  
 
-	
+* **roof_control_functions.py** - Equivalent to the 'intelligent_roof_controller_functions' script written in PHP on the gateway machine. Responsible for the low level communication with the PLC box. ** No new functions have been added, so the new tilt checks etc are not in place**   
 
+* **tcs_control.py** - Can control much of the communication with the TCS machine, both in terms of initial connection and then sending over subsequent commands. Note, most of this has only been tested by using the script to ssh into the gateway machine, tests to send the commands directly from the gateway will only be possible once the new machine (with a newer version of python) is ready.  
 
 
 #### Unit test scripts	  
@@ -46,18 +50,22 @@ Documentation and software for the Xamidimura telescopes
 #### Observing recipe parameters
 * **FILTERS** - A list of the filter names to be used in the observing pattern for either telescope.  
 * **EXPTIME** - A list of exposure times that correspond to each filter, e.g. if 
+	
 	```
 	FILTERS RX, GX, BX  
 	EXPTIME 1, 2, 3
-	```  
+	``` 
+	 
  then the RX filter will have an exposure time of 1 seconds, the GX filter an exposure time of 2 seconds and the BX filter an exposure time of 3 seconds.  
 * **FOCUS_POS** - A list of ideal focus positions for each filter. (works same way as exposure times)  
 
 * **N_PATT** - Use (array) element number to reference the pattern of filters to be used for the north telescope. e.g. if
+
 	```
 	FILTERS RX, GX, BX
 	N_PATT 0,0,0,1,1,1,2,2,2
 	```  
+
 	the observing pattern will be ```RX,RX,RX,GX,GX,GX,BX,BX,BX```. The exposures and focus position will also do something similar.  
 	
 * **S_PATT** - Same as N_PATT but for south telescope.
@@ -71,9 +79,11 @@ As mentioned will contain the main functions to carry out the observing, and oth
 ### Things it will currently do
 - Currently can create fits file with only header information, store an observing record in the obslog2 table in the xamidimura database. The next file number is obtained by looking for the last used number in the directory where files are saved and adding 1.  
 
+- The code will attempt to connect to the TCS machine, in preparation for taking exposures, slewing etc. and disconnect when finish. It will make three attempts to connect. Timeout is 60 secs on each.
+
 - When the observing recipe is loaded, it takes the User defined patterns (N_PATT, S_PATT) and populates it with the required filters, exposure times, focus positions. Thought this would be the least effort for a user.  
 
-- Image type is decided based on the first 4 letters of the target name e.g. BIAS, FLAT, DARK. If it doesn't match these three then it will assume it is a science frame. This way can have multiple BIAS/FLAT/DARK targets in the target info database and observing recipes.  
+- Image type is decided based on the first 4 letters of the target name e.g. BIAS, FLAT, DARK, THER. If it doesn't match these three then it will assume it is a object frame. This way can have multiple BIAS/FLAT/DARK/THERMAL targets in the target info database and observing recipes.  
 
 - For one 'pattern' of exposures, i.e. one complete loop of N_PATT or S_PATT, the code will send request for an exposure to each telescope and get a status flag as a response. It uses asynchronous running to send the exposures, so one telescope does not need to wait for the other telescope to finish it's exposure before sending the new exposure request. During a pattern loop each telescope can take exposures independently. Need to workout how best to repeat the pattern.  
 
@@ -101,9 +111,12 @@ As mentioned will contain the main functions to carry out the observing, and oth
 	-4 = Unexpected response from TCS
 	-6 = Problem with filter wheel (code not active)
 	```  
+Status codes are defined at the top of the script.
 
 The code for the interuptions need to be written.  
 	
 - Exposure requests that are not completed (due to weather alert, TCS timeout etc) are noted in the observing log table, by fits headers are not saved.  
+
+
 
 - No unit tests created yet.  

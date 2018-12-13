@@ -38,11 +38,19 @@ observing.py
 	
 	- get_fits_header_info(focuser_config,focuser_position, weather_list, expose_info, target_info)
 	
-	- get_obslog_info(fits_info_dict, CCDno, IMAGE_ID = 1)
+	- get_obslog_info(fits_info_dict, CCDno, IMAGE_ID, status, savefile=True)
 	
 	- get_next_file_number(CCDno, fits_file_dir = 'fits_file_tests/')
 	
 	- get_observing_recipe(target_name, path = 'obs_recipes/')
+	
+	- [async] take_exposure_north(obs_recipe, image_type, target_info, timeout_time=60)
+	
+	- [async] take_exposure_south(obs_recipe, image_type, target_info, timeout_time = 60)
+	
+	- [async] exposure_TCS_response(expOb, telescope, num)
+	
+	- [async] exposureTCSerrorcode(num, exptime,telescope)
 	
 	----------------------------------------------------------------------
 	Main Function
@@ -67,8 +75,15 @@ import logging
 import numpy as np
 import asyncio
 import timeout_decorator
-import dummy_serial
+import tcs_control as tcs
 
+STATUS_CODE_OK = 0
+STATUS_CODE_CCD_WARM = 1
+STATUS_CODE_WEATHER_INTERRUPT = -1
+STATUS_CODE_OTHER_INTERRUPT = -2
+STATUS_CODE_UNEXPECTED_RESPONSE = -4
+STATUS_CODE_NO_RESPONSE = -5
+STATUS_CODE_FILTER_WHEEL_TIMEOUT = -6
 
 
 
@@ -571,10 +586,10 @@ async def take_exposure_north(obs_recipe, image_type, target_info, timeout_time=
 		
 		except fwc.FilterwheelError:
 			logging.error('Problem with check/change filterwheel request')
-			status.set_result(-6)
+			status.set_result(STATUS_CODE_FILTER_WHEEL_TIMEOUT)
 		except timeout_decorator.TimeoutError():
 			logging.error('Timeout on filterwheel connection (120 sec)')
-			status.set_result(-6)
+			status.set_result(STATUS_CODE_FILTER_WHEEL_TIMEOUT)
 		"""
 
 		try:
@@ -588,7 +603,7 @@ async def take_exposure_north(obs_recipe, image_type, target_info, timeout_time=
 		
 		except asyncio.TimeoutError:
 			logging.error('TIMEOUT: No response from TCS. Exposure abandoned.')
-			status.set_result(-5)
+			status.set_result(STATUS_CODE_NO_RESPONSE)
 
 		#Do observing log and fits header
 		next_no2 = sort_all_logging_info(exp_objN,'target_class',focuser2_info,dbconn,dbcurs,status.result())
@@ -653,7 +668,7 @@ async def take_exposure_south(obs_recipe, image_type, target_info, timeout_time 
 		
 		except asyncio.TimeoutError:
 			logging.error('TIMEOUT: No response from TCS. Exposure abandoned.')
-			status.set_result(-5)
+			status.set_result(STATUS_CODE_NO_RESPONSE)
 			
 		
 		#Do observing log and fits header
@@ -685,7 +700,7 @@ async def exposure_TCS_response(expOb, telescope, num):
 	#set the start time for the exposure
 	expOb.set_start_time()
 	#SEND EXPOSURE COMMAND TO TCS - get status depending on response
-	num.set_result(0)#this will really be whatever the function returns to acknowledge command recieved
+	num.set_result(STATUS_CODE_OK)#this will really be whatever the function returns to acknowledge command recieved
 
 
 
@@ -711,25 +726,25 @@ async def exposureTCSerrorcode(num, exptime,telescope):
 		telescope - either North/South depending on the telescope doing the requesting
 	"""
 	#return num
-	if num.result() == 0 or num.result() == 1:
+	if num.result() == STATUS_CODE_OK or num.result() == STATUS_CODE_CCD_WARM:
 	
-		if num.result() == 1:
+		if num.result() == STATUS_CODE_CCD_WARM:
 			logging.warning('CCD Temp > -20')
 		#while [no weather alert]
 		await asyncio.sleep(exptime)# put in here something to stop this if there is a weather alert
 		logging.info('Exposure on '+telescope+' complete.')
 		#else:
-		#	num.set_result(-1)
+		#	num.set_result(STATUS_CODE_WEATHER_INTERRUPT)
 		#	logging.warning('Weather alert during exposure')
 		# or (-2 exposure interrupted - non weather)
-	elif num.result() == -3:
+	elif num.result() == STATUS_CODE_EXPOSURE_NOT_STARTED:
 		logging.error('Command recieved by TCS, but exposure not started')
 
 	else:
 		logging.error('Unexpected response')
-		num.set_result(-4)
+		num.set_result(STATUS_CODE_UNEXPECTED_RESPONSE)
 
-#def go_to_target(coordsArr,timeout=60):
+def go_to_target(coordsArr):
 	"""
 	Will do the necessary steps require to get the telescope to move to a new target position.
 	
@@ -746,17 +761,48 @@ async def exposureTCSerrorcode(num, exptime,telescope):
 	"""
 	Is roof open?
 	"""
+	"""
+	NEeed to change: Check current position, is it the same as new pos?
+	"""
+	
+	roof_open = True
+	
+	# Check the supplied coordinates are ok to be passed
+	try:
+		tcs.check_tele_coords(coordsArr, False)
+		vaild_coord = True
+	except:
+		logging.error('Target coordinates have wrong format for telescope.')
+		valid_coord =False
 
-	#if valid_coord == True and roof_open == True:
-		#"""
-		#send move telescope to coords command
-		#"""
-		#time_decorator
-		#print('Could pass the coords to mount')
+	"""
+	Some to check limits?
+	"""
 
-	#else:
-	#	print('Unable to move to target')
-	#	logging.error('Unable to move to target')
+	if valid_coord == True and roof_open == True and need_to_change == True:
+		
+		
+		try:
+			send_coords(coordsArr)
+		except timeout_decorator.TimeoutError:
+			logging.error('Request timed out. Could not pass coordinates to telescope.')
+		else:
+			print('Could pass the coords to mount')
+
+	else:
+		print('Unable to move to target')
+		logging.error('Unable to move to target')
+
+@timeout_decorator.timeout(60, use_signals=False)
+def send_coords(coords,equinox='J2000'):
+	"""
+	Once working this function will be what sends the target coordinates to the telescope.
+	 Once on the target, the telescope will start tracking it. A 60sec timeout is applied.
+	 
+	Assumes the coords are sent as RA/DEC with equinox=J2000
+	"""
+	respond = tcs.slew_or_track_target(coords, tcs_conn, equinox = equinox)
+
 
 
 def main():
@@ -803,8 +849,18 @@ def main():
 	
 
 	#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-
+	# Connect to the TCS machine - for exposures and telescope
+	#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	global tcs_conn
+	tcs_conn_tries=0
+	while tcs_conn_tries < 3:
+		try:
+			tcs_conn = tcs.open_TCS_ssh_connection()
+			open_to_TCS = True
+		except:
+			logging.error('Attempt to connect to TCS '+str(tcs_conn_tries+1)+'/3 has failed')
+			open_to_TCS = False
+			tcs_conn_tries += 1
 	#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	#Connect to table in the database, so that an observing log can be stored
 	#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -843,18 +899,20 @@ def main():
 		image_type = 'FLAT'
 	elif next_target_name[:4] == 'DARK' or next_target_name[:4] == 'Dark' or next_target_name[:4] == 'dark':
 		image_type = 'DARK'
+	elif next_target_name[:4] == 'THER' or next_target_name[:4] == 'Ther' or next_target_name[:4] == 'ther':
+		image_type = 'THERMAL'
 	else:
-		image_type = 'SCIENCE'
+		image_type = 'OBJECT'
 
 
 	
 	"""
 	Move telescope to the target
-	
+	"""
 	
 	test_coords = ['10:46:04', '-46:08,06']
-	#go_to_target()#target_class.coords)
-	"""
+	go_to_target(test_coords)#target_class.coords)
+	
 	
 	#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	#THen this will be part of the loop that runs when taking exposures
@@ -873,14 +931,22 @@ def main():
 	loop1.run_until_complete(asyncio.gather(taskS,taskN))
 	#i+=1
 	#test1()
-	
+
 	#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	#This is testing stuff to show all the rows in the obslog2 table
 	connect_database.show_all_rows_in_table(observe_log_DBtable,dbcurs)
 	connect_database.close_connection(dbconn,dbcurs)
 	#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-
+	# Close connection to TCS
+	tcs_close_tries = 0
+	while tcs_close_tries <3 and open_to_TCS == True:
+		
+		try:
+			tcs.close_TCS_connection(tcs_conn)
+		except:
+			logging.error('Unable to close connection to TCS')
+			tcs_close_tries +=1
+	#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 """
 def main()
 if __name__ == '__main__':
