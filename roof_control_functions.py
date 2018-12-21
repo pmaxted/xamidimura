@@ -15,9 +15,10 @@
 """
 
 import serial
+import settings_and_error_codes as set_err_codes
 
 # Configuration parameters
-PLC_COM_PORT = 'COM6'
+PLC_COM_PORT = 'COM6' #/dev/ttyS2
 PLC_BAUD_RATE = 9600
 PLC_PARITY = 'E'#'PARITY_EVEN'
 PLC_STOP_BITS = 2#'STOPBITS_TWO'
@@ -108,7 +109,7 @@ def plc_command_response(command=PLC_Status_Request):
 	if plc_string_is_valid(command):
 	
 	
-		open_port = serial.Serial(port = PLC_COM_PORT, baudrate = PLC_BAUD_RATE, parity=PLC_PARITY, stopbits = PLC_STOP_BITS, bytesize = PLC_CHARACTER_LENGTH,rtscts = True)
+		open_port = serial.Serial(port = PLC_COM_PORT, baudrate = PLC_BAUD_RATE, parity=PLC_PARITY, stopbits = PLC_STOP_BITS, bytesize = PLC_CHARACTER_LENGTH,rtscts = True, timeout = set_err_codes.plc_serial_port_timeout)
 		#???set stty settings?
 		
 		open_port.write(command.encode('utf-8'))
@@ -288,13 +289,52 @@ def plc_status_message(status):
 
 	return message
 
+def plc_status_tilt_status(plc_string):
+	"""
+	** NEW ** for Xamidimura telescope
+	
+	If
+		plc_string is a valid PLC roof status string for normal completion
+	then
+		return the current  as a decimal number
+	else
+		return 255
+	
+	PARAMETERs:
+	
+		plc_string = the response from the plc
+		
+	RETURN
+	
+		Either the current tilt status as D-memory 153, or 255
+		
+	**NOT TESTED***
+		
+	"""
+
+	if plc_string[-2:] == '*\r' and plc_string[0] == '@' and plc_string[:7] =='@00RD00':
+		frame = plc_string[:-4]
+		fcs = plc_string[-4:-2]
+		tilt_status = plc_string[19:22] # This really needs to be checked
+
+		x = ord('@')
+
+		for i in range(1,len(frame)):
+			x = x ^ ord(frame[i:i+1])
+
+		if int(fcs, 16) == x:
+			return int(tilt_status, 16)
+		else:
+			return 255
+	else:
+		return 255
 
 def plc_status_comms_timeout(plc_string):
 	"""
 	If
 		plc_string is a valid PLC roof status string for normal completion
 	then
-		return the current power timeout as a decimal number
+		return the current communication timeout as a decimal number
 	else
 		return 255
 	
@@ -313,7 +353,7 @@ def plc_status_comms_timeout(plc_string):
 	if plc_string[-2:] == '*\r' and plc_string[0] == '@' and plc_string[:7] =='@00RD00':
 		frame = plc_string[:-4]
 		fcs = plc_string[-4:-2]
-		timeout = plc_string[-7:-3] # This really needs to be checked
+		timeout = plc_string[15:19] # This really needs to be checked
 
 		x = ord('@')
 
@@ -388,7 +428,7 @@ def plc_status_status_code(plc_string):
 	if plc_string[-2:] == '*\r' and plc_string[0] == '@' and plc_string[:7] =='@00RD00':
 		frame = plc_string[:-4]
 		fcs = plc_string[-4:-2]
-		status = plc_string[-7:-3] # This really needs to be checked
+		status = plc_string[7:11] # This really needs to be checked
 
 		for i in range(1,len(frame)):
 			x = x ^ ord(frame[i:i+1])

@@ -27,11 +27,13 @@ Documentation and software for the Xamidimura telescopes
 
 * **observing.py** - Will contain the main functions to carry out the observing, and other functions required by this main function. Currently can create fits file with only header information, store an observing record in the obslog2 table in the xamidimura database. No unit tests created yet.  
 
-* **PLC_interaction_functions.py** - Contains functions will will open/close the roof, get the roof/rain/plc status, swap to/from main/battery power etc. These functions can log message and print messages if required. **CURRENTLY just a copy of the old script. No new functions have been added, so the new tilt checks etc are not in place**  
+* **PLC_interaction_functions.py** - Contains functions will will open/close the roof, get the roof/rain/plc status, swap to/from main/battery power etc. Have been modified from the original version. Messages are now logged, and errors (a user defined PLC_ERROR) are raised if a problem occurs instead of exiting Python. Function which check the status of something will return the info as a dictionary and not just print the messages to screen. **CURRENTLY No new functions have been added, so the new tilt checks etc are not in place**  
 
-* **roof_control_functions.py** - Equivalent to the 'intelligent_roof_controller_functions' script written in PHP on the gateway machine. Responsible for the low level communication with the PLC box. ** No new functions have been added, so the new tilt checks etc are not in place**   
+* **roof_control_functions.py** - Equivalent to the 'intelligent_roof_controller_functions' script written in PHP on the gateway machine. Responsible for the low level communication with the PLC box. Added a function to get the information containing the tilt bits, but not tested.  
 
-* **tcs_control.py** - Can control much of the communication with the TCS machine, both in terms of initial connection and then sending over subsequent commands. Note, most of this has only been tested by using the script to ssh into the gateway machine, tests to send the commands directly from the gateway will only be possible once the new machine (with a newer version of python) is ready.  
+* **settings_and_error_codes.py** - Somewhere to keep all the error code definitions, timeouts, etc so you don't nee to go hunting through all the code to find them. Plus, if they are used multiple times, only have to change them once. Can try to make error codes unique.  
+
+* **tcs_control.py** - Can control much of the communication with the TCS machine, both in terms of initial connection and then sending over subsequent commands. Note, most of this has only been tested by using the script to ssh into the gateway machine, tests to send the commands directly from the gateway will only be possible once the new machine (with a newer version of python) is ready. Now includes a function to obtain exposures  
 
 
 #### Unit test scripts	  
@@ -42,14 +44,14 @@ Documentation and software for the Xamidimura telescopes
 
 ## Observing recipes
 
-* So far one example 'test_target.obs', in the obs_recipes folder. Eventually have one for each target.  
+* So far one example 'test_target_single_Texp.obs', in the obs_recipes folder. Eventually have one for each target.  
 * Each file named with the target name.
 * Perhaps have a 'standard' recipe, which will be used if no recipe is found for a particular target.  
 * Some information still need to be sorted out e.g the IMG-RA/DEC values and how to store the comparison information.  
 
 #### Observing recipe parameters
 * **FILTERS** - A list of the filter names to be used in the observing pattern for either telescope.  
-* **EXPTIME** - A list of exposure times that correspond to each filter, e.g. if 
+* **EXPTIME** - A list of exposure times. The same exposure times will be used for simultaneous exposures on the North and South telescope. This list should be the same length as N_PATT and S_PATT
 	
 	```
 	FILTERS RX, GX, BX  
@@ -66,7 +68,7 @@ Documentation and software for the Xamidimura telescopes
 	N_PATT 0,0,0,1,1,1,2,2,2
 	```  
 
-	the observing pattern will be ```RX,RX,RX,GX,GX,GX,BX,BX,BX```. The exposures and focus position will also do something similar.  
+	the observing pattern will be ```RX,RX,RX,GX,GX,GX,BX,BX,BX```. The focus position will also do something similar.  For the exposure times a list such as ```1,1,1,2,2,2,3,3,3''' should be stated for the above observing pattern, but this will be the same pattern used for the South telescope.
 	
 * **S_PATT** - Same as N_PATT but for south telescope.
 
@@ -81,11 +83,12 @@ As mentioned will contain the main functions to carry out the observing, and oth
 
 - The code will attempt to connect to the TCS machine, in preparation for taking exposures, slewing etc. and disconnect when finish. It will make three attempts to connect. Timeout is 60 secs on each.
 
-- When the observing recipe is loaded, it takes the User defined patterns (N_PATT, S_PATT) and populates it with the required filters, exposure times, focus positions. Thought this would be the least effort for a user.  
+- When the observing recipe is loaded, it takes the User defined patterns (N_PATT, S_PATT) and populates it with the required filters, exposure times, focus positions. Thought this would be the least effort for a user. A full list of exposure times to match the obseerving pattern is required as the same time will for an exposure on both the North and South telescopes.  
 
-- Image type is decided based on the first 4 letters of the target name e.g. BIAS, FLAT, DARK, THER. If it doesn't match these three then it will assume it is a object frame. This way can have multiple BIAS/FLAT/DARK/THERMAL targets in the target info database and observing recipes.  
+- Image type is decided based on the first 4 letters of the target name e.g. BIAS, FLAT, DARK, THER. If it doesn't match these three then it will assume it is a object frame. This way can have multiple BIAS/FLAT/DARK/THERMAL targets in the target info database and observing recipes. Requests for DARK frames will be passed as THERMAL to the TCS. 
 
-- For one 'pattern' of exposures, i.e. one complete loop of N_PATT or S_PATT, the code will send request for an exposure to each telescope and get a status flag as a response. It uses asynchronous running to send the exposures, so one telescope does not need to wait for the other telescope to finish it's exposure before sending the new exposure request. During a pattern loop each telescope can take exposures independently. Need to workout how best to repeat the pattern.  
+- The code will pair exposure requests for the North and South telescope. Request to change the filters are done asynchronously, so one telescope does not need to wait for the other filter change to be complete. As the exposure
+	time are the same for both telescopes, the code only refers to the exposure pattern for the North telescope. The code will loop through the observing pattern. A status flag will be obtain for each exposure, both North and South. Need to workout how best to repeat the observing pattern.  
 
 - **The code to change filter is not currently active + needs testing**  
 
@@ -93,7 +96,7 @@ As mentioned will contain the main functions to carry out the observing, and oth
 
 - Timeout on TCS is currently 60 seconds.  
 
-- **Need to put in code to actually send TCS exposure request**  
+- Code to request TCS exposure is in place but needs to be tested. Need the code to handle a weather interuption, etc.    
 
 - Valid response code from TCS are: 
 	``` 
@@ -111,7 +114,7 @@ As mentioned will contain the main functions to carry out the observing, and oth
 	-4 = Unexpected response from TCS
 	-6 = Problem with filter wheel (code not active)
 	```  
-Status codes are defined at the top of the script.
+Status codes are defined in settings_and_error_codes.py.
 
 The code for the interuptions need to be written.  
 	
