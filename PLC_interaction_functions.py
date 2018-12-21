@@ -52,7 +52,10 @@ PLC_interaction_functions.py
 	- plc_set_power_timeout(timeout, print_messages=True, log_messages=True, exit_after=True)
 	
 	- plc_stop_roof(print_messages=True, log_messages=True, exit_after=True)
-
+	----------------------------------------------------------------------
+	NEW python functions
+	----------------------------------------------------------------------
+	- plc_is_roof_open(print_messages = True, log_messages = True)
 
 """
 
@@ -60,10 +63,21 @@ import serial
 import roof_control_functions as rcf
 import logging
 import sys
+import settings_and_error_codes as set_err_codes
 
 logging.basicConfig(filename = '/Users/Jessica/PostDoc/ScriptsNStuff/current_branch/xamidimura/logfiles/plc.log',filemode='w',level=logging.INFO, format='%(asctime)s  %(levelname)s %(message)s')
 
-def sort_messages(message, print_messages = True, log_messages = True):
+class PLC_ERROR(Exception):
+	"""
+	User defined errir
+	"""
+	def __init__(self,message):
+		self.message = message
+
+	def __str__(self):
+		return(repr(self.message))
+
+def sort_messages(message, print_messages = True, log_messages = True,level = 'error'):
 	"""
 	Will decide if a message needs to be printed to the terminal and/or logging. Can do both, just one of them or neither.
 	
@@ -78,7 +92,10 @@ def sort_messages(message, print_messages = True, log_messages = True):
 	if print_messages == True:
 		print(message)
 	if log_messages == True:
-		logging.error(message)
+		if level == 'error':
+			logging.error(message)
+		else:
+			logging.info(message)
 
 def get_D100_D102_status():
 	
@@ -101,19 +118,22 @@ def get_D100_D102_status():
 	RETURN:
 		
 		response - If the response from the PLC pass the check, then it will be returned, otherwise Python will 
-			exit.
+			raise a PLC_Error exception.
+			
+			
 	"""
 
 	# Get the current status of the command buffer words D-100 to D-102
 	response = rcf.plc_command_response(rcf.PLC_Command_Status_Request)
 
 	if rcf.plc_status_end_code(response):
-		sort_messages('Error getting roof status from PLC:'+ rcf.plc_status_error_message(rcf.plc_status_end_code(response)))
-		sys.exit(1)
+		logging.error('Error getting roof status from PLC:'+ rcf.plc_status_error_message(rcf.plc_status_end_code(response)))
+		raise PLC_ERROR('Error getting roof status from PLC:'+ rcf.plc_status_error_message(rcf.plc_status_end_code(response)))
+
 	else:
 		return response
 
-def split_up_response(response):
+def split_up_response(response, print_messages=True,log_messages=True):
 
 	"""
 	Takes a response message from the PLC and will split it up, and return the frame,
@@ -168,13 +188,13 @@ def split_up_response(response):
 			x = x ^ ord(frame[i:i+1])
 
 		if int('fcs_hex' != x):
-			sort_messages('Roof status FCS check fail: '+response)
-			sys.exit(1)
-		else:
-			sort_messages('Got invalid roof status from PLC: '+response)
-			sys.exit(1)
+			logging.error('Roof status FCS check fail: '+str(response))
+			raise PLC_ERROR('Roof status FCS check fail: '+str(response))
+	else:
+		logging.error('Got invalid roof status from PLC: '+str(response))
+		raise PLC_ERROR('Got invalid roof status from PLC: '+str(response))
 
-		return frame, status_hex,power_timeout_hex, comms_timeout_hex, fcs_hex
+	return frame, status_hex,power_timeout_hex, comms_timeout_hex, fcs_hex
 
 def create_and_send_new_command(status_hex,power_timeout_hex,comms_timeout_hex):
 	"""
@@ -200,10 +220,11 @@ def create_and_send_new_command(status_hex,power_timeout_hex,comms_timeout_hex):
 	cmd = rcf.plc_insert_fcs(cmd)
 	response = rcf.plc_command_response(cmd)
 	if response != rcf.PLC_Roof_Command_Response_OK:
-		sort_messages('Command failed:'+response)
-		sys.exit(1)
+		logging.error('Command failed:'+str(response))
+		raise PLC_ERROR('Command failed:'+str(response))
 
-def plc_close_roof(print_messages = True, log_messages = True, exit_after = True):
+
+def plc_close_roof(print_messages = True, log_messages = True):
 
 	"""
 	Issue the commands to close the roof via the PLC box
@@ -215,18 +236,9 @@ def plc_close_roof(print_messages = True, log_messages = True, exit_after = True
 	
 	*** DOES NOT CHECK IF THE TELESCOPE IS GOING TO BE HIT ****
 	
-	Will used sys.exit(1) if there is an issue, otherwise sys.exit(0)
-	
-	PARAMETERS:
-		
-		print_messages = If True, messages will be printed to the terminal. Default is true, so that
-							scripts called from terminal will display messages.
-		log_messages = If True, messages will be logged in the file plc.log.
-		
-		exit_after = If True, will use sys.exit(0) to exit the script when successfully complete, but
-			not if it is set to False. Again, useful if begin called from an executable script.
-		
-		messages can be both printed and logged.
+	RETURN
+	 
+		PLC_CODE_OK, from the settings and errors codes script, to show that the code has completed
 	
 	"""
 
@@ -234,37 +246,34 @@ def plc_close_roof(print_messages = True, log_messages = True, exit_after = True
 
 	response = rcf.plc_command_response(rcf.PLC_Request_Roof_Status)
 	if rcf.plc_status_end_code(response):
-		sort_messages('Error getting roof status from PLC:'+ rcf.plc_status_error_message(rcf.plc_status_end_code(response)))
-		sys.exit(1)
+		logging.error('Error getting roof status from PLC:'+ rcf.plc_status_error_message(rcf.plc_status_end_code(response)))
+		raise PLC_ERROR('Error getting roof status from PLC:'+ rcf.plc_status_error_message(rcf.plc_status_end_code(response)))
 	
 	# Pickout the roof status part of the response
 	roof_status = rcf.plc_status_status_code(response)
 	# Check the roof is set for remote control
 	if rcf.int_bit_is_set(roof_status, rcf.PLC_Roof_Remote_Control) == False:
-		sort_messages('PLC is not under remote control.')
-		sys.exit(1)
+		sort_messages('PLC is not under remote control.', print_messages=print_messages, log_messages=log_messages)
+		raise PLC_ERROR('PLC is not under remote control.')
 
 	# Check if the motor stop is pressed.
 	if rcf.int_bit_is_set(roof_status, rcf.PLC_Roof_Motor_Stop_Pressed) == True:
-		sort_messages('PLC motor stop is pressed')
-		sys.exit(1)
+		logging.error('PLC motor stop is pressed')
+		raise PLC_ERROR('PLC motor stop is pressed')
 
 	# Check to see if the AC motor is being used. If it is check for power failure
 	#  or that the AC motor has tripped
 	if rcf.int_bit_is_set(roof_status, rcf.PLC_Roof_DC_Motor_In_Use) == False:
 		if rcf.int_bit_is_set(roof_status, rcf.PLC_Roof_Power_Failure) == True:
-			sort_messages('Power failure and AC motor selected')
-			sys.exit(1)
+			logging.error('Power failure and AC motor selected')
+			raise PLC_ERROR('Power failure and AC motor selected')
 
 		if rcf.int_bit_is_set(roof_status, rcf.PLC_Roof_AC_Motor_Tripped) == True:
-			sort_messages('AC motor has tripped.')
-			sys.exit(1)
+			logging.error('AC motor has tripped.')
+			raise PLC_ERROR('AC motor has tripped.')
 
 	# Get the current status of the command buffer words D-100 to D-102
-	response = hex(rcf.plc_command_response(rcf.PLC_Command_Status_Request))
-	if rcf.plc_status_end_code(response):
-		sort_messages('Error getting roof status from PLC:'+ rcf.plc_status_error_message(rcf.plc_status_end_code(response)))
-		sys.exit(1)
+	response = get_D100_D102_status()
 
 	frame, status_hex,power_timeout_hex, comms_timeout_hex, fcs_hex = split_up_response(response)
 
@@ -277,162 +286,180 @@ def plc_close_roof(print_messages = True, log_messages = True, exit_after = True
 
 	create_and_send_new_command(status_hex,power_timeout_hex,comms_timeout_hex)
 
-	if exit_after == True:
-		sys.exit(0)
+	return set_err_codes.PLC_CODE_OK
 
 
-def plc_get_plc_status(print_messages = True, log_messages = True):
+def plc_get_plc_status(log_messages = True):
 
 	"""
 	Issue the commands the get the status of the plc from the plc box
 	
 	PARAMETERS:
+	
+		log_messages = If True, messages will be logged in the file plc.log. Error messages will still be
+			logged even if false.
 		
-		print_messages = If True, messages will be printed to the terminal. Default is true, so that
-							scripts called from terminal will display messages.
-		log_messages = If True, messages will be logged in the file plc.log.
+	RETURN 
+	
+		plc_status_dict = Dictionary containing the current response code, status ans operating mode of the 
+			plc box.
 	"""
 
 	response = rcf.plc_command_response(rcf.PLC_Status_Request)
-	sort_messages('PLC response code:'+response)
-	sort_messages('PLC status: '+rcf.plc_status_message(rcf.plc_status_request_response_plc(response)))
-	sort_messages('PLC operating mode: '+rcf.plc_mode(response))
+	plc_status_dict = dict()
+
+	plc_status_dict['PLC_Response_Code'] = response
+	plc_status_dict['PLC_Status'] = rcf.plc_status_message(rcf.plc_status_request_response_plc(response))
+	plc_status_dict['PLC_Operating_Mode'] = rcf.plc_mode(response)
+
+	if log_messages == True:
+		dict_keys_list = list(plc_status_dict.keys())
+		for i in range(len(plc_status_dict.keys())):
+			logging.info(dict_keys_list[i] +' = '+ plc_status_dict[dict_keys_list[i]])
+
+	return plc_status_dict
 
 
-def plc_get_rain_status(print_messages = True, log_messages = True):
+def plc_get_rain_status(log_messages = True):
 	"""
 	Issue commands to get the rain status from the PLC box
 	
 	PARAMETERS:
+	
+		log_messages = If True, messages will be logged in the file plc.log. Error messages will still be
+			logged even if false.
 		
-		print_messages = If True, messages will be printed to the terminal. Default is true, so that
-							scripts called from terminal will display messages.
-		log_messages = If True, messages will be logged in the file plc.log.
+	RETURN:
+	
+		rain_status_dict =  A dictionary containing the response code, the rain status (either 'Check
+		 Rain' or 'Ignore Rain') and the PC Comm and Power Failure timeouts.
 	"""
-	print(rcf.PLC_Request_Roof_Status)
+	
 	response = rcf.plc_command_response(rcf.PLC_Request_Roof_Status)
-	sort_messages('PLC response code: '+str(response))
+	rain_status_dict = dict()
+	rain_status_dict['Response Code'] = response
+	
 	if rcf.plc_status_end_code(response):
-		sort_messages('Error getting roof status from PLC:'+ rcf.plc_status_error_message(rcf.plc_status_end_code(response)))
-		sys.exit(1)
+		logging.error('Error getting roof status from PLC:'+ rcf.plc_status_error_message(rcf.plc_status_end_code(response)),print_messages=print_messages, log_messages=log_messages)
+		raise PLC_ERROR('Error getting roof status from PLC:'+ rcf.plc_status_error_message(rcf.plc_status_end_code(response)))
+	
 	else:
 		roof_status = rcf.plc_status_status_code(response)
-		sort_messages('Response: '+str(response))
+		rain_status_dict = dict()
 		if rcf.hex_bit_is_set(roof_status,rcf.PLC_CMD_BIT_RAIN) == True:
-			sort_messages('PLC_Check_Rain')
+			rain_status_dict['Rain_status'] = 'Check Rain'
 		else:
-			sort_messages('PLC_Ignore_Rain')
-	sort_messages('PLC PC communications timeout: '+rcf.plc_status_comms_timeout(response))
-	sort_messages('PLC Power failure timeout: '+rcf.plc_status_power_timeout(response))
+			rain_status_dict['Rain_status'] = 'Ignore Rain'
+
+	rain_status_dict['PC_Communication_Timeout'] = rcf.plc_status_comms_timeout(response)
+	rain_status_dict['Power_Failure_Timeout'] = rcf.plc_status_comms_timeout(response)
+
+	if log_messages == True:
+		dict_keys_list = list(rain_status_dict.keys())
+		for i in range(len(rain_status_dict.keys())):
+			logging.info(dict_keys_list[i] +' = '+ rain_status_dict[dict_keys_list[i]])
+
+	return rain_status_dict
 
 
-
-
-def plc_get_roof_status(print_messages = True, log_messages = True):
+def plc_get_roof_status(log_messages=True):
 	"""
-	Sends the commands needed to get the roof status from the PLC box
+	Sends the commands needed to get the roof status from the PLC box. Will also log the information
 
 	PARAMETERS:
-		
-		print_messages = If True, messages will be printed to the terminal. Default is true, so that
-							scripts called from terminal will display messages.
-		log_messages = If True, messages will be logged in the file plc.log.
+	
+		log_messages = If true, the status of the various parameters will be logged. Error messages will still be
+			logged even if false.
+	
+	RETURN
+	
+		roof_dict = A dictionary containing the status of all parameters relating to the roof.
 		
 	"""
-
+	
 	response = rcf.plc_command_response(rcf.PLC_Request_Roof_Status)
-	sort_messages('PLC response code: '+str(response))
+	roof_dict = dict()
+	roof_dict['Response Code'] = response
 	if rcf.plc_status_end_code(response):
-		sort_messages('Error getting roof status from PLC:'+ rcf.plc_status_error_message(rcf.plc_status_end_code(response)))
-		sys.exit(1)
+		logging.error('Error getting roof status from PLC:'+ rcf.plc_status_error_message(rcf.plc_status_end_code(response)), print_messages=print_messages, log_messages=log_messages)
+		raise RunError('Error getting roof status from PLC:'+ rcf.plc_status_error_message(rcf.plc_status_end_code(response)))
+
 	else:
 		roof_status = rcf.plc_status_status_code(response)
 
 		# Roof Closed?
-		if rcf.int_bit_is_set(roof_status, rcf.PLC_Roof_Closed):
-			sort_messages('PLC_Roof_Closed')
+		roof_dict['Roof_Closed'] = rcf.int_bit_is_set(roof_status, rcf.PLC_Roof_Closed)
+
 		# Roof open?
-		if rcf.int_bit_is_set(roof_status, rcf.PLC_Roof_Open):
-			sort_messages('PLC_Roof_Open')
+		roof_dict['Roof_Open'] = rcf.int_bit_is_set(roof_status, rcf.PLC_Roof_Open)
 
 		# Roof moving?
-		if rcf.int_bit_is_set(roof_status, rcf.PLC_Roof_Moving):
-			sort_messages('PLC_Roof_Moving')
+		roof_dict['Roof_Moving'] = rcf.int_bit_is_set(roof_status, rcf.PLC_Roof_Moving)
 
 		#Check Roof control Remote/Manual
 		if rcf.int_bit_is_set(roof_status,rcf.PLC_Roof_Remote_Control):
-			sort_messages('PLC_Roof_Remote_Control')
+			roof_dict['Roof_Control'] = 'Remote'
 		else:
-			sort_messages('PLC_Roof_Manual_Control')
+			roof_dict['Roof_Control'] = 'Manual'
 
 		# Check rain status
-		if rcf.int_bit_is_set(roof_status,rcf.PLC_Roof_Raining):
-			sort_messages('PLC_Roof_Raining')
-		else:
-			sort_messages('PLC_Roof_No_Rain')
+		roof_dict['Roof_Raining'] = rcf.int_bit_is_set(roof_status,rcf.PLC_Roof_Raining)
 
 		# Check for forced rain closure
-		if rcf.int_bit_is_set(roof_status, rcf.PLC_Roof_Forced_Rain_Closure):
-			sort_messages('PLC_Roof_Forced_Rain_Closure')
-		else:
-			sort_messages('PLC_Roof_No_Forced_Rain_Closure')
+		roof_dict['Roof_Forced_Close'] = rcf.int_bit_is_set(roof_status, rcf.PLC_Roof_Forced_Rain_Closure)
 
 		# Building Temp High:
-		if rcf.int_bit_is_set(roof_status, rcf.PLC_Roof_Building_Temp_High):
-			sort.messages('PLC_Roof_Building_Temp_High')
+		roof_dict['High_Building_Temp'] = rcf.int_bit_is_set(roof_status, rcf.PLC_Roof_Building_Temp_High)
 
 		# extractor fan
 		if rcf.int_bit_is_set(roof_status, rcf.PLC_Roof_Extractor_Fan_On):
-			sort.messages('PLC_Roof_Extractor_Fan_On')
+			roof_dict['Extrator_Fan'] = 'On'
 		else:
-			sort_messages('PLC_Roof_Extractor_Fan_Off')
+			roof_dict['Extrator_Fan'] = 'Off'
 
 		# motor stop is pressed
 		if rcf.int_bit_is_set(roof_status, rcf.PLC_Roof_Motor_Stop_Pressed):
-			sort_messages('PLC_Roof_Motor_Stop_Pressed')
+			roof_dict['Roof_Motor_Stop'] = 'Pressed'
 		else:
-			sort_messages('PLC_Roof_Motor__Stop_Not_Pressed')
+			roof_dict['Roof_Motor_Stop'] = 'Not Pressed'
 
 		# AC Motor has tripped
-		if rcf.int_bit_is_set(roof_status, PLC_Roof_AC_Motor_Tripped):
-			sort_messages('PLC_Roof_AC_Motor_Tripped')
-		else:
-			sort_messages('PLC_Roof_AC_Motor_OK_No_Trip')
+		roof_dict['Roof_AC_Motor_Tripped'] = rcf.int_bit_is_set(roof_status, PLC_Roof_AC_Motor_Tripped)
 
 		# Using DC motor
 		if rcf.int_bit_is_set(roof_status, rcf.PLC_Roof_DC_Motor_In_Use):
-			sort_messages('PLC_Roof_DC_Motor_In_Use')
+			roof_dict['Roof_Motor_Being_Used'] = 'DC'
 		else:
-			sort_messages('PLC_Roof_AC_Motor_In_Use')
+			roof_dict['Roof_Motor_Being_Used'] = 'AC'
 
 
 		#Close Proximity
-		if rcf.int_bit_is_set(roof_status, rcf.PLC_Roof_Close_Proximity):
-			sort_messages('PLC_Roof_Close_Proximity')
+		roof_dict['Roof_Close_Proximity'] = rcf.int_bit_is_set(roof_status, rcf.PLC_Roof_Close_Proximity)
 
 		#Power failure
-		if rcf.int_bit_is_set(roof_status, rcf.PLC_Roof_Power_Failure):
-			sort_messages('PLC_Power_Failure')
-
+		roof_dict['Roof_Power_Failure'] = rcf.int_bit_is_set(roof_status, rcf.PLC_Roof_Power_Failure)
 
 		#Force_Power_closure
-		if rcf.int_bit_is_set(roof_status,rcf.PLC_Roof_Forced_Power_Closure):
-			sort_messages('PLC_Roof_Forced_Power_Closure')
+		roof_dict['Roof_Forced_Power_Closure'] = rcf.int_bit_is_set(roof_status,rcf.PLC_Roof_Forced_Power_Closure)
 
 		# Open proximity
-		if rcf.int_bit_is_set(roof_status, rcf.PLC_Roof_Open_Proximity):
-			sort_messages('PLC_Roof_Open_Proximity')
+		roof_dict['Roof_Open_Proximity'] = rcf.int_bit_is_set(roof_status, rcf.PLC_Roof_Open_Proximity)
 
 		#Door open
-		if rcf.int_bit_is_set(roof_status, rcf.PLC_Roof_Door_Open):
-			sort_messages('PLC_Roof_Door_Open')
+		roof_dict['Roof_Door_Open'] = rcf.int_bit_is_set(roof_status, rcf.PLC_Roof_Door_Open)
 
-	sort_messages('PLC PC communications timeout: '+rcf.plc_status_comms_timeout(response))
-	sort_messages('PLC Power failure timeout: '+rcf.plc_status_power_timeout(response))
+	roof_dict['PC_Communication_Timeout'] = rcf.plc_status_comms_timeout(response)
+	roof_dict['Power_Failure_Timeout'] = rcf.plc_status_comms_timeout(response)
+
+	if log_messages == True:
+		dict_keys_list = list(roof_dict.keys())
+		for i in range(len(roof_dict.keys())):
+			logging.info(dict_keys_list[i] +' = '+ str(roof_dict[dict_keys_list[i]]))
+
+	return roof_dict
 
 
-
-def plc_open_roof(print_messages = True, log_messages = True, exit_after=True):
+def plc_open_roof():
 	"""
 	Send the commands to open the roof. Will check the following:
 	 - The roof interface is set to remote
@@ -440,43 +467,36 @@ def plc_open_roof(print_messages = True, log_messages = True, exit_after=True):
 	 - The rain sensor is not triggered
 	 - There is no power failure
 	 
-	PARAMETERS:
-		
-		print_messages = If True, messages will be printed to the terminal. Default is true, so that
-							scripts called from terminal will display messages.
-		log_messages = If True, messages will be logged in the file plc.log.
-		
-		exit_after = If True, will use sys.exit(0) to exit the script when successfully complete, but
-			not if it is set to False. Again, useful if begin called from an executable script.
-		
-		messages can be both printed and logged.
+	 RETURN
+	 
+		PLC_CODE_OK, from the settings and errors codes script, to show that the code has completed
 	 
 	"""
 	response = rcf.plc_command_response(rcf.PLC_Request_Roof_Status)
 	if rcf.plc_status_end_code(response):
-		sort_messages('Error getting roof status from PLC:'+ rcf.plc_status_error_message(rcf.plc_status_end_code(response)))
-		sys.exit(1)
+		logging.error('Error getting roof status from PLC:'+ rcf.plc_status_error_message(rcf.plc_status_end_code(response)))
+		raise PLC_ERROR('Error getting roof status from PLC:'+ rcf.plc_status_error_message(rcf.plc_status_end_code(response)))
 
 	roof_status = rcf.plc_status_status_code(response)
 
 	if int_bit_is_set(roof_status, rcf.PLC_Roof_Remote_Control) == False:
-		sort_messages('PLC not under roemote control')
-		sys.exit(1)
+		logging.error('PLC not under remote control')
+		raise PLC_ERROR('PLC not under remote control')
 
 	if rcf.int_bit_is_set(roof_status, rcf.PLC_Roof_Remote_Control):
-		sort_messages('PLC motor stop is pressed')
-		sys.exit(1)
+		logging.error('PLC motor stop is pressed')
+		raise PLC_ERROR('PLC motor stop is pressed')
 
 	if rcf.int_bit_is_set(roof_status, rcf.PLC_Roof_Raining):
-		sort_messages("It's RAINING!!")
-		sys.exit(1)
+		logging.error("It's RAINING!!")
+		raise PLC_ERROR("It's RAINING!!")
 
 	if rcf.int_bit_is_set(roof_status, rcf.PLC_Roof_Power_Failure):
-		sort_messages('Power failure')
-		sys.exit(1)
+		logging.error('Power failure')
+		raise PLC_ERROR('Power failure')
 
 	# Get the current status of the command buffer words D-100 to D-102
-	response = get_D100_D102_status
+	response = get_D100_D102_status()
 
 	frame, status_hex,power_timeout_hex, comms_timeout_hex, fcs_hex = split_up_response(response)
 
@@ -490,21 +510,16 @@ def plc_open_roof(print_messages = True, log_messages = True, exit_after=True):
 	#Create new command, sent it and deal with response
 	create_and_send_new_command(status_hex,power_timeout_hex,comms_timeout_hex)
 
-	if exit_after == True:
-		sys.exit(0)
+	return set_err_codes.PLC_CODE_OK
 
-def plc_request_roof_control(print_messages = True, log_messages = True, exit_after=True):
+def plc_request_roof_control():
 	"""
 	Send the commands to request control of the roof
 	
-	PARAMETERS:
+	RETURN
+	 
+		PLC_CODE_OK, from the settings and errors codes script, to show that the code has completed
 		
-		print_messages = If True, messages will be printed to the terminal. Default is true, so that
-							scripts called from terminal will display messages.
-		log_messages = If True, messages will be logged in the file plc.log.
-		
-		exit_after = If True, will use sys.exit(0) to exit the script when successfully complete, but
-			not if it is set to False. Again, useful if begin called from an executable script.
 	"""
 	response = get_D100_D102_status()
 
@@ -521,21 +536,16 @@ def plc_request_roof_control(print_messages = True, log_messages = True, exit_af
 	status_hex = rcf.unset_hex_bit(status_hex, rcf.PLC_CMD_BIT_REQ_CONTROL)
 	create_and_send_new_command(status_hex,power_timeout_hex,comms_timeout_hex)
 
-	if exit_after == True:
-		sys.exit(0)
 
-def plc_reset_watchdog(print_messages = True, log_messages = True, exit_after=True):
+	return set_err_codes.PLC_CODE_OK
+
+def plc_reset_watchdog():
 	"""
 	Send the commands to reset the watchdog for the PLC box
 	
-	PARAMETERS:
-		
-		print_messages = If True, messages will be printed to the terminal. Default is true, so that
-							scripts called from terminal will display messages.
-		log_messages = If True, messages will be logged in the file plc.log.
-			
-		exit_after = If True, will use sys.exit(0) to exit the script when successfully complete, but
-			not if it is set to False. Again, useful if begin called from an executable script.
+	RETURN
+	 
+		PLC_CODE_OK, from the settings and errors codes script, to show that the code has completed
 	
 	"""
 	
@@ -549,22 +559,17 @@ def plc_reset_watchdog(print_messages = True, log_messages = True, exit_after=Tr
 	
 	create_and_send_new_command(status_hex,power_timeout_hex,comms_timeout_hex)
 	
-	if exit_after == True:
-		sys.exit(0)
+	return set_err_codes.PLC_CODE_OK
 
 
-def plc_select_battery(print_messages = True, log_messages = True, exit_after=True):
+def plc_select_battery():
 	"""
 	Send the commands to select the battery for the PLC box
 	
-	PARAMETERS:
+	RETURN
+	 
+		PLC_CODE_OK, from the settings and errors codes script, to show that the code has completed
 		
-		print_messages = If True, messages will be printed to the terminal. Default is true, so that
-							scripts called from terminal will display messages.
-		log_messages = If True, messages will be logged in the file plc.log.
-		
-		exit_after = If True, will use sys.exit(0) to exit the script when successfully complete, but
-			not if it is set to False. Again, useful if begin called from an executable script.
 	"""
 	
 	response = get_D100_D102_status()
@@ -579,21 +584,17 @@ def plc_select_battery(print_messages = True, log_messages = True, exit_after=Tr
 
 	create_and_send_new_command(status_hex,power_timeout_hex,comms_timeout_hex)
 	
-	if exit_after == True:
-		sys.exit(0)
+	return set_err_codes.PLC_CODE_OK
 
-def plc_select_mains(print_messages = True, log_messages = True, exit_after=True):
+
+def plc_select_mains():
 	"""
 	Send the commands to select the mains for the PLC box
 	
-	PARAMETERS:
+	RETURN
+	 
+		PLC_CODE_OK, from the settings and errors codes script, to show that the code has completed
 		
-		print_messages = If True, messages will be printed to the terminal. Default is true, so that
-							scripts called from terminal will display messages.
-		log_messages = If True, messages will be logged in the file plc.log.
-		
-		exit_after = If True, will use sys.exit(0) to exit the script when successfully complete, but
-			not if it is set to False. Again, useful if begin called from an executable script.
 	"""
 	
 	response = get_D100_D102_status()
@@ -608,28 +609,26 @@ def plc_select_mains(print_messages = True, log_messages = True, exit_after=True
 
 	create_and_send_new_command(status_hex,power_timeout_hex,comms_timeout_hex)
 	
-	if exit_after == True:
-		sys.exit(0)
+	return set_err_codes.PLC_CODE_OK
 
-def plc_set_comms_timeout(timeout, print_messages = True, log_messages = True, exit_after=True):
+
+def plc_set_comms_timeout(timeout):
 	"""
 	Send the commands to set the comms timeout for the PLC box
 	
 	PARAMETERS:
 		
 		timeout = timeout time in seconds, between 1 and 9999
-		
-		print_messages = If True, messages will be printed to the terminal. Default is true, so that
-							scripts called from terminal will display messages.
-		log_messages = If True, messages will be logged in the file plc.log.
-		
-		exit_after = If True, will use sys.exit(0) to exit the script when successfully complete, but
-			not if it is set to False. Again, useful if begin called from an executable script.
+
+	RETURN
+	 
+		PLC_CODE_OK, from the settings and errors codes script, to show that the code has completed
+
 	"""
 	
 	if timeout < 1 or timeout >9999:
-		sort_messages('Invalid timeout value, 1 <= Timeout < 9999')
-		sys.exit(1)
+		logging.error('Invalid timeout value, 1 <= Timeout < 9999')
+		raise ValueError('Invalid timeout value, 1 <= Timeout < 9999')
 
 	response = get_D100_D102_status()
 
@@ -649,10 +648,9 @@ def plc_set_comms_timeout(timeout, print_messages = True, log_messages = True, e
 	status_hex = rcf.unset_hex_bit(status_hex, rcf.PLC_CMD_BIT_SET_COMMS_DELAY)
 	create_and_send_new_command(status_hex,power_timeout_hex,comms_timeout_hex)
 
-	if exit_after == True:
-		sys.exit(0)
+	return set_err_codes.PLC_CODE_OK
 
-def plc_set_power_timeout(timeout, print_messages = True, log_messages = True, exit_after=True):
+def plc_set_power_timeout(timeout):
 	"""
 	Send the commands to set the power timeout for the PLC box
 	
@@ -660,18 +658,16 @@ def plc_set_power_timeout(timeout, print_messages = True, log_messages = True, e
 		
 		timeout = timeout time in seconds, between 1 and 9999
 		
-		print_messages = If True, messages will be printed to the terminal. Default is true, so that
-							scripts called from terminal will display messages.
-		log_messages = If True, messages will be logged in the file plc.log.
-		
-		exit_after = If True, will use sys.exit(0) to exit the script when successfully complete, but
-			not if it is set to False. Again, useful if begin called from an executable script.
+	RETURN
+	 
+		PLC_CODE_OK, from the settings and errors codes script, to show that the code has completed
 	"""
 	
 	if timeout < 1 or timeout >9999:
-		sort_messages('Invalid timeout value, 1 <= Timeout < 9999')
-		sys.exit(1)
+		logging.error('Invalid timeout value, 1 <= Timeout < 9999')
+		raise ValueError('Invalid timeout value, 1 <= Timeout < 9999')
 
+			
 	response = get_D100_D102_status()
 
 	frame, status_hex,power_timeout_hex, comms_timeout_hex, fcs_hex = split_up_response(response)
@@ -690,23 +686,19 @@ def plc_set_power_timeout(timeout, print_messages = True, log_messages = True, e
 	status_hex = rcf.unset_hex_bit(status_hex, rcf.PLC_CMD_BIT_SET_POWER_DELAY)
 	create_and_send_new_command(status_hex,power_timeout_hex,comms_timeout_hex)
 
-	if exit_after == True:
-		sys.exit(0)
+	return set_err_codes.PLC_CODE_OK
 
 
-def plc_stop_roof(print_messages = True, log_messages = True, exit_after=True):
+def plc_stop_roof():
 
 	"""
 	Send the commands to stop the roof to the PLC box
 	
-	PARAMETERS:
+	RETURN
+	 
+		PLC_CODE_OK, from the settings and errors codes script, to show that the code has completed
 		
-		print_messages = If True, messages will be printed to the terminal. Default is true, so that
-							scripts called from terminal will display messages.
-		log_messages = If True, messages will be logged in the file plc.log.
 		
-		exit_after = If True, will use sys.exit(0) to exit the script when successfully complete, but
-			not if it is set to False. Again, useful if begin called from an executable script.
 	"""
 	response = get_D100_D102_status()
 
@@ -721,7 +713,20 @@ def plc_stop_roof(print_messages = True, log_messages = True, exit_after=True):
 	
 	create_and_send_new_command(status_hex,power_timeout_hex,comms_timeout_hex)
 
+	return set_err_codes.PLC_CODE_OK
 
-	if exit_after == True:
-		sys.exit(0)
 
+
+def plc_is_roof_open():
+	"""
+	Will just check if the open roof bit is set
+	"""
+
+	response = rcf.plc_command_response(rcf.PLC_Request_Roof_Status)
+	if rcf.plc_status_end_code(response):
+		logging.error('Error getting roof status from PLC:'+ rcf.plc_status_error_message(rcf.plc_status_end_code(response)))
+		raise PLC_ERROR('Error getting roof status from PLC:'+ rcf.plc_status_error_message(rcf.plc_status_end_code(response)))
+	else:
+		roof_open = rcf.int_bit_is_set(roof_status, rcf.PLC_Roof_Open)
+
+	return roof_open

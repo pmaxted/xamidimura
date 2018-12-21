@@ -10,7 +10,8 @@ from pexpect import pxssh
 import pexpect
 import getpass
 import logging
-#import timeout_decorator
+import settings_and_error_codes as set_err_code
+import timeout_decorator
 
 logging.basicConfig(filename= 'testlog.log', filemode = 'w', level=logging.INFO, 
 	format='%(asctime)s %(levelname)s %(message)s')
@@ -19,7 +20,7 @@ logging.basicConfig(filename= 'testlog.log', filemode = 'w', level=logging.INFO,
   TCS connection functions
  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 """
-def open_gateway_ssh_connection(gate_timeout):
+def open_gateway_ssh_connection(gate_timeout=set_err_code.tcs_coms_timeout):
 	""" 
 	Setup an ssh connection to the gateway/observer machine. Again this won't be necessary when the script
 	 is actually on the machine.
@@ -45,7 +46,7 @@ def open_gateway_ssh_connection(gate_timeout):
 	return s
 
 
-def open_TCS_ssh_connection(connect_to_gateway_first = False, timeout=60):
+def open_TCS_ssh_connection(connect_to_gateway_first = False, timeout=set_err_code.tcs_coms_timeout):
 
 	""" 
 	
@@ -162,12 +163,12 @@ def close_TCS_connection(open_conn):
 		open_conn - the pxssh connection that was previously opened
 	"""
 	
-	#print('Closing connection to TCS...')
+	print('Closing connection to TCS...')
 	logging.info('Closing connection to TCS...')
 	open_conn.sendline('exit')
 	open_conn.prompt()
 	logging.info('Connection to tcs closed.')
-	#print('Connection to tcs closed.')
+	print('Connection to tcs closed.')
 
 def close_gateway_ssh(open_conn):
 	"""
@@ -178,10 +179,10 @@ def close_gateway_ssh(open_conn):
 	
 		open_conn - the pxssh connection that was previously opened
 	"""
-	#print('Logging out of gateway...')
+	print('Logging out of gateway...')
 	logging.info('Logging out of gateway...')
 	open_conn.logout()
-	#print('Gateway connection closed')
+	print('Gateway connection closed')
 	logging.info('Gateway connection closed')
 
 """ 
@@ -189,7 +190,7 @@ def close_gateway_ssh(open_conn):
   Commands to interact with telescope on TCS over ssh
  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 """
-
+@timeout_decorator(set_err_code.tcs_coms_timeout, use_signals=False)
 def send_command(command, open_conn, expected_prompt = '[wasp@tcs ~]$'):
 	""" 
 	Send a 'command' to the TCS computer over the 'open_conn' ssh connection.
@@ -541,7 +542,7 @@ def check_tele_coords(coords, is_alt_az):
 			if valid_Coords ==False:
 				raise ValueError('Invalid Coordinates provided')
 		
-def slew_or_track_target(coords, open_conn, do_check =True, track_target=True, is_alt_az = False, equinox='J2000'):
+def slew_or_track_target(coords, open_conn, track_target=True, is_alt_az = False, equinox='J2000'):
 
 	""" 
 	Send the command require to get the telescope to point at a target,
@@ -573,8 +574,7 @@ def slew_or_track_target(coords, open_conn, do_check =True, track_target=True, i
 	 	
 	"""
 	#Check the coordinates that have been pas are valid values
-	if do_check == True:
-		check_tele_coords(coords, is_alt_az)
+	check_tele_coords(coords, is_alt_az)
 	
 	if track_target == False:
 		command_str = 'slew '
@@ -599,9 +599,12 @@ def slew_or_track_target(coords, open_conn, do_check =True, track_target=True, i
 	#J2000 is the default, and the RA/DEC values are assumed to be J2000 is not specified
 	if is_alt_az == False and equinox != 'J2000':
 		command_str += ' '+equinox
-
-
-	target = send_command(command_str, open_conn)
+	
+	try:
+	#Send the command to the TCS	
+		target = send_command(command_str, open_conn)
+	except timeout_decorator.TimeoutError:
+		logging.critical('Failed to contact TCS')
 
 	return target
 
@@ -661,10 +664,76 @@ def apply_offset_to_tele(ra_alt_off, dec_az_off, open_conn, units='arcsec', is_a
 #  Functions to send exposure commands - not sure how these work with new system
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-#def tcs_exposure_request(type, duration, number = 1)
-#	"""
-#	Ask the 
-#	"""
+def tcs_exposure_request(type, duration = 0, number = 1):
+	"""
+	Send the expose command to the TCS, along with the exposure type number of exposures and their 
+	 duration. The supplied 'type' will be checked to make sure it is a valid type. Note 'dark' type
+	 will be relabelled as 'thermal'.
+	
+	The expose command will get all of the CCD to expose simultaneously. If specified, number will
+	be taken sequentially, waiting for each to read out before starting the next.
+	
+	Duration is required for all exposure except 'bias'. 
+	
+	THERMAL - A thermal (dark) exposure. The shutter will remain closed, and the CCD will integrate
+		for the given duration, and then be read out.
+		
+	BIAS - A bias frame. The shutter will remain closed, and the CCD flushed and immediately read 
+		out.
+		
+	FLAT - A flat field. The same as flagged as a flat field in the FITS headers.
+	
+	OBJECT - A target frame. The shutter will be opened and the CCD integrated for the given duration.
+	
+	
+	PARAMETERS:
+	
+		type = the type of exposures wanted. A valid list includes 'thermal', 'dark', 'bias', 'flat', 
+			and 'object'
+			
+		duration = the length of the exposure in seconds.
+		
+		number = the number of exposures wanted. The default will be '1' as this is want will be requested
+			by the main observing script
+	"""
+
+	valid_types = ['thermal','dark', 'bias', 'flat','object']
+	valid = type in valid_types
+	if type == 'dark':
+		type = 'thermal'
+
+	if number <= 1:
+		logging.error('Invalid number of exposures requested')
+		return respond = set_err_code.STATUS_CODE_EXPOSURE_NOT_STARTED
+
+	if duration <=0:
+		logging.error('Invalid exposure time requested')
+		return respond = set_err_code.STATUS_CODE_EXPOSURE_NOT_STARTED
+
+	command_str = 'expose ' + type
+	if number != 1:
+		command_str += ' '+str(number)
+	if type != 'bias':
+		command_str += ' ' + str(duration)
+		
+		
+	respond = send_command(command_str, open_conn)
+	good_response = respond == 0
+
+	if good_response:
+		respond = set_err_code.STATUS_CODE_OK
+
+	cam_temp = get_camera_status[2]
+	if good_repsonse and cam_temp>-20:
+		respond = set_err_code.STATUS_CODE_CCD_WARM
+
+	else:
+		respond = set_err_code.STATUS_CODE_EXPOSURE_NOT_STARTED
+
+
+	return respond
+
+	
 
 def stopcam(open_conn):
 

@@ -1,4 +1,4 @@
-s"""
+"""
 common.py
 Jessica A. Evans
 15/10/2018

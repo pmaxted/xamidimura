@@ -44,13 +44,17 @@ observing.py
 	
 	- get_observing_recipe(target_name, path = 'obs_recipes/')
 	
-	- [async] take_exposure_north(obs_recipe, image_type, target_info, timeout_time=60)
+	- take_exposure(obs_recipe, image_type, target_info, timeout_time=set_err_code.telescope_coms_timeout)
 	
-	- [async] take_exposure_south(obs_recipe, image_type, target_info, timeout_time = 60)
+	- [async] change_filters(filter_name, ifw_port, ifw_config,status)
 	
-	- [async] exposure_TCS_response(expOb, telescope, num)
+	- exposure_TCS_response(expObN, expObS, timeout)
 	
-	- [async] exposureTCSerrorcode(num, exptime,telescope)
+	- exposureTCSerrorcode(statN,statS, exptime)
+	
+	- go_to_target(coordsArr)
+	
+	- send_coords(coords,equinox='J2000')
 	
 	----------------------------------------------------------------------
 	Main Function
@@ -76,14 +80,22 @@ import numpy as np
 import asyncio
 import timeout_decorator
 import tcs_control as tcs
+import roof_control_functions as rcf
+import PLC_interaction_functions as plc
+import settings_and_error_codes as set_err_code
 
+# Status code for taking exposure
 STATUS_CODE_OK = 0
 STATUS_CODE_CCD_WARM = 1
 STATUS_CODE_WEATHER_INTERRUPT = -1
 STATUS_CODE_OTHER_INTERRUPT = -2
+STATUS_CODE_EXPOSURE_NOT_STARTED = -3
 STATUS_CODE_UNEXPECTED_RESPONSE = -4
 STATUS_CODE_NO_RESPONSE = -5
 STATUS_CODE_FILTER_WHEEL_TIMEOUT = -6
+
+#pass_coord_attempts = 2
+#tcs_conn_tries_total =3
 
 
 
@@ -334,6 +346,7 @@ def get_obslog_info(fits_info_dict, CCDno, IMAGE_ID,status,savefile=True):
 	
 	
 	"""
+
 	#IMAGE_ID = '{0:>010}'.format(IMAGE_ID)
 	obslog_dict = {'IMAGE_ID': int(str(IMAGE_ID)+str(CCDno)),
 	'CCD_ID'     : str(CCDno),
@@ -469,6 +482,9 @@ def get_observing_recipe(target_name, path = 'obs_recipes/'):
 	 
 	Note the observing recipes are assumed to be saved in a file with a name format of
 		'target_name'.obs
+		
+	** NOTE The same exposure times are used for the North and South Exposures - Recommend
+	 using the same filter pattern in both telescopes **
 	 
 	PARAMETERS:
 	
@@ -492,15 +508,18 @@ def get_observing_recipe(target_name, path = 'obs_recipes/'):
 	try:
 		observing_recipe['EXPTIME'] = np.array(observing_recipe['EXPTIME'], dtype=float)
 	except:
-		logging.error('Observing recipe exposure times in wron format')
+		logging.error('Observing recipe exposure times in wrong format')
+
+	if len(observing_recipe['EXPTIME']) != len(observing_recipe['N_PATT']) or len(observing_recipe['EXPTIME']) != len(observing_recipe['S_PATT']):
+		logging.error('Number of Exposure times does not match the number of filters in the filter pattern.')
 	
 	try:
 		# Create the full lists and add to the dictionary
 		n_filt = np.take(observing_recipe['FILTERS'], observing_recipe['N_PATT'])
 		s_filt = np.take(observing_recipe['FILTERS'], observing_recipe['S_PATT'])
 		
-		n_expo = np.take(observing_recipe['EXPTIME'], observing_recipe['N_PATT'])
-		s_expo = np.take(observing_recipe['EXPTIME'], observing_recipe['S_PATT'])
+		n_expo = observing_recipe['EXPTIME']
+		s_expo = observing_recipe['EXPTIME']
 		
 		n_focus = np.take(observing_recipe['FOCUS_POS'], observing_recipe['N_PATT'])
 		s_focus = np.take(observing_recipe['FOCUS_POS'], observing_recipe['S_PATT'])
@@ -540,14 +559,17 @@ def get_observing_recipe(target_name, path = 'obs_recipes/'):
 
 		return observing_recipe
 
-async def take_exposure_north(obs_recipe, image_type, target_info, timeout_time=60):
+def take_exposure(obs_recipe, image_type, target_info, timeout_time=set_err_code.telescope_coms_timeout):
 	
 	"""
-	Part of the functions used to execute the exposures, in this cas for the North-telescope. Need to add the actual
-	 call to the TCS and get response function.
+	Part of the functions used to execute the exposures Need to add the actual call to the 
+	 TCS and get response function.
 	 
-	For the North-telescope, this will loop through the expanded filter pattern in the observing recipe and run
-	 an exposure for each.
+	For both telescopes, this will loop through the expanded filter pattern in the observing recipe and run
+	 an exposure for each. Filters for each will be change simultaneously.
+	 
+	It will take the infomation for the North telescope to dictate the exposure time length, (will be the same for south telescope). Both telescopes use the same exposure time because of how the 'expose' command
+		is define on the TCS computer. It exposes both camera for a set time, and changing this will be complex
 	
 	 
 	Possible error codes logged from exposure request:
@@ -568,114 +590,62 @@ async def take_exposure_north(obs_recipe, image_type, target_info, timeout_time=
 		target_info = infomation loaded from the target database about the object being observed.
 	
 	"""
-	
+	global next_no1
 	global next_no2
 	for j in range(len(obs_recipe['N_FILT'])):
 		exp_objN = exposure_obj(obs_recipe['N_EXPO'][j],obs_recipe['N_FILT'][j],image_type,2, ifw2_config['name'], next_no2)
-		
-		#Have to initialise command that will be set in other async functions
-		status = asyncio.Future()
-		"""
-		#change filter wheel to appropriate filter if need be:
-		# uncomment when open port available
-		try:
-			fwc.change_filter(exp_objN.filter, ifw2_port, ifw2_config)
-			# Don't think need to wait for the filter wheel, because this is built into to got position
-			# function, in the filter wheel control functions. No other commands are sent until that function
-			# receives the expected response from the filterwheel
-		
-		except fwc.FilterwheelError:
-			logging.error('Problem with check/change filterwheel request')
-			status.set_result(STATUS_CODE_FILTER_WHEEL_TIMEOUT)
-		except timeout_decorator.TimeoutError():
-			logging.error('Timeout on filterwheel connection (120 sec)')
-			status.set_result(STATUS_CODE_FILTER_WHEEL_TIMEOUT)
-		"""
-
-		try:
-			# First send the command to the telescope and expect an '0' acknowledgement if it was received
-			#  and started
-			await asyncio.wait_for(exposure_TCS_response(exp_objN,'North',status), timeout=timeout_time)
-			# This function waits for a time equal to the exposure time, in case a weather alert is received
-			#  during the exposure. Need to have the two stages otherwise there would be a timeout error for
-			#  long exposure (i.e. > that set timeout)
-			await exposureTCSerrorcode(status,exp_objN.exptime,'North')
-		
-		except asyncio.TimeoutError:
-			logging.error('TIMEOUT: No response from TCS. Exposure abandoned.')
-			status.set_result(STATUS_CODE_NO_RESPONSE)
-
-		#Do observing log and fits header
-		next_no2 = sort_all_logging_info(exp_objN,'target_class',focuser2_info,dbconn,dbcurs,status.result())
-
-async def take_exposure_south(obs_recipe, image_type, target_info, timeout_time = 60):
-	"""
-	Part of the functions used to execute the exposures, in this cas for the South-telescope. Need to add the actual
-	 call to the TCS and get response function.
-	 
-	For the South-telescope, this will loop through the expanded filter pattern in the observing recipe and run
-	 an exposure for each.
-	 
-	 
-	 Possible error codes logged from exposure request:
-		0 if exposure command is received, exposure successful
-		1 if CCD temp > -20
-		-1 weather alert received, exposure aborted
-		-2 exposure aborted, other reason
-		-3 if recieve but exposure not started
-		-4 Unexpected response from TCS
-		-5 Timeout from TCS (60sec)
-	 
-	PARAMETERS
-	
-		obs_recipe = A loaded observing recipe, load from a file using the get_observing_recipe function. Requires
-			the exposure list, filter list and list of focus positions.
-		image_type = The type of image being taken, e.g. SCIENCE, BIAS, FLAT...
-		target_info = infomation loaded from the target database about the object being observed.
-	
-	"""
-	global next_no1
-	for j in range(len(obs_recipe['S_FILT'])):
 		exp_objS = exposure_obj(obs_recipe['S_EXPO'][j],obs_recipe['S_FILT'][j],image_type,1, ifw1_config['name'], next_no1)
 
-		#Have to initialise command that will be set in other async functions
-		status = asyncio.Future()
 		"""
+		#Change the filters if need be, don't want to have to wait for one filter to change before starting
+		#  on the second, so the asyncio module will allow the to be change simultaneously
+		filter_loop1 = asyncio.get_event_loop()
+		filterS = filter_loop1.create_task(change_filters(exp_objS.filter, ifw1_port, ifw1_confi,statusS))
+		filterN = filter_loop1.create_task(change_filters(exp_objN.filter, ifw2_port, ifw2_config,statusN))
+		filter_loop1.run_until_complete(asyncio.gather(filterS,filterN))
+		"""
+
+		try:
+			# First send the command to the telescope and expect an '0' acknowledgement if it was received
+			#  and started.
+			statusN, statusS = exposure_TCS_response(exp_objN,exp_objS, timeout=timeout_time)
+			# This function waits for a time equal to the exposure time, in case a weather alert is received
+			#  during the exposure. Need to have the two stages otherwise there would be a timeout error for
+			#  long exposure (i.e. > that set timeout)
+			statusN, statusS = exposureTCSerrorcode(statusN,statusS, exp_objN.exptime)
+		
+		except TimeoutError:
+			logging.error('TIMEOUT: No response from TCS. Exposure abandoned.')
+			statusS = set_err_code.STATUS_CODE_NO_RESPONSE
+			statusN = set_err_code.STATUS_CODE_NO_RESPONSE
+
+		#Do observing log and fits header
+		next_no1 = sort_all_logging_info(exp_objS,'target_class',focuser1_info,dbconn,dbcurs,statusS)
+		next_no2 = sort_all_logging_info(exp_objN,'target_class',focuser2_info,dbconn,dbcurs,statusN)
+
+async def change_filters(filter_name, ifw_port, ifw_config,status):
+		"""
+		Allows both filterwheels to change the filter with having to wait for the other filterwheel.
+		"""
+
 		#change filter wheel to appropriate filter if need be:
 		# uncomment when open port available
 		try:
-			timeout_decorator.timeout(120)(fwc.change_filter(exp_objS.filter, ifw1_port, ifw1_config))
+			#will need to check this
+			await asyncio.wait_for(fwc.change_filter(filter_name, ifw_port, ifw_config))
 			# Don't think need to wait for the filter wheel, because this is built into to got position
 			# function, in the filter wheel control functions. No other commands are sent until that function
 			# receives the expected response from the filterwheel
 		
 		except fwc.FilterwheelError:
-			logging.error('Problem with check/change filterwheel request')
-			status.set_result(-6)
-		execpt timeout_decorator.TimeoutError()
-			logging.error('Timeout on filterwheel connection (120 sec)')
-			status.set_result(-6)
-		"""
-			
-		try:
-			# First send the command to the telescope and expect an '0' acknowledgement if it was received
-			#  and started
-			await asyncio.wait_for(exposure_TCS_response(exp_objS,'South',status), timeout=timeout_time)
-			# This function waits for a time equal to the exposure time, in case a weather alert is received
-			#  during the exposure. Need to have the two stages otherwise there would be a timeout error for
-			#  long exposure (i.e. > that set timeout)
-			await exposureTCSerrorcode(status,exp_objS.exptime,'South')
-		
-		except asyncio.TimeoutError:
-			logging.error('TIMEOUT: No response from TCS. Exposure abandoned.')
-			status.set_result(STATUS_CODE_NO_RESPONSE)
-			
-		
-		#Do observing log and fits header
-		next_no1 = sort_all_logging_info(exp_objS,'target_class',focuser1_info,dbconn,dbcurs,status.result())
+			logging.error('Problem with check/change filterwheel request: ' + ifw_config[name])
+			status.set_result(set_err_code.STATUS_CODE_FILTER_WHEEL_TIMEOUT)
+		except timeout_decorator.TimeoutError():
+			logging.error('Timeout on filterwheel connection (120 sec) for filterwheel: '+ifw_config[name])
+			status.set_result(set_err_code.STATUS_CODE_FILTER_WHEEL_TIMEOUT)
 
 
-async def exposure_TCS_response(expOb, telescope, num):
+def exposure_TCS_response(expObN, expObS, timeout):
 	"""
 	Send command to TCS to carry out exposure. Will expect an immediate response to be returned.
 	 Response will be
@@ -690,21 +660,29 @@ async def exposure_TCS_response(expOb, telescope, num):
 
 	PARAMETERS
 	
-		expOb - an exposure time object, to have access to the exposure time, and to set the start time
+		expObN - an exposure object for north tele, to have access to the exposure time, and to set the start time
+		expObS - an exposure object for South tele, to have access to the exposure time, and to set the start time
 		telescope - either North/South depending on the telescope doing the requesting
 		num - the error code. Is a asyncio future so is declared in a previous function and
 				is initially set here.
 	"""
 	
-	logging.info('Starting ' + str(expOb.exptime) + ' sec exposure on '+telescope)
+	logging.info('Starting ' + str(expObN.exptime) + ' sec exposure')
 	#set the start time for the exposure
-	expOb.set_start_time()
+	expObN.set_start_time()
+	expObS.set_start_time()
+	
 	#SEND EXPOSURE COMMAND TO TCS - get status depending on response
-	num.set_result(STATUS_CODE_OK)#this will really be whatever the function returns to acknowledge command recieved
+	tcs.exposure_request(expObN.image_type, exp_objN.exptime)
+	
+	statN = set_err_code.STATUS_CODE_OK#this will really be whatever the function returns to acknowledge command recieved
+	statS = set_err_code.STATUS_CODE_OK
+
+	return statN, statS
 
 
 
-async def exposureTCSerrorcode(num, exptime,telescope):
+def exposureTCSerrorcode(statN,statS, exptime):
 	"""
 	This will look at the response recieved from the TCS and take action as appropriate, mainly creating
 	 logging messages. If the exposure was started successfully (0 or 1) then it will wait for the 
@@ -726,23 +704,31 @@ async def exposureTCSerrorcode(num, exptime,telescope):
 		telescope - either North/South depending on the telescope doing the requesting
 	"""
 	#return num
-	if num.result() == STATUS_CODE_OK or num.result() == STATUS_CODE_CCD_WARM:
+	OK_to_Exp_North = statN == set_err_code.STATUS_CODE_OK or statN == set_err_code.STATUS_CODE_CCD_WARM
+	OK_to_Exp_South = statS == set_err_code.STATUS_CODE_OK or statS == set_err_code.STATUS_CODE_CCD_WARM
+	if OK_to_Exp_North or OK_to_Exp_South:
 	
-		if num.result() == STATUS_CODE_CCD_WARM:
-			logging.warning('CCD Temp > -20')
+		if statN == set_err_code.STATUS_CODE_CCD_WARM:
+			logging.warning('North CCD Temp > -20')
+		if statS == set_err_code.STATUS_CODE_CCD_WARM:
+			logging.warning('South CCD Temp > -20')
 		#while [no weather alert]
-		await asyncio.sleep(exptime)# put in here something to stop this if there is a weather alert
-		logging.info('Exposure on '+telescope+' complete.')
+		# change to using the wait command on the TCS
+		time.sleep(exptime)# put in here something to stop this if there is a weather alert
+		logging.info('Exposure complete.')
 		#else:
-		#	num.set_result(STATUS_CODE_WEATHER_INTERRUPT)
+		#	num.set_result(set_err_code.STATUS_CODE_WEATHER_INTERRUPT)
 		#	logging.warning('Weather alert during exposure')
-		# or (-2 exposure interrupted - non weather)
-	elif num.result() == STATUS_CODE_EXPOSURE_NOT_STARTED:
+		# or (set_err_code.STATUS_CODE_OTHER_INTERRUPT exposure interrupted - non weather)
+	elif statN == set_err_code.STATUS_CODE_EXPOSURE_NOT_STARTED or statS == set_err_code.STATUS_CODE_EXPOSURE_NOT_STARTED:
 		logging.error('Command recieved by TCS, but exposure not started')
 
 	else:
 		logging.error('Unexpected response')
-		num.set_result(STATUS_CODE_UNEXPECTED_RESPONSE)
+		statN = set_err_code.STATUS_CODE_UNEXPECTED_RESPONSE
+		statS = set_err_code.STATUS_CODE_UNEXPECTED_RESPONSE
+
+	return statN, statS
 
 def go_to_target(coordsArr):
 	"""
@@ -757,52 +743,133 @@ def go_to_target(coordsArr):
 	"""
 	Valid coords? Check limits
 	"""
+	# Check the supplied coordinates are ok to be passed
+	try:
+		tcs.check_tele_coords(coordsArr, False)
+		valid_coord = True
+	except:
+		logging.error('Target coordinates have wrong format for telescope.')
+		valid_coord = False
+	"""
+	NEeed to change: Check current position, is it the same as new pos?
+	"""
+	# Get current telescope pointing, do we need to change position?
+	current_ra_dec = tcs.get_tel_target[0:2]
+	if current_ra_dec == coordsArr:
+		logging.info('Same coordinates, do not need to move target')
+		need_to_change = False
+	else:
+		need_to_change = True
 
 	"""
 	Is roof open?
 	"""
-	"""
-	NEeed to change: Check current position, is it the same as new pos?
-	"""
+
+
 	
-	roof_open = True
 	
-	# Check the supplied coordinates are ok to be passed
+	# Check that the roof is open, first get status
 	try:
-		tcs.check_tele_coords(coordsArr, False)
-		vaild_coord = True
+		roof_open_bool = plc.is_roof_open()
+
 	except:
-		logging.error('Target coordinates have wrong format for telescope.')
-		valid_coord =False
+		logging.critical('Cannot communicate with PLC, cannot tell roof status')
+		"""**** CLOSE UP****"""
 
-	"""
-	Some to check limits?
-	"""
-
-	if valid_coord == True and roof_open == True and need_to_change == True:
-		
-		
+	if roof_open_bool == False:
+		# get roof status
 		try:
-			send_coords(coordsArr)
-		except timeout_decorator.TimeoutError:
-			logging.error('Request timed out. Could not pass coordinates to telescope.')
+			roof_dict = plc.plc_get_roof_status(log_messages = True)
+		except:
+			logging.critical('Unable to communicate with PLC box: Cannot open roof')
+		
 		else:
-			print('Could pass the coords to mount')
+			safe_to_open = False
+			# Check if it's raining, no point trying to open
+			if roof_dict['Roof_Raining'] == True:
+				logging.critical("PLC Thinks it's raining, unsafe to open")
+			
+			
+			# It might not be open, but it might be opening or closing..
+			if roof_dict['Roof_Moving'] == True:
+				# While it's still move keep checking the roof status and when it has stopped
+				# moving
+				while roof_dict['Roof_Moving'] == True:
+					roof_dict = plc.plc_get_roof_status(log_messages = False)
+					if roof_dict['Roof_Closed'] == True:
+						logging.info('Roof now closed')
+						#still unsafe to open
+					elif roof_dict['Roof_Open'] == True
+						logging.info('Roof now open')
+						roof_open_bool = True
+						# but no point setting 'safe to open' or it will try to open an already open roof
+			
+			if roof_dict['Roof_Control'] == 'Remote' and roof_dict['Roof_Motor_Stop'] == 'Not Pressed' and roof_dict['Roof_Power_Failure'] == False:
+				# The conditions above need to be true before the roof will open
+				safe_to_open = True
+			else:
+				logging.critical('Check roof control, Motor Stop and Power failure')
+				#pack up and go to bed, although might be able to do something about the remote thing?
 
+
+			if safe_to_open == True
+				# Try to open the roof
+				try:
+					plc.plc_open_roof()
+				
+				except:
+					logging.critical('Cannot open roof')
+				else:
+					# Keep an eye on the roof status to check when it has stopped moving
+					roof_dict = plc.plc_get_roof_status(log_messages = False)
+					roof_moving_timeout_count = 0
+					
+					while roof_dict['Roof_Moving'] == True and roof_moving_timeout_count<set_err_code.roof_moving_timeout:
+						time.sleep(1)
+						roof_dict = plc.plc_get_roof_status(log_messages = False)
+						roof_moving_timeout_count += 1
+					if roof_moving_timeout_count = set_err_code.roof_moving_timeout:
+						# Probably have some alert here...
+						logging.error('Timeout on the roof movement')
+			else:
+				"""
+				PUT THIS CODE IN HERE
+				"""
+				#if not safe, put telescope to bed...
+				print('Need to close up for now....')
+
+
+	
+	if valid_coord == True and roof_open_bool == True and need_to_change == True:
+		
+		pass_coord_attempts_count = 0
+		while pass_coord_attempts_count < pass_coord_attempts:
+			try:
+				send_coords(coordsArr)
+			except timeout_decorator.TimeoutError:
+				pass_coord_attempts_count += 1
+				logging.error('Request timed out. Could not pass coordinates to telescope.')
+			else:
+				print('Could pass the coords to mount')
+				break
+		if pass_coord_attempts_count == pass_coord_attempts:
+			logging.critical('Too many attempts to pass telescope coords! Closing up')
+			#Add in code to close
+			
 	else:
-		print('Unable to move to target')
-		logging.error('Unable to move to target')
+		print('No coordinate change applied')
+		logging.error('No coordinate change applied')
 
-@timeout_decorator.timeout(60, use_signals=False)
+@timeout_decorator.timeout(set_err_code.telescope_coms_timeout, use_signals=False)
 def send_coords(coords,equinox='J2000'):
 	"""
 	Once working this function will be what sends the target coordinates to the telescope.
-	 Once on the target, the telescope will start tracking it. A 60sec timeout is applied.
+	 Once on the target, the telescope will start tracking it. A 30sec timeout is applied.
 	 
 	Assumes the coords are sent as RA/DEC with equinox=J2000
 	"""
-	respond = tcs.slew_or_track_target(coords, tcs_conn, equinox = equinox)
-
+	#respond = tcs.slew_or_track_target(coords, tcs_conn, equinox = equinox)
+	print('ASSUMED TO BE SLEWING!!!')
 
 
 def main():
@@ -852,15 +919,15 @@ def main():
 	# Connect to the TCS machine - for exposures and telescope
 	#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	global tcs_conn
-	tcs_conn_tries=0
-	while tcs_conn_tries < 3:
-		try:
-			tcs_conn = tcs.open_TCS_ssh_connection()
-			open_to_TCS = True
-		except:
-			logging.error('Attempt to connect to TCS '+str(tcs_conn_tries+1)+'/3 has failed')
-			open_to_TCS = False
-			tcs_conn_tries += 1
+#	tcs_conn_tries=0
+#	while tcs_conn_tries < tcs_conn_tries_total:
+#		try:
+#			tcs_conn = tcs.open_TCS_ssh_connection()
+#			open_to_TCS = True
+#		except:
+#			logging.critical('Attempt to connect to TCS '+str(tcs_conn_tries+1)+'/'+str(tcs_conn_tries_total)+' has failed')
+#			open_to_TCS = False
+#			tcs_conn_tries += 1
 	#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	#Connect to table in the database, so that an observing log can be stored
 	#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -887,7 +954,7 @@ def main():
 			RA/DEC of target
 			Name
 	"""
-	next_target_name = 'test_target'
+	next_target_name = 'test_target_single_Texp'
 	loaded_target_info = 'target_class' #need to write a function to do get this info once there is a database
 	#what to do if no observing recipe for target??
 	obs_recipe = get_observing_recipe(next_target_name)
@@ -919,16 +986,7 @@ def main():
 	#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	#i =0
 	#while i <3:
-	
-	# By using asyncio the north telescope exposures do not need to wait for the south telescope
-	#  exposures to start or run.
-	loop1 = asyncio.get_event_loop()
-	taskS = loop1.create_task(take_exposure_south(obs_recipe,image_type,loaded_target_info))
-	taskN = loop1.create_task(take_exposure_north(obs_recipe,image_type,loaded_target_info))
-	
-	#This will only run through the observing script once (while testing) will need to change it later
-	#  Eventually maybe put it in some while loop
-	loop1.run_until_complete(asyncio.gather(taskS,taskN))
+	take_exposure(obs_recipe,image_type,loaded_target_info)
 	#i+=1
 	#test1()
 
@@ -938,14 +996,14 @@ def main():
 	connect_database.close_connection(dbconn,dbcurs)
 	#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	# Close connection to TCS
-	tcs_close_tries = 0
-	while tcs_close_tries <3 and open_to_TCS == True:
+#	tcs_close_tries = 0
+#	while tcs_close_tries <tcs_conn_tries_total and open_to_TCS == True:
 		
-		try:
-			tcs.close_TCS_connection(tcs_conn)
-		except:
-			logging.error('Unable to close connection to TCS')
-			tcs_close_tries +=1
+#		try:
+#			tcs.close_TCS_connection(tcs_conn)
+#		except:
+#			logging.error('Unable to close connection to TCS')
+#			tcs_close_tries +=1
 	#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 """
 def main()
