@@ -31,7 +31,7 @@ Documentation and software for the Xamidimura telescopes
 
 * **roof_control_functions.py** - Equivalent to the 'intelligent_roof_controller_functions' script written in PHP on the gateway machine. Responsible for the low level communication with the PLC box. Added a function to get the information containing the tilt bits, but not tested.  
 
-* **settings_and_error_codes.py** - Somewhere to keep all the error code definitions, timeouts, etc so you don't nee to go hunting through all the code to find them. Plus, if they are used multiple times, only have to change them once. Can try to make error codes unique.  
+* **settings_and_error_codes.py** - Somewhere to keep all the error code definitions, timeouts, etc so you don't need to go hunting through all the code to find them. Plus, if they are used multiple times, only have to change them once. Can try to make error codes unique.  
 
 * **tcs_control.py** - Can control much of the communication with the TCS machine, both in terms of initial connection and then sending over subsequent commands. Note, most of this has only been tested by using the script to ssh into the gateway machine, tests to send the commands directly from the gateway will only be possible once the new machine (with a newer version of python) is ready. Now includes a function to obtain exposures  
 
@@ -88,7 +88,7 @@ As mentioned will contain the main functions to carry out the observing, and oth
 - Image type is decided based on the first 4 letters of the target name e.g. BIAS, FLAT, DARK, THER. If it doesn't match these three then it will assume it is a object frame. This way can have multiple BIAS/FLAT/DARK/THERMAL targets in the target info database and observing recipes. Requests for DARK frames will be passed as THERMAL to the TCS. 
 
 - The code will pair exposure requests for the North and South telescope. Request to change the filters are done asynchronously, so one telescope does not need to wait for the other filter change to be complete. As the exposure
-	time are the same for both telescopes, the code only refers to the exposure pattern for the North telescope. The code will loop through the observing pattern. A status flag will be obtain for each exposure, both North and South. Need to workout how best to repeat the observing pattern.  
+	time are the same for both telescopes, the code only refers to the exposure pattern for the North telescope. The code will loop through the observing pattern. A status flag will be obtained for each exposure, both North and South. Need to workout how best to repeat the observing pattern.  
 
 - **The code to change filter is not currently active + needs testing**  
 
@@ -101,7 +101,7 @@ As mentioned will contain the main functions to carry out the observing, and oth
 - Valid response code from TCS are: 
 	``` 
 	0 = message received, exposure started  
-	1 = exposure started, but ccd temperature is greater that -20 degrees.
+	1 = exposure started, but ccd temperature is greater than -20 degrees.
 	-3 = message received by TCS but exposure not started
 	```  
 	   

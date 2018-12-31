@@ -398,18 +398,24 @@ class test_end_serial_commnication_close_port(unittest.TestCase):
 class test_initial_filter_wheel_setup(unittest.TestCase):
 
 	def setUp(self):
-		#self.test_dict_ok = dict({'baud_rate':19200,'data_bits':8, 'stop_bits':1, 'parity':'N',
-		#	'A':'RX', 'B':'GX','C':'BX','D':'WX', 'E':'IX'})
+		#self.test_dict_ok = dict({'name':'ifw1-south', 'port_name': self.dummy_port,
+		'baud_rate':19200,'data_bits':8, 'stop_bits':1, 'parity':'N',
+		'no_of_filters': 8,
+		'1': 'A', '2': 'B', '3': 'C', '4': 'D', '5': 'E', '6': 'F', '7': 'G','8': 'H',
+		'A':'RX', 'B':'GX','C':'BX','D':'WX', 'E':'IX','F':'BLANK','G':'BLANK','H':'BLANK'})
+		
 		#Pretend a serial port has already been opened has been initialised using dummy_serial
 		self.dummy_port = dummy_serial.Serial(port='test_port', timeout=0.00001)
 		# Setup up the expected responses
-		dummy_serial.RESPONSES = {'WEXITS': 'END'}
+		dummy_serial.RESPONSES = {'WEXITS': 'END','WHOME': 'A'}
 """
 
 class test_change_filter(unittest.TestCase):
 
 	def setUp(self):
 		self.test_dict_ok = dict({'baud_rate':19200,'data_bits':8, 'stop_bits':1, 'parity':'N',
+		'no_of_filters': 8,
+		'1': 'A', '2': 'B', '3': 'C', '4': 'D', '5': 'E', '6': 'F', '7': 'G','8': 'H',
 		'A':'RX', 'B':'GX','C':'BX','D':'WX', 'E':'IX','F':'BLANK','G':'BLANK','H':'BLANK'})
 		#Pretend a serial port has already been opened has been initialised using dummy_serial
 		self.dummy_port = dummy_serial.Serial(port='test_port', timeout=0.00001)
@@ -419,7 +425,7 @@ class test_change_filter(unittest.TestCase):
 	def test_same_filter(self):
 		
 		with self.assertLogs(level='INFO') as cm:
-			fwc.logging.getLogger().info(fwc.change_filter(1, self.dummy_port, self.test_dict_ok))
+			fwc.logging.getLogger().info(fwc.change_filter('RX', self.dummy_port, self.test_dict_ok))
 			logging_actual_response = cm.output[0].split(':')[0]
 		self.assertEqual(logging_actual_response, 'INFO')
 
