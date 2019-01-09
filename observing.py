@@ -94,12 +94,16 @@ STATUS_CODE_UNEXPECTED_RESPONSE = -4
 STATUS_CODE_NO_RESPONSE = -5
 STATUS_CODE_FILTER_WHEEL_TIMEOUT = -6
 
-#pass_coord_attempts = 2
-#tcs_conn_tries_total =3
 
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+fileHand = logging.FileHandler(filename = '/Users/Jessica/PostDoc/ScriptsNStuff/current_branch/xamidimura/logfiles/observingScript.log', mode = 'w')
+fileHand.setLevel(logging.INFO)
+formatter = logging.Formatter('%(asctime)s [%(name)s] %(levelname)s - %(message)s')
+fileHand.setFormatter(formatter)
+logger.addHandler(fileHand)
 
-
-logging.basicConfig(filename = 'logfiles/observingScript.log',filemode='w',level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
+#logging.basicConfig(filename = 'logfiles/observingScript.log',filemode='w',level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
 observe_log_DBtable = 'obslog2'
 
 
@@ -451,7 +455,7 @@ def get_next_file_number(CCDno, fits_file_dir = 'fits_file_tests/'):
 	"""
 	
 	if CCDno not in [1,2]:
-		logging.error('Invalid CCD number')
+		logger.error('Invalid CCD number')
 	
 	else:
 
@@ -508,10 +512,10 @@ def get_observing_recipe(target_name, path = 'obs_recipes/'):
 	try:
 		observing_recipe['EXPTIME'] = np.array(observing_recipe['EXPTIME'], dtype=float)
 	except:
-		logging.error('Observing recipe exposure times in wrong format')
+		logger.error('Observing recipe exposure times in wrong format')
 
 	if len(observing_recipe['EXPTIME']) != len(observing_recipe['N_PATT']) or len(observing_recipe['EXPTIME']) != len(observing_recipe['S_PATT']):
-		logging.error('Number of Exposure times does not match the number of filters in the filter pattern.')
+		logger.error('Number of Exposure times does not match the number of filters in the filter pattern.')
 	
 	try:
 		# Create the full lists and add to the dictionary
@@ -533,15 +537,15 @@ def get_observing_recipe(target_name, path = 'obs_recipes/'):
 	
 		for i in N_uniq:
 			if i not in valid_index:
-				logging.error('Check recipe: Invalid value in the N_PATT for '+target_name)
+				logger.error('Check recipe: Invalid value in the N_PATT for '+target_name)
 				#print('Invalid value in the N_PATT for '+target_name)
 
 		for i in S_uniq:
 			if i not in valid_index:
-				logging.error('Check recipe: Invalid value in the S_PATT for '+target_name)
+				logger.error('Check recipe: Invalid value in the S_PATT for '+target_name)
 				#print('Invalid value in the S_PATT for '+target_name)
 				
-		logging.error('Problem with observing script for target: ' + target_name)
+		logger.error('Problem with observing script for target: ' + target_name)
 
 	else:
 		observing_recipe['N_FILT'] = n_filt
@@ -554,7 +558,7 @@ def get_observing_recipe(target_name, path = 'obs_recipes/'):
 		observing_recipe['S_FOCUS'] = s_focus
 		
 		if len(observing_recipe['N_FILT']) != len(observing_recipe['S_FILT']):
-			logging.warning('Length of filter patterns for both telescopes are unequal, will use shorter length')
+			logger.warning('Length of filter patterns for both telescopes are unequal, will use shorter length')
 		
 
 		return observing_recipe
@@ -615,7 +619,7 @@ def take_exposure(obs_recipe, image_type, target_info, timeout_time=set_err_code
 			statusN, statusS = exposureTCSerrorcode(statusN,statusS, exp_objN.exptime)
 		
 		except TimeoutError:
-			logging.error('TIMEOUT: No response from TCS. Exposure abandoned.')
+			logger.error('TIMEOUT: No response from TCS. Exposure abandoned.')
 			statusS = set_err_code.STATUS_CODE_NO_RESPONSE
 			statusN = set_err_code.STATUS_CODE_NO_RESPONSE
 
@@ -638,10 +642,10 @@ async def change_filters(filter_name, ifw_port, ifw_config,status):
 			# receives the expected response from the filterwheel
 		
 		except fwc.FilterwheelError:
-			logging.error('Problem with check/change filterwheel request: ' + ifw_config[name])
+			logger.error('Problem with check/change filterwheel request: ' + ifw_config[name])
 			status.set_result(set_err_code.STATUS_CODE_FILTER_WHEEL_TIMEOUT)
 		except timeout_decorator.TimeoutError():
-			logging.error('Timeout on filterwheel connection (120 sec) for filterwheel: '+ifw_config[name])
+			logger.error('Timeout on filterwheel connection (120 sec) for filterwheel: '+ifw_config[name])
 			status.set_result(set_err_code.STATUS_CODE_FILTER_WHEEL_TIMEOUT)
 
 
@@ -667,7 +671,7 @@ def exposure_TCS_response(expObN, expObS, timeout):
 				is initially set here.
 	"""
 	
-	logging.info('Starting ' + str(expObN.exptime) + ' sec exposure')
+	logger.info('Starting ' + str(expObN.exptime) + ' sec exposure')
 	#set the start time for the exposure
 	expObN.set_start_time()
 	expObS.set_start_time()
@@ -709,22 +713,22 @@ def exposureTCSerrorcode(statN,statS, exptime):
 	if OK_to_Exp_North or OK_to_Exp_South:
 	
 		if statN == set_err_code.STATUS_CODE_CCD_WARM:
-			logging.warning('North CCD Temp > -20')
+			logger.warning('North CCD Temp > -20')
 		if statS == set_err_code.STATUS_CODE_CCD_WARM:
-			logging.warning('South CCD Temp > -20')
+			logger.warning('South CCD Temp > -20')
 		#while [no weather alert]
 		# change to using the wait command on the TCS
 		time.sleep(exptime)# put in here something to stop this if there is a weather alert
-		logging.info('Exposure complete.')
+		logger.info('Exposure complete.')
 		#else:
 		#	num.set_result(set_err_code.STATUS_CODE_WEATHER_INTERRUPT)
-		#	logging.warning('Weather alert during exposure')
+		#	logger.warning('Weather alert during exposure')
 		# or (set_err_code.STATUS_CODE_OTHER_INTERRUPT exposure interrupted - non weather)
 	elif statN == set_err_code.STATUS_CODE_EXPOSURE_NOT_STARTED or statS == set_err_code.STATUS_CODE_EXPOSURE_NOT_STARTED:
-		logging.error('Command recieved by TCS, but exposure not started')
+		logger.error('Command recieved by TCS, but exposure not started')
 
 	else:
-		logging.error('Unexpected response')
+		logger.error('Unexpected response')
 		statN = set_err_code.STATUS_CODE_UNEXPECTED_RESPONSE
 		statS = set_err_code.STATUS_CODE_UNEXPECTED_RESPONSE
 
@@ -748,7 +752,7 @@ def go_to_target(coordsArr):
 		tcs.check_tele_coords(coordsArr, False)
 		valid_coord = True
 	except:
-		logging.error('Target coordinates have wrong format for telescope.')
+		logger.error('Target coordinates have wrong format for telescope.')
 		valid_coord = False
 	"""
 	NEeed to change: Check current position, is it the same as new pos?
@@ -756,7 +760,7 @@ def go_to_target(coordsArr):
 	# Get current telescope pointing, do we need to change position?
 	current_ra_dec = tcs.get_tel_target[0:2]
 	if current_ra_dec == coordsArr:
-		logging.info('Same coordinates, do not need to move target')
+		logger.info('Same coordinates, do not need to move target')
 		need_to_change = False
 	else:
 		need_to_change = True
@@ -773,7 +777,7 @@ def go_to_target(coordsArr):
 		roof_open_bool = plc.is_roof_open()
 
 	except:
-		logging.critical('Cannot communicate with PLC, cannot tell roof status')
+		logger.critical('Cannot communicate with PLC, cannot tell roof status')
 		"""**** CLOSE UP****"""
 
 	if roof_open_bool == False:
@@ -781,13 +785,13 @@ def go_to_target(coordsArr):
 		try:
 			roof_dict = plc.plc_get_roof_status(log_messages = True)
 		except:
-			logging.critical('Unable to communicate with PLC box: Cannot open roof')
+			logger.critical('Unable to communicate with PLC box: Cannot open roof')
 		
 		else:
 			safe_to_open = False
 			# Check if it's raining, no point trying to open
 			if roof_dict['Roof_Raining'] == True:
-				logging.critical("PLC Thinks it's raining, unsafe to open")
+				logger.critical("PLC Thinks it's raining, unsafe to open")
 			
 			
 			# It might not be open, but it might be opening or closing..
@@ -797,10 +801,10 @@ def go_to_target(coordsArr):
 				while roof_dict['Roof_Moving'] == True:
 					roof_dict = plc.plc_get_roof_status(log_messages = False)
 					if roof_dict['Roof_Closed'] == True:
-						logging.info('Roof now closed')
+						logger.info('Roof now closed')
 						#still unsafe to open
 					elif roof_dict['Roof_Open'] == True
-						logging.info('Roof now open')
+						logger.info('Roof now open')
 						roof_open_bool = True
 						# but no point setting 'safe to open' or it will try to open an already open roof
 			
@@ -808,7 +812,7 @@ def go_to_target(coordsArr):
 				# The conditions above need to be true before the roof will open
 				safe_to_open = True
 			else:
-				logging.critical('Check roof control, Motor Stop and Power failure')
+				logger.critical('Check roof control, Motor Stop and Power failure')
 				#pack up and go to bed, although might be able to do something about the remote thing?
 
 
@@ -818,7 +822,7 @@ def go_to_target(coordsArr):
 					plc.plc_open_roof()
 				
 				except:
-					logging.critical('Cannot open roof')
+					logger.critical('Cannot open roof')
 				else:
 					# Keep an eye on the roof status to check when it has stopped moving
 					roof_dict = plc.plc_get_roof_status(log_messages = False)
@@ -830,7 +834,7 @@ def go_to_target(coordsArr):
 						roof_moving_timeout_count += 1
 					if roof_moving_timeout_count = set_err_code.roof_moving_timeout:
 						# Probably have some alert here...
-						logging.error('Timeout on the roof movement')
+						logger.error('Timeout on the roof movement')
 			else:
 				"""
 				PUT THIS CODE IN HERE
@@ -848,17 +852,17 @@ def go_to_target(coordsArr):
 				send_coords(coordsArr)
 			except timeout_decorator.TimeoutError:
 				pass_coord_attempts_count += 1
-				logging.error('Request timed out. Could not pass coordinates to telescope.')
+				logger.error('Request timed out. Could not pass coordinates to telescope.')
 			else:
 				print('Could pass the coords to mount')
 				break
 		if pass_coord_attempts_count == pass_coord_attempts:
-			logging.critical('Too many attempts to pass telescope coords! Closing up')
+			logger.critical('Too many attempts to pass telescope coords! Closing up')
 			#Add in code to close
 			
 	else:
 		print('No coordinate change applied')
-		logging.error('No coordinate change applied')
+		logger.error('No coordinate change applied')
 
 @timeout_decorator.timeout(set_err_code.telescope_coms_timeout, use_signals=False)
 def send_coords(coords,equinox='J2000'):
@@ -925,7 +929,7 @@ def main():
 #			tcs_conn = tcs.open_TCS_ssh_connection()
 #			open_to_TCS = True
 #		except:
-#			logging.critical('Attempt to connect to TCS '+str(tcs_conn_tries+1)+'/'+str(tcs_conn_tries_total)+' has failed')
+#			logger.critical('Attempt to connect to TCS '+str(tcs_conn_tries+1)+'/'+str(tcs_conn_tries_total)+' has failed')
 #			open_to_TCS = False
 #			tcs_conn_tries += 1
 	#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1002,7 +1006,7 @@ def main():
 #		try:
 #			tcs.close_TCS_connection(tcs_conn)
 #		except:
-#			logging.error('Unable to close connection to TCS')
+#			logger.error('Unable to close connection to TCS')
 #			tcs_close_tries +=1
 	#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 """

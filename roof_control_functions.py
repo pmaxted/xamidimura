@@ -11,11 +11,26 @@
 	- Also no stty settings are set when the port to the PLC is open. It may be possible
 	 to use subprocess to set them if needed, however the Python functions don't really
 	 interact with the terminal so I think there not needed - needs to be tested
+	 
+	
+ <07/01/19> I have change the roof request command from the old '@00RD0150000351*\r'
+	to '@00RD0150000451*\r'. This should get the PLC to return 4 words instead of 3.
+	This 4th word should contain the information about the tilt of the telescope. 
+	Haven't check that this will actually work....
 
 """
 
 import serial
-import settings_and_error_codes as set_err_codes
+import settings_and_error_codes as set_err_codes #Defines error codes used
+import logging
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+fileHand = logging.FileHandler(filename = '/Users/Jessica/PostDoc/ScriptsNStuff/current_branch/xamidimura/logfiles/plc.log', mode = 'w')
+fileHand.setLevel(logging.INFO)
+formatter = logging.Formatter('%(asctime)s [%(name)s] %(levelname)s - %(message)s')
+fileHand.setFormatter(formatter)
+logger.addHandler(fileHand)
 
 # Configuration parameters
 PLC_COM_PORT = 'COM6' #/dev/ttyS2
@@ -46,7 +61,8 @@ crtscts = enable RTS/CTS handshaking [Python - This is set when port is opened]
 PLC_Status_Request = '@00MS5E*\r'
 PLC_Status_Write  = '@00SC0252*\r'
 PLC_Status_Write_Response = '@00SC0050*\r'
-PLC_Request_Roof_Status = '@00RD0150000351*\r'
+#PLC_Request_Roof_Status = '@00RD0150000351*\r'
+PLC_Request_Roof_Status = '@00RD0150000456*\r'
 PLC_Roof_Command_Response_OK = '@00WD0053*\r'
 # This is an undocumented command to get the current status of the command
 # buffer (Data memory 100). See e-mail from Keegan Titus <keegan@saao.ac.za>
@@ -94,7 +110,7 @@ PLC_Telescope_Drive_Control = 14 # 0=Normal, 1=Roof controller
 
 def plc_command_response(command=PLC_Status_Request):
 	"""
-	Sends a single PLC command, returns the response or FALSE if there is any problem.
+	Sends a single PLC command, returns the response or triggers error if there is any problem.
 	 PLC command must include terminating "*\r"
   
 		PARAMETERS
@@ -121,14 +137,14 @@ def plc_command_response(command=PLC_Status_Request):
 
 	else:
 		raise ValueError("Request to send invalid PLC command")
-		return False
-
+		
 def plc_string_is_valid(plc_string):
 	"""
 	 Return TRUE if:
 		- plc_string has a leading "@"
 		- and plc_string contains the correct node number (00)
-		- and plc_contains a header code (validity of the code is not checked)
+		- and plc_contains a header code (validity of the code is not checked, only check
+			its not interger)
 		- and plc_string has a trailing "*<CR>"
 		- and The Frame Check Sequence (FCS) of $plc_string is correct
 		else return false.
@@ -137,24 +153,33 @@ def plc_string_is_valid(plc_string):
 	
 		plc_string = the string to be checked
 	"""
-	if plc_string[0] == '@' and plc_string[:3] == '@00' and plc_string[-2:] =='*\r' and len(plc_string[3:-2])!=0:
+	if plc_string[0] == '@' and plc_string[:3] == '@00' and plc_string[-2:] =='*\r' and len(plc_string[3:-4])>=2:
 		frame = plc_string[:-4]
-		fcs = plc_string[-4:-2]
+		logger.debug("frame: " + frame)
 
-		x = ord('@')
+		fcs = plc_string[-4:-2]
+		logger.debug("fcs: " + fcs)
 		
+		header_code=plc_string[3:5]
+		logger.debug("Header Code:" + str(header_code))
+
+		# fcs calculation
+		x = ord('@')
 		for i in range(1,len(frame)):
 			x = x ^ ord(frame[i:i+1])
-
+		
+		logger.debug('Calc: '+ str(x)+ '. Expected: '+ str(int(fcs,16)))
 
 		return int(fcs, 16) == x
+	else:
+		return False
 
 def plc_insert_fcs(plc_string):
 	"""
 	If
 		- plc_string has a leading "@"
 		- and plc_string contains the correct node number (00)
-		- and plc_contains a header code (validity of the code is not checked)
+		- and plc_contains a header code (validity of the code is not checked, checks it's not an integer)
 		- and plc_string has a trailing "00*<CR>"
  	then
 		- return original string but with the trailing "00" replaced with the
@@ -162,18 +187,30 @@ def plc_insert_fcs(plc_string):
 	else
 		-  return false.
 	"""
-	if plc_string[0] == '@' and plc_string[:3] == '@00' and plc_string[-2:] =='*\r' and len(plc_string[3:-2])!=0:
+	logger.debug('@00:'+str(plc_string[:3] == '@00'))
+	logger.debug('00 near terminator: '+str(plc_string[-4:] == '00*\r'))
+	logger.debug('Not zero length:'+ str(len(plc_string[3:-2])>=2))
+	
+	
+	if plc_string[:3] == '@00' and len(plc_string[3:-2])>=2 and plc_string[-4:] =='00*\r':
 		frame = plc_string[:-4]
 		oldfcs = plc_string[-4:-2]
 		terminator = plc_string[-2:]
-		#print(frame,oldfcs,terminator)
+		logger.debug('Frame: '+str(frame)+', Old fcs: '+str(oldfcs)+', Terminator: '+str(terminator))
+
+		header_code=plc_string[3:5]
+		logger.debug("Header Code:" + str(header_code))
 
 		x = ord('@')
 		
 		for i in range(1,len(frame)):
 			x = x ^ ord(frame[i:i+1])
+		logger.debug('Calc: '+ str(x) + ', hex(x)='+hex(x))
+		
+		hex_x_value = "%x" % x
+		logger.debug('Hex x value:' + str(hex_x_value))
 
-		return (str(frame)+hex(x)+str(terminator)).upper()
+		return (str(frame)+hex_x_value+str(terminator)).upper()
 
 	else:
 		return False
@@ -189,32 +226,34 @@ def plc_mode(plc_string):
 	
 	*** Not tested **
 	"""
-	if plc_string[-2:] == '*\r' and plc_string[0] == '@' and plc_string[:8] =='@00MS000':
+	if plc_string[-2:] == '*\r' and plc_string[:5] =='@00MS':
 		frame = plc_string[:-4]
 		fcs = plc_string[-4:-2]
-		mode = plc_string[8] # This really needs to be checked
+		mode = plc_string[8]
+		logger.debug('Frame: '+str(frame)+', fcs: '+fcs+', mode: '+str(mode))
+		
 		x = ord("@")
 
 		for i in range(1,len(frame)):
 			x = x ^ ord(frame[i:i+1])
-
+		
+		logger.debug("x: "+ str(x)+ ', test: '+str(int(fcs, 16) == x))
+		
 		if int(fcs, 16) == x:
-			if mode == int("0",16):
-				return "Program mode"
-			elif mode == int("2", 16):
-				return "Run mode"
-			elif mode == int("3", 16):
-				return "Monitor Mode"
-			else:
-				return "Unknown mode: "+mode
+			try:
+				return set_err_codes.PLC_STATUS_MODE[mode]
+			except KeyError:
+				return set_err_codes.PLC_STATUS_UNKNOWN_MODE
+		
 		else:
-			return "Invalid PLC status request response string"
+			return set_err_codes.PLC_STATUS_INVALID_RESPONSE
 	else:
-		return "Invalid PLC status request response string"
-
+		return set_err_codes.PLC_STATUS_INVALID_RESPONSE
 
 def plc_status_request_response_plc(plc_string):
 	"""
+	ORIGINAL USEAGE
+	~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	If
 		- plc_string is a valid PLC status request response string
 	then
@@ -228,6 +267,20 @@ def plc_status_request_response_plc(plc_string):
 	>>> if (plc_status_request_response_plc(plc_string))
 	>>>     print("Problem with PLC: ")
 	>>>     print(plc_status_message(plc_status_request_response_plc(plc_string))+"\n")
+	
+	~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	
+	CURRENT USAGE:
+	
+	If
+		- plc is a valid PLC status request repsonse string
+	then 
+		- return the corresponding message for a valid status,
+	else
+		- return unknown status.
+		
+	Means shouldn't need the separate plc_status_message function.
+	 Will just immediately return the message
 
 	PARAMETERS:
 	
@@ -235,32 +288,36 @@ def plc_status_request_response_plc(plc_string):
 	
 	RETURN
 	
-		The byte from the status data that contains the PLC status
-		
-		OR
-		
-		15 (hex "F")
-		
-	** Not Tested ***
+		The message corresponding to the status, or unknown status message
 
 	"""
 
-	if plc_string[-2:] == '*\r' and plc_string[0] == '@' and plc_string[:7] =='@00MS00':
+	if plc_string[-2:] == '*\r' and plc_string[:5] =='@00MS':
 		frame = plc_string[:-4]
 		fcs = plc_string[-4:-2]
 		status = plc_string[7] # This really needs to be checked
-
+		logger.debug('Frame: '+str(frame)+', fcs: '+fcs+', status: '+str(status))
+		
+		x = ord("@")
 		for i in range(1,len(frame)):
 			x = x ^ ord(frame[i:i+1])
+		logger.debug("x: "+ str(x)+ ', test: '+str(int(fcs, 16) == x))
 
 		if int(fcs, 16) == x:
-			return int(status, 16)
+			try:
+				message = set_err_codes.PLC_STATUS_STATUS[status]
+			except KeyError:
+				message = set_err_codes.PLC_STATUS_UNKNOWN_STATUS+str(status)
+				
 		else:
-			return 15
+			message = set_err_codes.PLC_STATUS_INVALID_RESPONSE
 	else:
-		return 15
+		message = set_err_codes.PLC_STATUS_INVALID_RESPONSE
+	
+	return message
 
-def plc_status_message(status):
+
+#def plc_status_message(status):
 	"""
 	Return the error message corresponding to the byte status for a PLC status 
 		request response string PLC status byte (or "Normal" if status is 0).
@@ -274,7 +331,11 @@ def plc_status_message(status):
 	
 		message = The message corresponding to that status
 	"""
-
+#	try:
+#		message = set_err_codes.PLC_STATUS_STATUS[status]
+#	except:
+#		message = set_err_codes.PLC_STATUS_UKNOWN_STATUS+str(status)
+	"""
 	if status == int("0", 16):
 		message = "Normal"
 	
@@ -286,8 +347,8 @@ def plc_status_message(status):
 
 	else:
 		message = "Unknown error code: "+str(status)
-
-	return message
+	"""
+#	return message
 
 def plc_status_tilt_status(plc_string):
 	"""
@@ -298,7 +359,7 @@ def plc_status_tilt_status(plc_string):
 	then
 		return the current  as a decimal number
 	else
-		return 255
+		return 255 as set in the settings and error codes script
 	
 	PARAMETERs:
 	
@@ -306,7 +367,7 @@ def plc_status_tilt_status(plc_string):
 		
 	RETURN
 	
-		Either the current tilt status as D-memory 153, or 255
+		Either the current tilt status as D-memory 153, or 255 as set in the settings and error codes script
 		
 	**NOT TESTED***
 		
@@ -315,19 +376,22 @@ def plc_status_tilt_status(plc_string):
 	if plc_string[-2:] == '*\r' and plc_string[0] == '@' and plc_string[:7] =='@00RD00':
 		frame = plc_string[:-4]
 		fcs = plc_string[-4:-2]
-		tilt_status = plc_string[19:22] # This really needs to be checked
+		tilt_status = plc_string[19:23] # This really needs to be checked
+		logger.debug('Frame: '+str(frame)+', fcs: '+fcs+', tilt status: '+str(tilt_status))
 
 		x = ord('@')
 
 		for i in range(1,len(frame)):
 			x = x ^ ord(frame[i:i+1])
+		logger.debug("x: "+ str(x)+ ', test: '+str(int(fcs, 16) == x))
 
 		if int(fcs, 16) == x:
 			return int(tilt_status, 16)
 		else:
-			return 255
+			return set_err_codes.PLC_STATUS_FAIL_TO_DECODE_RESPONSE
 	else:
-		return 255
+		return set_err_codes.PLC_STATUS_FAIL_TO_DECODE_RESPONSE
+
 
 def plc_status_comms_timeout(plc_string):
 	"""
@@ -336,7 +400,7 @@ def plc_status_comms_timeout(plc_string):
 	then
 		return the current communication timeout as a decimal number
 	else
-		return 255
+		return 255, as set in the settings and error codes script
 	
 	PARAMETERs:
 	
@@ -344,28 +408,31 @@ def plc_status_comms_timeout(plc_string):
 		
 	RETURN
 	
-		Either the current power timeout, or 255
-		
-	**NOT TESTED***
+		Either the current power timeout, or 255 as set in the settings and error codes script
 		
 	"""
 
-	if plc_string[-2:] == '*\r' and plc_string[0] == '@' and plc_string[:7] =='@00RD00':
+	if plc_string[-2:] == '*\r' and plc_string[:5] =='@00RD':
 		frame = plc_string[:-4]
 		fcs = plc_string[-4:-2]
-		timeout = plc_string[15:19] # This really needs to be checked
+		timeout = plc_string[15:19]
+		
+		logger.debug('Frame: '+str(frame)+', fcs: '+fcs+', timeout: '+str(timeout))
 
 		x = ord('@')
 
 		for i in range(1,len(frame)):
 			x = x ^ ord(frame[i:i+1])
 
+		logger.debug("x: "+ str(x)+ ', test: '+str(int(fcs, 16) == x))
+		logger.debug('timeout: '+ str(int(timeout, 16)))
+		
 		if int(fcs, 16) == x:
 			return int(timeout, 16)
 		else:
-			return 255
+			return set_err_codes.PLC_STATUS_FAIL_TO_DECODE_RESPONSE
 	else:
-		return 255
+		return set_err_codes.PLC_STATUS_FAIL_TO_DECODE_RESPONSE
 
 def plc_status_power_timeout(plc_string):
 	"""
@@ -374,7 +441,7 @@ def plc_status_power_timeout(plc_string):
 	then
 		return the current power timeout as a decimal number
 	else
-		return 255
+		return 255, as set in the settings and error codes script
 	
 	PARAMETERs:
 	
@@ -382,28 +449,30 @@ def plc_status_power_timeout(plc_string):
 		
 	RETURN
 	
-		Either the current power timeout, or 255
-		
-	**NOT TESTED***
+		Either the current power timeout, or 255 as set in the settings and error codes script
 		
 	"""
 
-	if plc_string[-2:] == '*\r' and plc_string[0] == '@' and plc_string[:7] =='@00RD00':
+	if plc_string[-2:] == '*\r' and plc_string[:5] =='@00RD':
 		frame = plc_string[:-4]
 		fcs = plc_string[-4:-2]
-		timeout = plc_string[11:15] # This really needs to be checked
-
+		timeout = plc_string[11:15]
+		
+		logger.debug('Frame: '+str(frame)+', fcs: '+fcs+', timeout: '+str(timeout))
 
 		x = ord('@')
 		for i in range(1,len(frame)):
 			x = x ^ ord(frame[i:i+1])
-
+		
+		logger.debug('x: '+ str(x)+ ', test: '+str(int(fcs, 16) == x))
+		logger.debug('timeout: '+ str(int(timeout, 16)))
+		
 		if int(fcs, 16) == x:
 			return int(timeout, 16)
 		else:
-			return 255
+			return set_err_codes.PLC_STATUS_FAIL_TO_DECODE_RESPONSE
 	else:
-		return 255
+		return set_err_codes.PLC_STATUS_FAIL_TO_DECODE_RESPONSE
 
 def plc_status_status_code(plc_string):
 	"""
@@ -412,7 +481,7 @@ def plc_status_status_code(plc_string):
 	then 
 	 - return the status code as a decimal number
 	else
-	 - return 255
+	 - return 255 as set in the settings and error codes script
 	 
 	PARAMETERS:
 	
@@ -421,24 +490,29 @@ def plc_status_status_code(plc_string):
 	RETURN:
 	
 		Either:
-		 - the status code as a decimal number
+		 - the status code as a decimal number. This will contain information as to which
+			bits are set
 		 OR
-		 - 255
+		 - 255, as set in the settings and error codes script
 	"""
-	if plc_string[-2:] == '*\r' and plc_string[0] == '@' and plc_string[:7] =='@00RD00':
+	if plc_string[-2:] == '*\r' and plc_string[:5] =='@00RD':
 		frame = plc_string[:-4]
 		fcs = plc_string[-4:-2]
-		status = plc_string[7:11] # This really needs to be checked
+		status = plc_string[7:11]
+		logger.debug('Frame: '+str(frame)+', fcs: '+fcs+', status: '+str(status))
 
+		x = ord('@')
 		for i in range(1,len(frame)):
 			x = x ^ ord(frame[i:i+1])
 
+		logger.debug('x: '+ str(x)+ ', test: '+str(int(fcs, 16) == x))
+		
 		if int(fcs, 16) == x:
 			return int(status, 16)
 		else:
-			return 255
+			return set_err_codes.PLC_STATUS_FAIL_TO_DECODE_RESPONSE
 	else:
-		return 255
+		return set_err_codes.PLC_STATUS_FAIL_TO_DECODE_RESPONSE
 
 def plc_status_end_code(plc_string):
 	"""
@@ -447,7 +521,7 @@ def plc_status_end_code(plc_string):
 	then
 	 - return the end code as a decimal number
 	else
-	 - return 255
+	 - return 255, as set in the settings and error codes script
  
 	For normal completion the end code is 0, so this function can be used
 	 in the following way.
@@ -456,23 +530,37 @@ def plc_status_end_code(plc_string):
 	>>>		print("Problem getting roof status from PLC: ")
 	>>>		print(plc_error_message(plc_status_end_code(plc_string))+"\n")
 
+	PARAMETERS:
+	
+		plc_string = the response string from plc.
+	
+	RETURN:
+	
+		Either:
+		 - the end code as a decimal number.
+		 OR
+		 - 255, as set in the settings and error codes script
+
 	"""
-	if plc_string[-2:] == '*\r' and plc_string[0] == '@' and plc_string[:5] =='@00RD':
+	if plc_string[-2:] == '*\r' and plc_string[:5] =='@00RD':
 
 		frame = plc_string[:-4]
 		fcs = plc_string[-4:-2]
-		endcode = plc_string[5:7] # This really needs to be checked
+		endcode = plc_string[5:7]
+		logger.debug('Frame: '+str(frame)+', fcs: '+fcs+', endcode hex: '+str(endcode))
 
-
+		x = ord('@')
 		for i in range(1,len(frame)):
 			x = x ^ ord(frame[i:i+1])
+		
+		logger.debug('x: '+ str(x)+ ', test: '+str(int(fcs, 16) == x))
 
 		if int(fcs, 16) == x:
 			return int(endcode, 16)
 		else:
-			return 255
+			return set_err_codes.PLC_STATUS_FAIL_TO_DECODE_RESPONSE
 	else:
-		return 255
+		return set_err_codes.PLC_STATUS_FAIL_TO_DECODE_RESPONSE
 
 
 def plc_status_write_response_end_code(plc_string):
@@ -480,7 +568,7 @@ def plc_status_write_response_end_code(plc_string):
 	If
 	 - plc_string is a valid PLC status write response string
 	then
-	 - return the end code as a decimal number
+	 - return the write response end code as a decimal number
 	else
 	 - return 255
 	 
@@ -491,34 +579,69 @@ def plc_status_write_response_end_code(plc_string):
 	>>>   print("Problem with PLC: ")
 	>>>   print(plc_error_message(plc_error_code(plc_string))+"\n")
 
+	PARAMETERS:
+	
+		plc_string = the response string from plc.
+	
+	RETURN:
+	
+		Either:
+		 - the write response end code as a decimal number.
+		 OR
+		 - 255, as set in the settings and error codes script
+
 	"""
 
-	if plc_string[-2:] == '*\r' and plc_string[0] == '@' and plc_string[:5] =='@00SC':
+	if plc_string[-2:] == '*\r' and plc_string[:5] =='@00SC':
 
 		frame = plc_string[:-4]
 		fcs = plc_string[-4:-2]
-		endcode = plc_string[5:7] # This really needs to be checked
-
-
+		endcode = plc_string[5:7]
+		logger.debug('Frame: '+str(frame)+', fcs: '+fcs+', endcode hex: '+str(endcode))
+		
+		x = ord('@')
 		for i in range(1,len(frame)):
 			x = x ^ ord(frame[i:i+1])
+
+		logger.debug('x: '+ str(x)+ ', test: '+str(int(fcs, 16) == x))
 
 		if int(fcs, 16) == x:
 			return int(endcode, 16)
 		else:
-			return 255
+			return set_err_codes.PLC_STATUS_FAIL_TO_DECODE_RESPONSE
 	else:
-		return 255
+		return set_err_codes.PLC_STATUS_FAIL_TO_DECODE_RESPONSE
 
 
-def plc_status_write_error_message_(end_code):
+def plc_status_write_error_message(end_code):
 	"""
 	Return the error message corresponding to the End Code 'end_code' for a PLC
 	 Status write response.
 	(or 'Normal Completion' if the 'end_code' is 0)
 	If no such error message return "Unknown error code
+	
+	PARAMETERS:
+	
+		end_code = integer decimal representation of the end_code from a response.
+			Note the original is in hex format
+			
+	RETURN:
+	 
+		message = message that corresponds to the error message. The Error code messages
+			are stated in the original plc manual are for the hex format numbers. As
+			such the dictionary key require the error code to be in hex format
+
 	"""
 
+	hex_end_code = format(end_code,"02x").upper()
+	try:
+		#hex_end_code = hex(end_code)
+		message = set_err_codes.PLC_STATUS_WRITE_ERROR_MESSAGE[str(hex_end_code)]
+	except KeyError:
+		message = set_err_codes.PLC_STATUS_UNKNOWN_STATUS+ str(hex_end_code)
+
+	return message
+	"""
 	if end_code == int("00",16):
 		message = "Normal Completion"
 	elif end_code == int("13",16):
@@ -537,24 +660,52 @@ def plc_status_write_error_message_(end_code):
 		message = "Unknown error code: "+ str(end_code)
 
 	return message
-
+	"""
 
 def plc_status_error_message(error_code):
 	"""
 	Return the error message corresponding to the End Code error_code
 	 (or "Normal Completion" if error_code is 0)
 	 If no such error message return "Unknown error code".
+	
+	The error code is converted to hex, because this hex value can be directly compare to what is read from a response string. i.e. in the response string '@00SCA322*\r',
+	 'A3' represents the error code in hex format, which would be inputted in this code
+	 as 163.
+	 
+	 PARAMETERS:
+	 
+		error_code = integer decimal representation of the error code from a response. 
+			Note that the original error code is in hex format.
+			
+	 RETURN:
+	 
+		message = message that corresponds to the error message. The Error code messages
+			are stated in the original plc manual are for the hex format numbers. As
+			such the dictionary key require the error code to be in hex format
+	
 	"""
+	hex_error_code = format(error_code,"02x").upper()
+	try:
+		message = set_err_codes.PLC_STATUS_ERROR_MESSAGE[str(hex_error_code)]
+	except KeyError:
+		message = set_err_codes.PLC_STATUS_UNKNOWN_STATUS+ str(hex_error_code)
+
+	return message
+	"""
+	#print(error_code, type(error_code))
+	#print("test:", "%02x" % error_code)
+	hex_error_code = "%02x" % error_code
+	print(hex_error_code)
 	if error_code == int("00",16):
 		message = "Normal Completion"
 	elif error_code == int("01",16):
 		message = "Not executable in RUN mode"
 	elif error_code == int("02",16):
-		message = "Not executable in Monitor mode"
+		message = "Not executable in MONITOR mode"
 	elif error_code == int("04",16):
 		message = "Address Over"
 	elif error_code == int("08",16):
-		message = "Not executable in Program mode"
+		message = "Not executable in PROGRAM mode"
 	elif error_code == int("13",16):
 		message = "FCS error"
 	elif error_code == int("14",16):
@@ -573,20 +724,44 @@ def plc_status_error_message(error_code):
 		message = "Format Error in transmit data"
 	elif error_code == int("A5",16):
 		message = "Data Error in transmit data"
-	elif error_code == int("A6",16):
+	elif error_code == int("A8",16):
 		message = "Frame Length Error in transmit data"
 	else:
 		message = 'Unknown error code: '+str(error_code)+'.'
-
+	
 	return message
+	"""
 
 def plc_data_error_message(end_code):
 	"""
 	Return the error message corresponding to the End Code end_code from a PLC 
 	 request data response (or "Normal Completion" if end_code is 00).
 	 If no such error message return "Unknown error code".
+
+	PARAMETERS:
+	
+		end_code = integer decimal representation of the end_code from a response.
+			Note the original is in hex format
+			
+	RETURN:
 	 
+		message = message that corresponds to the error message. The Error code messages
+			are stated in the original plc manual are for the hex format numbers. As
+			such the dictionary key require the error code to be in hex format
 	"""
+	#"""
+	hex_end_code = format(end_code,"02x").upper()
+	#print(end_code, type(end_code))
+	logger.debug(str(hex_end_code)+' '+ str(type(hex_end_code)))
+	try:
+		#hex_end_code = hex(end_code)
+		message = set_err_codes.PLC_STATUS_DATA_ERROR_MESSAGE[str(hex_end_code)]
+	except KeyError:
+		message = set_err_codes.PLC_STATUS_UNKNOWN_STATUS+ str(hex_end_code)
+
+	"""
+	print(end_code, type(end_code))
+
 	if end_code == int("00",16):
 		message = "Normal Completion"
 	elif end_code == int("13",16):
@@ -601,36 +776,81 @@ def plc_data_error_message(end_code):
 		message = "Not executable due to CPU Unit CPU error"
 	else:
 		message = "Unknown error code: "+str(end_code)
-
+	"""
 	return message
 
 
-def int_bit_is_set(int, offset):
+def int_bit_is_set(intNo, offset):
 	"""
+	Will look at the integer representation of a status given by 'int' has the bit (given 
+	 by 'offset' set.
+	 
+	 e.g. Reading in the status code '0003' from a plc response string will produce 
+	  1 and 2 for bits 0 and 1 respectively, but 0 for all others.
+	  
+	Note if the plc response string was found to be invalid at some point and 255
+	 has been return then all bits 1 through to 8 will be set.
+	
+	
 	Uses bitwise operators '&' and '<<'
+	
+	PARAMETERS:
+	
+		intNo = integer represetation of a status.
+		offset = the bit to check whether or not it is set
+	
+	RETURN:
+	
+		bool(ans) = True/Falae. ans would be 0 if not set or 1,2,4,8,16... depending on which bit is being checked. The bool() function turn this to True/False 
+			response, which means this finction can be used in terms of:
+			
+			>>> if int_bit_is_set(1, 1):
+			>>>  do something
+			
 	"""
-	ans = int & (1 <<offset)
-	return ans
+	if isinstance(intNo, int) == False or intNo<0:
+		raise ValueError('First argument should be a positive integer.')
+	else:
+		if isinstance(offset, int) == False or offset <0 or offset >15:
+			raise ValueError('Second argument should be a positive integer, betweeen 0 and 15 inclusive.')
+		else:
+			ans = intNo & (1 <<offset)
+
+		return bool(ans)
 
 def set_hex_bit(hex, offset):
 	"""
 	Uses bitwise operators '|' and '~'
 	"""
-	fmt = ':0'+len(hex)+'X'
-	ans = fmt.format(int(hex,16) | (1<<offset))
-	return ans
+	
+	if isinstance(offset, int) == False or offset <0 or offset >15:
+		raise ValueError('Second argument should be a positive integer, betweeen 0 and 15 inclusive.')
+	else:
+		fmt = '0'+str(len(str(hex)))+'X'
+		ans = format(int(hex,16) | (1<<offset), fmt)
+		return ans
 
 def unset_hex_bit(hex, offset):
 	"""
 	Uses bitwise operators '&', '<<' and '~'
 	"""
-	fmt = ':0'+len(hex)+'X'
-	ans = fmt.format(int(hex,16) & ~(1 << offset))
-	return ans
+	if isinstance(offset, int) == False or offset <0 or offset >15:
+		raise ValueError('Second argument should be a positive integer, betweeen 0 and 15 inclusive.')
+
+	else:
+
+		fmt = '0'+str(len(str(hex)))+'X'
+		ans = format(int(hex,16) & ~(1 << offset), fmt)
+		return ans
 
 def hex_bit_is_set(hex, offset):
 	"""
 	Uses bitwise operators '&' and '<<'
 	"""
-	ans = hex & (1 <<offset)
-	return ans
+		
+	if isinstance(offset, int) == False or offset <0 or offset >15:
+		raise ValueError('Second argument should be a positive integer, betweeen 0 and 15 inclusive.')
+	else:
+		ans = hex & (1 <<offset)
+
+		return bool(ans)

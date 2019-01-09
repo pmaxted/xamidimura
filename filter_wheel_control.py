@@ -7,15 +7,10 @@ Jessica A. Evans
 	Numerous function to control the operations of the filter wheels. Note, these functions are
 	 designed to work with a 8-position filter wheels.
 	
-	01/11/18
+	02/01/19
 	 - So far has all the commands that are laid out in the manual for the ifw filter wheel, and startup/change filter/shutdown functions
 	 - Make sure that it's raising suitable errors/logging them
-	 - Initialisation, change filter and start up function don't have any unit testing - need
-		actual connection to device, or change to initialisation function to handle a dummy
-		port.
-		
-	12/11/18
-	 - Changed it so it works with a 8-position filter wheel
+	 - Initialisation, change filter and start up function have any unit tests, uses unittest's "Mock" to pretend to be the open port.
 				
 	
 	CURRENT FUNCTIONS:
@@ -69,8 +64,17 @@ import serial
 import logging
 import numpy
 
+#logger = logging.getLogger("FILTER WHEEL CONTROL")
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+fileHand = logging.FileHandler(filename = 'logfiles/filter_wheel.log', mode = 'w')
+fileHand.setLevel(logging.INFO)
+formatter = logging.Formatter('%(asctime)s [%(name)s] %(levelname)s - %(message)s')
+fileHand.setFormatter(formatter)
+logger.addHandler(fileHand)
 
-logging.basicConfig(filename = 'logfiles/filter_wheel.log',filemode='w',level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
+#logging.basicConfig(filename = 'logfiles/filter_wheel.log',filemode='w',level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
+
 
 class Error( Exception ):
 	"""Base class for exceptions in the script"""
@@ -98,38 +102,38 @@ def check_config_port_values_for_ifw(config_dict):
 	# BAUD RATE
 	if 'baud_rate' in config_dict.keys():
 		if config_dict['baud_rate'] != 19200:
-			logging.critical('Unexpected baud rate for ifw filter wheels, 19200 is expected.')
+			logger.critical('Unexpected baud rate for ifw filter wheels, 19200 is expected.')
 			raise ValueError('Unexpected baud rate for ifw filter wheels, 19200 is expected.')
 	else:
-		logging.critical('No baud rate found in config file.')
+		logger.critical('No baud rate found in config file.')
 		raise KeyError('No baud rate found in config file.')
 	
 	# DATA BITS
 	if 'data_bits' in config_dict.keys():
 		if config_dict['data_bits'] != 8:
-			logging.critical('Unexpected number for data bits, 8 is expected')
+			logger.critical('Unexpected number for data bits, 8 is expected')
 			raise ValueError('Unexpected number for data bits, 8 is expected')
 	else:
-		logging.critical('No data bits number found in config file')
+		logger.critical('No data bits number found in config file')
 		raise KeyError('No data bits number found in config file')
 	
 	# STOP BITS
 	if 'stop_bits' in config_dict.keys():
 		if config_dict['stop_bits'] != 1:
-			logging.critical('Unexpected number for stop bits, 1 is expected')
+			logger.critical('Unexpected number for stop bits, 1 is expected')
 			raise ValueError('Unexpected number for stop bits, 1 is expected')
 	else:
-		logging.critical('No stop bits number found in config file')
+		logger.critical('No stop bits number found in config file')
 		raise KeyError('No stop bits number found in config file')
 	
 	
 	# PARITY
 	if 'parity' in config_dict.keys():
 		if config_dict['parity'] != 'N':
-			logging.critical('Unexpected parity values, "N" is expected')
+			logger.critical('Unexpected parity values, "N" is expected')
 			raise ValueError('Unexpected parity values, "N" is expected')
 	else:
-		logging.critical('No parity values found in config file')
+		logger.critical('No parity values found in config file')
 		raise KeyError('No parity values found in config file')
 
 def initialise_ifw_serial_connection(config_dict):
@@ -154,7 +158,7 @@ def initialise_ifw_serial_connection(config_dict):
 		
 	"""
 	initialise_command = b'WSMODE'
-	expected_return = '!\r\n'
+	expected_return = b'!\r\n'
 	
 	# Open a port
 	initial_port = common.open_port_from_config_param(config_dict)
@@ -162,21 +166,21 @@ def initialise_ifw_serial_connection(config_dict):
 	initial_port.write(initialise_command)#.encode('utf-8'))
 	
 	# Expecting a '!' followed by a CR/LF if succesfully received
-	read_bytes = initial_port.read(size=3)
+	read_bytes = initial_port.read(3)
+
 	no_of_attempts = 1
-	
 	# The controller can timeut if only a partial command is received, so try upto
 	#  3 times if it failed the first time
 	while read_bytes != expected_return:
 		initial_port.write(initialise_command)#.encode('utf-8'))
-		read_bytes = initial_port.read(size=3)
+		read_bytes = initial_port.read(3)
 		no_of_attempts +=1
 		if no_of_attempts == 3:
-			logging.critical('Failed to initialise filter wheel '+config_dict['name']+' after 3 attempts..')
+			logger.critical('Failed to initialise filter wheel '+config_dict['name']+' after 3 attempts..')
 			break
 
 	if read_bytes == expected_return:
-		logging.info('Filter wheel initialisation complete')
+		logger.info('Filter wheel initialisation complete')
 	
 	return initial_port
 
@@ -208,7 +212,7 @@ def form_filter_names_string_from_config_dict(config_dict):
 	valid_config_letters = ['A','B','C','D','E','F','G','H']
 	
 	if False in [i in config_dict for i in valid_config_letters]:
-		logging.error('Filter wheel ID not in config file.')
+		logger.error('Filter wheel ID not in config file.')
 		raise ValueError('Filter wheel ID not in config file.')
 	else:
 		#So far this creates a tuple of names assign to each ID from the config file.
@@ -223,11 +227,11 @@ def form_filter_names_string_from_config_dict(config_dict):
 			valid_letter_bool = letter in valid_chars
 			if valid_letter_bool == False:
 				all_valid_bool = False
-				logging.error(letter + ' in the name '+ name + ' is not a valid character. Please only use "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ=.#/-% or a space"')
+				logger.error(letter + ' in the name '+ name + ' is not a valid character. Please only use "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ=.#/-% or a space"')
 				raise ValueError(letter+' in the name '+ name + ' is not a valid character. Please only use "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ=.#/-% or a space"')
 		if len(name) > 8 or len(name) <=0:
 			all_valid_bool = False
-			logging.error('One of the names is too long or too short. Must be  <8 but >0')
+			logger.error('One of the names is too long or too short. Must be  <8 but >0')
 			raise ValueError('One of the names is too long or too short. Must be  <8 but >0')
 			
 		final_string += '{: <8}'.format(name)
@@ -262,7 +266,7 @@ def pass_filter_names(str_of_64chars, initialised_port, wheel_ID = 'A'):
 		"""
 	valid_wheel_ID = ['A','B','C','D','E','F','G','H']
 	if wheel_ID not in valid_wheel_ID:
-		logging.error('Invalid wheel ID. Please select A,B,C,D,E,F,G or H')
+		logger.error('Invalid wheel ID. Please select A,B,C,D,E,F,G or H')
 	else:
 		
 		issue_command = 'WLOAD'+wheel_ID+'*'+str_of_64chars#+'\n'
@@ -271,11 +275,11 @@ def pass_filter_names(str_of_64chars, initialised_port, wheel_ID = 'A'):
 		message = common.send_command_get_response(issue_command, initialised_port)
 		
 		if message == expected_return:
-			logging.info('Filter names successfully stored.')
+			logger.info('Filter names successfully stored.')
 		elif message == 'ER=3':
-			logging.error('ER=3: Improper value received for wheel ID. Please see manual for more info.')
+			logger.error('ER=3: Improper value received for wheel ID. Please see manual for more info.')
 		else:
-			logging.critical('Unexpected response message:'+message)
+			logger.critical('Unexpected response message:'+message)
 
 
 def get_stored_filter_names(initialised_port, formatted_dict = True):
@@ -403,13 +407,13 @@ def goto_home_position(initialised_port, return_home_id = False):
 	#  the code has returned a valid ID to identify the home position. If not assume that it's an error and
 	#  raise an exception...
 	if return_message == 'ER=1':
-		logging.error('ER=1. Number of steps to find position 1 > 2600. See manual for details.')
+		logger.error('ER=1. Number of steps to find position 1 > 2600. See manual for details.')
 	elif return_message == 'ER=3':
-		logging.error('ER=3. Filter ID not found successfully.')
+		logger.error('ER=3. Filter ID not found successfully.')
 	elif return_message in valid_wheel_ID:
-		logging.info('Filter ID: ' +return_message+' set as home position, at position 1')
+		logger.info('Filter ID: ' +return_message+' set as home position, at position 1')
 	else:
-		logging.critical('Unexpected Error: ' + return_message)
+		logger.critical('Unexpected Error: ' + return_message)
 	
 	if return_home_id == True:
 		return return_message
@@ -438,24 +442,24 @@ def goto_filter_position(new_position, initialised_port):
 	valid_positions = [1,2,3,4,5,6,7,8]
 	
 	#if new_position not in valid_positions:
-	#	logging.error(str(new_position) +' is not a valid position number')
+	#	logger.error(str(new_position) +' is not a valid position number')
 	#else:
 	return_message = common.send_command_get_response(move_command,initialised_port)
 		
 	if return_message == expected_return:
-			logging.info('Filter change successful. Current position: '+str(new_position))
+			logger.info('Filter change successful. Current position: '+str(new_position))
 	
 	elif return_message == 'ER=4':
-			logging.error('ER=4. Wheel stuck in position, or moving slowly.')
+			logger.error('ER=4. Wheel stuck in position, or moving slowly.')
 			raise FilterwheelError('ER=4. Wheel stuck in position, or moving slowly.')
 	elif return_message == 'ER=5':
-			logging.error('ER=5. Invalid filter position supplied')
+			logger.error('ER=5. Invalid filter position supplied')
 			raise ValueError('ER=5. Invalid filter position supplied')
 	elif return_message == 'ER=6':
-			logging.error('ER=6. WARNING! wheel slipping and taking too many step to next position')
+			logger.error('ER=6. WARNING! wheel slipping and taking too many step to next position')
 			raise FilterwheelError('ER=6. WARNING! wheel slipping and taking too many step to next position')
 	else:
-			logging.critical('Unexpected Error: ' + return_message)
+			logger.critical('Unexpected Error: ' + return_message)
 			raise FilterwheelError('Unexpected Error: ' + return_message)
 
 def end_serial_communication_close_port(initialised_port):
@@ -472,10 +476,10 @@ def end_serial_communication_close_port(initialised_port):
 
 	return_message = common.send_command_get_response(exit_command, initialised_port)
 	if return_message == expected_return:
-		logging.info('Communication with filter wheel: Closed')
+		logger.info('Communication with filter wheel: Closed')
 		initialised_port.close()
 	else:
-		logging.warning('Communication port not closed')
+		logger.warning('Communication port not closed')
 
 
 
@@ -517,10 +521,13 @@ def initial_filter_wheel_setup(config_file_name, config_file_loc = 'configs/'):
 
 	if currently_stored != config_names:
 		pass_filter_names(config_names, open_port)
+		logger.info('Stored filter names updated')
+
+	elif currently_stored == config_names:
+		logger.warning('Names are identical, stored filter names not changed')
 
 	else:
-		logging.WARNING('Stored filter names not changed')
-
+		logger.error('Cannot update filter names')
 
 def filter_wheel_startup(config_file_name, config_file_loc = 'configs/'):
 
@@ -554,7 +561,7 @@ def filter_wheel_startup(config_file_name, config_file_loc = 'configs/'):
 	open_port = initialise_ifw_serial_connection(loaded_dict)
 	goto_home_position(open_port)
 
-	logging.info('Filter wheel startup complete.')
+	logger.info('Filter wheel startup complete.')
 
 	return open_port, loaded_dict
 
@@ -597,7 +604,7 @@ def change_filter(new_filter, open_port, config_dict):
 		goto_filter_position(matchedPos, open_port)
 
 	else:
-		logging.info('No Filter change required..')
+		logger.info('No Filter change required..')
 
 
 def filter_wheel_shutdown(open_port):
@@ -614,4 +621,4 @@ def filter_wheel_shutdown(open_port):
 	goto_home_position(open_port)
 	end_serial_communication_close_port(open_port)
 
-	logging.info('Filter wheel shutdown.')
+	logger.info('Filter wheel shutdown.')

@@ -13,8 +13,16 @@ import logging
 import settings_and_error_codes as set_err_code
 import timeout_decorator
 
-logging.basicConfig(filename= 'testlog.log', filemode = 'w', level=logging.INFO, 
-	format='%(asctime)s %(levelname)s %(message)s')
+#logging.basicConfig(filename= 'testlog.log', filemode = 'w', level=logging.INFO,
+#	format='%(asctime)s %(levelname)s %(message)s')
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+fileHand = logging.FileHandler(filename = '/Users/Jessica/PostDoc/ScriptsNStuff/current_branch/xamidimura/logfiles/tcs.log', mode = 'w')
+fileHand.setLevel(logging.DEBUG)
+formatter = logging.Formatter('%(asctime)s [%(name)s] %(levelname)s - %(message)s')
+fileHand.setFormatter(formatter)
+logger.addHandler(fileHand)
 """ 
  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   TCS connection functions
@@ -36,12 +44,12 @@ def open_gateway_ssh_connection(gate_timeout=set_err_code.tcs_coms_timeout):
 	user = 'wasp'
 	password = getpass.getpass('Gateway Password: ')
 	print('Logging into gateway machine...')
-	logging.info('Logging into gateway machine...')
+	logger.info('Logging into gateway machine...')
 	s.login(host, user,password)
 	s.expect('P*')
 	s.prompt()
 	print('Connected to gateway')
-	logging.info('Connected to gateway')
+	logger.info('Connected to gateway')
 
 	return s
 
@@ -81,23 +89,23 @@ def open_TCS_ssh_connection(connect_to_gateway_first = False, timeout=set_err_co
 		try:
 			s = open_gateway_ssh_connection(gate_timeout=timeout)
 		except pexpect.pxssh.ExceptionPxssh as ex:
-			logging.error('Failed to login to gateway:', ex)
+			logger.error('Failed to login to gateway:', ex)
 			print('Failed to login to gateway:', ex) 
 
 		else:
 		
 			print('Attempting to connect to TCS')
-			logging.info('Attempting to connect to TCS')
+			logger.info('Attempting to connect to TCS')
 			s.sendline('ssh tcs')
 			s.prompt()
 			s.expect_exact(tcsPrompt)
 			print('Getting telescope status')
-			logging.info('Getting telescope status')
+			logger.info('Getting telescope status')
 			s.sendline('telshow')
 			s.expect_exact(tcsPrompt) #expect_exact searches for a string not re expression
 			info = s.before.decode('utf-8').split('\r\r\n')[1].strip()
 			print('TCS connected, current status: ')
-			logging.info('TCS connected, current status:\n'+ info)
+			logger.info('TCS connected, current status:\n'+ info)
 			print(info)
 			
 			connectedBool = True
@@ -112,7 +120,7 @@ def open_TCS_ssh_connection(connect_to_gateway_first = False, timeout=set_err_co
 			s = pexpect.spawn('ssh tcs')
 		except:
 			print('Failed to connect to TCS machine...')
-			logging.error('Failed to connect to TCS machine...')
+			logger.error('Failed to connect to TCS machine...')
 						
 		else:
 			s.prompt()
@@ -121,14 +129,14 @@ def open_TCS_ssh_connection(connect_to_gateway_first = False, timeout=set_err_co
 			info = s.before.decode('utf-8')
 			print('TCS connected, current status: ')
 			print(info)
-			logging.info('TCS connected, current status:\n'+info)
+			logger.info('TCS connected, current status:\n'+info)
 			connectedBool = True
 	
 	if connectedBool == True:	
 		return s
 	else:
 		print('Not connected!')
-		logging.critical('Not connected!')
+		logger.critical('Not connected!')
 
 def close_both_connections(open_conn):
 
@@ -164,10 +172,10 @@ def close_TCS_connection(open_conn):
 	"""
 	
 	print('Closing connection to TCS...')
-	logging.info('Closing connection to TCS...')
+	logger.info('Closing connection to TCS...')
 	open_conn.sendline('exit')
 	open_conn.prompt()
-	logging.info('Connection to tcs closed.')
+	logger.info('Connection to tcs closed.')
 	print('Connection to tcs closed.')
 
 def close_gateway_ssh(open_conn):
@@ -180,10 +188,10 @@ def close_gateway_ssh(open_conn):
 		open_conn - the pxssh connection that was previously opened
 	"""
 	print('Logging out of gateway...')
-	logging.info('Logging out of gateway...')
+	logger.info('Logging out of gateway...')
 	open_conn.logout()
 	print('Gateway connection closed')
-	logging.info('Gateway connection closed')
+	logger.info('Gateway connection closed')
 
 """ 
  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -217,7 +225,7 @@ def send_command(command, open_conn, expected_prompt = '[wasp@tcs ~]$'):
 	
 	#get rid of repeated command
 	response = open_conn.before.decode('utf-8').split('\r\r\n')[1].strip()
-	logging.info('FROM TCS: '+response)
+	logger.info('FROM TCS: '+response)
 	return response
 
 
@@ -429,13 +437,13 @@ def startTel(open_conn, startAll = False):
 	
 	
 	if startAll == True:
-		logging.info('Running all telescope startup processes...')
+		logger.info('Running all telescope startup processes...')
 		target = send_command('startTel -all', open_conn)
 	elif startAll == False:
-		logging.info('Running telescope startup...')
+		logger.info('Running telescope startup...')
 		target = send_command('startTel', open_conn)
 	else:
-		logging.error('Invaild input for startAll, use True/False')
+		logger.error('Invaild input for startAll, use True/False')
 		raise ValueError('Invaild input for startAll, use True/False')
 
 def killTel(open_conn, killAll = False):
@@ -458,13 +466,13 @@ def killTel(open_conn, killAll = False):
 	
 	
 	if killAll == True:
-		logging.info('Stopping all telescope processes...')
+		logger.info('Stopping all telescope processes...')
 		target = send_command('killTel -all', open_conn)
 	elif killAll == False:
-		logging.info('Stopping telescope startup...')
+		logger.info('Stopping telescope startup...')
 		target = send_command('killTel', open_conn)
 	else:
-		logging.error('Invaild input for killAll, use True/False')
+		logger.error('Invaild input for killAll, use True/False')
 		raise ValueError('Invaild input for killAll, use True/False')
 		
 def check_tele_coords(coords, is_alt_az):
@@ -484,7 +492,7 @@ def check_tele_coords(coords, is_alt_az):
 	
 	#Stuff check coords are OK values?
 	if len(coords)!= 2:
-		logging.error('Incorrect length for coords parameter, should be 2')
+		logger.error('Incorrect length for coords parameter, should be 2')
 	else:
 		for i in range(len(coords)):
 		
@@ -582,7 +590,7 @@ def slew_or_track_target(coords, open_conn, track_target=True, is_alt_az = False
 	elif track_target == True:
 		command_str = 'track '
 	else:
-		logging.error('Invaild input for track_target, use True/False')	
+		logger.error('Invaild input for track_target, use True/False')	
 		raise ValueError('Invaild input for track_target, use True/False')
 	
 	if is_alt_az == True:
@@ -590,7 +598,7 @@ def slew_or_track_target(coords, open_conn, track_target=True, is_alt_az = False
 	elif is_alt_az == False:
 		pass
 	else:
-		logging.error('Invaild input for track_target, use True/False')	
+		logger.error('Invaild input for track_target, use True/False')	
 		raise ValueError('Invaild input for is_alt_az, use True/False')
 
 
@@ -604,7 +612,7 @@ def slew_or_track_target(coords, open_conn, track_target=True, is_alt_az = False
 	#Send the command to the TCS	
 		target = send_command(command_str, open_conn)
 	except timeout_decorator.TimeoutError:
-		logging.critical('Failed to contact TCS')
+		logger.critical('Failed to contact TCS')
 
 	return target
 
@@ -643,12 +651,12 @@ def apply_offset_to_tele(ra_alt_off, dec_az_off, open_conn, units='arcsec', is_a
 	elif is_alt_az == False:
 		pass
 	else:
-		logging.error('Invaild input for track_target, use True/False')	
+		logger.error('Invaild input for track_target, use True/False')	
 		raise ValueError('Invaild input for is_alt_az, use True/False')
 
 	valid_units = ['arcsec','arcmin','deg', 'arc']
 	if units not in valid_units:
-		logging.error('Invalid telescope offset unit provided')
+		logger.error('Invalid telescope offset unit provided')
 		raise ValueError('Invalid telescope offset unit provided')
 	
 	command_str += units + ' '
@@ -703,11 +711,11 @@ def tcs_exposure_request(type, duration = 0, number = 1):
 		type = 'thermal'
 
 	if number <= 1:
-		logging.error('Invalid number of exposures requested')
+		logger.error('Invalid number of exposures requested')
 		return respond = set_err_code.STATUS_CODE_EXPOSURE_NOT_STARTED
 
 	if duration <=0:
-		logging.error('Invalid exposure time requested')
+		logger.error('Invalid exposure time requested')
 		return respond = set_err_code.STATUS_CODE_EXPOSURE_NOT_STARTED
 
 	command_str = 'expose ' + type

@@ -1,10 +1,12 @@
 import unittest
+from unittest.mock import patch
 import filter_wheel_control as fwc
-import dummy_serial #not anaconda, part of minimalmodbus, installed with pip3?
+import dummy_serial
 
 
 """
- This script will contain all the unit test for the filter_wheel_control script. Contains test for most functions, but not the filterwheel setup or initialisation.Also current plan is to have unit tests for focuser and filter wheel in separate files, which will then be run from a master file -- not worked out how to do this
+ This script will contain all the unit tests for the filter_wheel_control script. Contains tests for most functions:
+	Has test for initialisation and setup, with the port opening done with a mock, i.e. no real port is connected. Also current plan is to have unit tests for focuser and filter wheel in separate files, which will then be run from a master file -- not worked out how to do this
  yet....
  
  Can run the test how they currently are in terminal using
@@ -82,23 +84,62 @@ class test_config_port_values(unittest.TestCase):
 		with self.assertRaises(KeyError):
 			fwc.check_config_port_values_for_ifw(test_dict_noPar)
 
-"""
+
+@patch("common.open_port_from_config_param")
 class test_port_initialisation(unittest.TestCase):
 
 	# Setup the dictionary to be used in all the other unit tests
 	def setUp(self):
-		# self. is needed otherwise the function will forget itself at the end
-		self.master,self.slave = pty.openpty()
-		port1 = dummy_serial.Serial()#os.ttyname(self.slave)
-		self.test_dict = dict({'baud_rate':19200,'data_bits':8, 'stop_bits':1, 'parity':'N', 'port_name':port1})
-		port1.RESPONSES
-	
+		self.test_dict_ok = dict({'name':'ifw1-SOUTH', 'port_name': 'port1',
+		'baud_rate':19200,'data_bits':8, 'stop_bits':1, 'parity':'N',
+		'no_of_filters': 8,
+		'1': 'A', '2': 'B', '3': 'C', '4': 'D', '5': 'E', '6': 'F', '7': 'G','8': 'H',
+		'A':'RX', 'B':'GX','C':'BX','D':'WX', 'E':'IX','F':'BLANK','G':'BLANK','H':'BLANK',
+		'home_pos': 'A', 'warning-low-temp': -40, 'warning-high-temp': 85})
+		
+		#Pretend a serial port has already been opened has been initialised using dummy_serial
+		self.dummy_port = dummy_serial.Serial(port=self.test_dict_ok['port_name'], timeout=0.00001)
+		# Setup up the expected responses
+		dummy_serial.RESPONSES = {'WSMODE': '!\r\n'}
+		#
+	#"""
+	def test_open_port_initialise(self, mock_open_port):
+		mock_open_port.return_value = self.dummy_port
+		
+		expected_port = self.dummy_port
+		expected_port_open_state = True
+		
+		actual_port = fwc.initialise_ifw_serial_connection(self.test_dict_ok)
+		actual_port_state = actual_port._isOpen
 
-#	def test_open_port
 
-	def test_initialise_no_errors(self):
-		open_port = fwc.initialise_ifw_serial_connection(self.test_dict)
-#"""
+		self.assertEqual(expected_port_open_state,actual_port_state)
+		self.assertEqual(expected_port,actual_port)
+		
+		mock_open_port.assert_called_once_with(self.test_dict_ok)
+
+		with self.assertLogs(level='INFO') as cm:
+			fwc.logging.getLogger().info(fwc.initialise_ifw_serial_connection(self.test_dict_ok))
+			logging_actual_response = cm.output[0].split(':')[0]
+		self.assertEqual(logging_actual_response, 'INFO')
+
+
+
+	def test_fail_initialisation(self, mock_open_port):
+		#Test for if there is a strange response from the filterwheel during initialisation
+		dummy_serial.RESPONSES = {'WSMODE': 'N\r\n'}
+
+		mock_open_port.return_value = self.dummy_port
+
+		with self.assertLogs(level='CRITICAL') as cm:
+			fwc.logging.getLogger().critical(fwc.initialise_ifw_serial_connection(self.test_dict_ok))
+			logging_actual_response = cm.output[0].split(':')[0]
+
+		self.assertEqual(logging_actual_response, 'CRITICAL')
+
+	def tearDown(self):
+		#close the dummy_port
+		self.dummy_port.close()
 
 class test_filter_names_to_string(unittest.TestCase):
 	"""
@@ -393,23 +434,101 @@ class test_end_serial_commnication_close_port(unittest.TestCase):
 			logging_actual_response = cm.output[0].split(':')[0]
 		self.assertEqual(logging_actual_response, 'WARNING')
 
-
-"""
+@patch("filter_wheel_control.initialise_ifw_serial_connection")
+@patch("common.load_config")
 class test_initial_filter_wheel_setup(unittest.TestCase):
+	
+	def setUp(self):
+		self.test_dict_ok = dict({'name':'ifw1-SOUTH', 'port_name': 'port1',
+		'baud_rate':19200,'data_bits':8, 'stop_bits':1, 'parity':'N',
+		'no_of_filters': 8,
+		'1': 'A', '2': 'B', '3': 'C', '4': 'D', '5': 'E', '6': 'F', '7': 'G','8': 'H',
+		'A':'RX', 'B':'GX','C':'BX','D':'WX', 'E':'IX','F':'BLANK','G':'BLANK','H':'BLANK',
+		'home_pos': 'A', 'warning-low-temp': -40, 'warning-high-temp': 85})
+		
+		#Pretend a serial port has already been opened has been initialised using dummy_serial
+		self.dummy_port = dummy_serial.Serial(port=self.test_dict_ok['port_name'], timeout=0.00001)
+		# Setup up the expected responses
+		dummy_serial.RESPONSES = {'WEXITS': 'END','WHOME': 'A',
+		'WREAD': 'OLD     GX      BX      WX      IX      BLANK   BLANK   BLANK   ',
+		'WLOAD' + 'A' + '*'+ 'RX      GX      BX      WX      IX      BLANK   BLANK   BLANK   ': '!'}
+
+	def test_setup_with_name_store_change_names(self, mock_dict, mock_initialisation_of_serial):
+		# Don't actually load the config, use the 'test' one, so if it config file changes
+		mock_dict.return_value = self.test_dict_ok
+		mock_initialisation_of_serial.return_value = self.dummy_port
+
+		with self.assertLogs(level='INFO') as cm:
+			fwc.logging.getLogger().info(fwc.initial_filter_wheel_setup('ifw1-south.cfg', config_file_loc='configs/'))
+			logging_actual_response = cm.output[0].split(':')[0]
+		self.assertEqual(logging_actual_response, 'INFO')
+
+		mock_initialisation_of_serial.assert_called_once_with(self.test_dict_ok)
+
+	def test_setup_with_name_store_no_change_names(self, mock_dict, mock_initialisation_of_serial):
+		dummy_serial.RESPONSES = {'WEXITS': 'END','WHOME': 'A',
+		'WREAD': 'RX      GX      BX      WX      IX      BLANK   BLANK   BLANK   ',
+		'WLOAD' + 'A' + '*'+ 'RX      GX      BX      WX      IX      BLANK   BLANK   BLANK   ': '!'}
+		
+		# Don't actually load the config, use the 'test' one, so if it config file changes
+		mock_dict.return_value = self.test_dict_ok
+		mock_initialisation_of_serial.return_value = self.dummy_port
+
+		with self.assertLogs(level='WARNING') as cm:
+			fwc.logging.getLogger().warning(fwc.initial_filter_wheel_setup('ifw1-south.cfg', config_file_loc='configs/'))
+			logging_actual_response = cm.output[0].split(':')[0]
+		self.assertEqual(logging_actual_response, 'WARNING')
+
+		mock_initialisation_of_serial.assert_called_once_with(self.test_dict_ok)
+
+
+	def tearDown(self):
+		#close the dummy_port
+		self.dummy_port.close()
+
+
+@patch("filter_wheel_control.initialise_ifw_serial_connection")
+@patch("common.load_config")
+class test_filter_wheel_startup(unittest.TestCase):
 
 	def setUp(self):
-		#self.test_dict_ok = dict({'baud_rate':19200,'data_bits':8, 'stop_bits':1, 'parity':'N',
-		#	'A':'RX', 'B':'GX','C':'BX','D':'WX', 'E':'IX'})
+		self.test_dict_ok = dict({'name':'ifw1-SOUTH', 'port_name': 'port1',
+		'baud_rate':19200,'data_bits':8, 'stop_bits':1, 'parity':'N',
+		'no_of_filters': 8,
+		'1': 'A', '2': 'B', '3': 'C', '4': 'D', '5': 'E', '6': 'F', '7': 'G','8': 'H',
+		'A':'RX', 'B':'GX','C':'BX','D':'WX', 'E':'IX','F':'BLANK','G':'BLANK','H':'BLANK',
+		'home_pos': 'A', 'warning-low-temp': -40, 'warning-high-temp': 85})
+		
 		#Pretend a serial port has already been opened has been initialised using dummy_serial
-		self.dummy_port = dummy_serial.Serial(port='test_port', timeout=0.00001)
+		self.dummy_port = dummy_serial.Serial(port=self.test_dict_ok['port_name'], timeout=0.00001)
 		# Setup up the expected responses
-		dummy_serial.RESPONSES = {'WEXITS': 'END'}
-"""
+		dummy_serial.RESPONSES = {'WEXITS': 'END','WHOME': 'A'}
+		
+	def test_return_port_and_dict(self, mock_dict, mock_initialisation_of_serial):
+		# Don't actually load the config, use the 'test' one, so if it config file changes
+		mock_dict.return_value = self.test_dict_ok
+		mock_initialisation_of_serial.return_value = self.dummy_port
+
+		expected_port_state = True
+		expected_dict = self.test_dict_ok
+
+		actual_port, actual_dict = fwc.filter_wheel_startup('ifw1-south.cfg', config_file_loc='configs/')
+		actual_port_state = actual_port._isOpen
+		
+		mock_initialisation_of_serial.assert_called_once_with(self.test_dict_ok)
+		self.assertEqual(expected_port_state,actual_port_state)
+		self.assertEqual(expected_dict, actual_dict)
+
+	def tearDown(self):
+		#close the dummy_port
+		self.dummy_port.close()
 
 class test_change_filter(unittest.TestCase):
 
 	def setUp(self):
 		self.test_dict_ok = dict({'baud_rate':19200,'data_bits':8, 'stop_bits':1, 'parity':'N',
+		'no_of_filters': 8,
+		'1': 'A', '2': 'B', '3': 'C', '4': 'D', '5': 'E', '6': 'F', '7': 'G','8': 'H',
 		'A':'RX', 'B':'GX','C':'BX','D':'WX', 'E':'IX','F':'BLANK','G':'BLANK','H':'BLANK'})
 		#Pretend a serial port has already been opened has been initialised using dummy_serial
 		self.dummy_port = dummy_serial.Serial(port='test_port', timeout=0.00001)
@@ -419,7 +538,7 @@ class test_change_filter(unittest.TestCase):
 	def test_same_filter(self):
 		
 		with self.assertLogs(level='INFO') as cm:
-			fwc.logging.getLogger().info(fwc.change_filter(1, self.dummy_port, self.test_dict_ok))
+			fwc.logging.getLogger().info(fwc.change_filter('RX', self.dummy_port, self.test_dict_ok))
 			logging_actual_response = cm.output[0].split(':')[0]
 		self.assertEqual(logging_actual_response, 'INFO')
 
