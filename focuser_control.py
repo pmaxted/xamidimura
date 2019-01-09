@@ -3,7 +3,7 @@ focuser_control.py
 Jessica A. Evans
 22/10/18
 
- 29/10/18 - Contains all the serial-port control functions for the focusers, currently excludes the commands that set various configuration settings. Need to decide if these will be needed...
+ 02/01/19 - Contains all the serial-port control functions for the focusers, and the startup/shutdown functions
 
 
 	CURRENT FUNCTIONS:
@@ -76,9 +76,16 @@ import common
 import serial
 import logging
 
-#def __main__():
-	#**** Will need to be put somewhere better eventually
-logging.basicConfig(filename = 'logfiles/focuser.log',filemode='w',level=logging.INFO, format='%(asctime)s  %(levelname)s %(message)s')
+focus_logger = logging.getLogger(__name__)
+focus_logger.setLevel(logging.INFO)
+focusHand = logging.FileHandler(filename = 'logfiles/focuser.log', mode = 'w')
+focusHand.setLevel(logging.INFO)
+formatter = logging.Formatter('%(asctime)s [%(name)s] %(levelname)s - %(message)s')
+focusHand.setFormatter(formatter)
+focus_logger.addHandler(focusHand)
+
+
+#logging.basicConfig(filename = 'logfiles/focuser.log',filemode='w',level=logging.INFO, format='%(asctime)s  %(levelname)s %(message)s')
 
 def check_config_port_values_for_focuser(config_dict):
 	"""
@@ -94,38 +101,38 @@ def check_config_port_values_for_focuser(config_dict):
 	# BAUD RATE
 	if 'baud_rate' in config_dict.keys():
 		if config_dict['baud_rate'] != 115200:
-			logging.critical('Unexpected baud rate for focuser, 115200 is expected')
+			focus_logger.critical('Unexpected baud rate for focuser, 115200 is expected')
 			raise ValueError('Unexpected baud rate for focuser, 115200 is expected')
 	else:
-		logging.critical('No baud rate found in config file.')
+		focus_logger.critical('No baud rate found in config file.')
 		raise KeyError('No baud rate found in config file.')
 	
 	# DATA BITS
 	if 'data_bits' in config_dict.keys():
 		if config_dict['data_bits'] != 8:
-			logging.critical('Unexpected number for data bits, 8 is expected')
+			focus_logger.critical('Unexpected number for data bits, 8 is expected')
 			raise ValueError('Unexpected number for data bits, 8 is expected')
 	else:
-		logging.critical('No data bits number found in config file')
+		focus_logger.critical('No data bits number found in config file')
 		raise KeyError('No data bits number found in config file')
 	
 	# STOP BITS
 	if 'stop_bits' in config_dict.keys():
 		if config_dict['stop_bits'] != 1:
-			logging.critical('Unexpected number for stop bits, 1 is expected')
+			focus_logger.critical('Unexpected number for stop bits, 1 is expected')
 			raise ValueError('Unexpected number for stop bits, 1 is expected')
 	else:
-		logging.critical('No stop bits number found in config file')
+		focus_logger.critical('No stop bits number found in config file')
 		raise KeyError('No stop bits number found in config file')
 	
 	
 	# PARITY
 	if 'parity' in config_dict.keys():
 		if config_dict['parity'] != 'N':
-			logging.critical('Unexpected parity values, "N" is expected')
+			focus_logger.critical('Unexpected parity values, "N" is expected')
 			raise ValueError('Unexpected parity values, "N" is expected')
 	else:
-		logging.critical('No parity values found in config file')
+		focus_logger.critical('No parity values found in config file')
 		raise KeyError('No parity values found in config file')
 
 
@@ -158,9 +165,9 @@ def check_focuser_no(x):
 		x =  the focuser number to be checked.
 		"""
 	
-	valid_focuser_number = [1,2]
+	valid_focuser_number = [1,2,]
 	if x not in valid_focuser_number:
-		logging.error(str(x) + ' is not a valid focuser number.')
+		focus_logger.error(str(x) + ' is not a valid focuser number.')
 		raise ValueError(str(x) + ' is not a valid focuser number.')
 	else:
 		return x
@@ -207,9 +214,9 @@ def halt_focuser(x, port):
 	message = common.send_command_two_response(command, port)
 
 	if message == 'HALTED':
-		logging.info('Motion of Focuser '+str(x)+' HALTED')
+		focus_logger.info('Motion of Focuser '+str(x)+' HALTED')
 	else:
-		logging.error('Response:'+message)
+		focus_logger.error('Response:'+message)
 
 def home_focuser(x, port):
 	"""
@@ -229,9 +236,9 @@ def home_focuser(x, port):
 	message = common.send_command_two_response(command, port)
 
 	if message == 'H':
-		logging.info('Focuser '+str(x)+ ' moving to home')
+		focus_logger.info('Focuser '+str(x)+ ' moving to home')
 	else:
-		logging.error('Response:'+message)
+		focus_logger.error('Response:'+message)
 
 def center_focuser(x, port):
 
@@ -251,9 +258,9 @@ def center_focuser(x, port):
 	message = common.send_command_two_response(command, port)
 
 	if message == 'M':
-		logging.info('Focuser '+str(x)+ ' moving to center')
+		focus_logger.info('Focuser '+str(x)+ ' moving to center')
 	else:
-		logging.error('Response:'+message)
+		focus_logger.error('Response:'+message)
 
 def move_to_position(pos, x, port):
 
@@ -275,7 +282,7 @@ def move_to_position(pos, x, port):
 	x = str(check_focuser_no(x))
 	
 	if pos > 112000 or pos < 0:
-		logging.error(str(pos)+ ' is an invalid position for focuser ' + x)
+		focus_logger.error(str(pos)+ ' is an invalid position for focuser ' + x)
 		raise ValueError(str(pos)+ ' is an invalid position for focuser ' + x)
 	
 
@@ -286,9 +293,9 @@ def move_to_position(pos, x, port):
 	message = common.send_command_two_response(command, port)
 
 	if message == 'M':
-		logging.info('Focuser '+str(x)+ ' moving to position: '+ format_pos)
+		focus_logger.info('Focuser '+str(x)+ ' moving to position: '+ format_pos)
 	else:
-		logging.error('Response:'+message)
+		focus_logger.error('Response:'+message)
 
 def move_focuser_in(x, port, move_speed=1):
 	"""
@@ -305,7 +312,7 @@ def move_focuser_in(x, port, move_speed=1):
 	"""
 	valid_speeds = [0,1]
 	if move_speed not in valid_speeds:
-		logging.error(str(move_speed) + ' is not a valid move speed. 0 = High, 1 = low.')
+		focus_logger.error(str(move_speed) + ' is not a valid move speed. 0 = High, 1 = low.')
 		raise ValueError(str(move_speed) + ' is not a valid move speed. 0 = High, 1 = low.')
 		
 	else:
@@ -314,9 +321,9 @@ def move_focuser_in(x, port, move_speed=1):
 		message = common.send_command_two_response(command, port)
 
 		if message == 'M':
-			logging.info('Focuser '+str(x)+ ' moving inwards')
+			focus_logger.info('Focuser '+str(x)+ ' moving inwards')
 		else:
-			logging.error('Response:'+message)
+			focus_logger.error('Response:'+message)
 
 def move_focuser_out(x, port, move_speed=1):
 	"""
@@ -333,7 +340,7 @@ def move_focuser_out(x, port, move_speed=1):
 		"""
 	valid_speeds = [0,1]
 	if move_speed not in valid_speeds:
-		logging.error(str(move_speed) + ' is not a valid move speed. 0 = High, 1 = low.')
+		focus_logger.error(str(move_speed) + ' is not a valid move speed. 0 = High, 1 = low.')
 		raise ValueError(str(move_speed) + ' is not a valid move speed. 0 = High, 1 = low.')
 
 	else:
@@ -342,10 +349,10 @@ def move_focuser_out(x, port, move_speed=1):
 		message = common.send_command_two_response(command, port)
 		
 		if message == 'M':
-			logging.info('Focuser '+str(x)+ ' moving outwards')
+			focus_logger.info('Focuser '+str(x)+ ' moving outwards')
 
 		else:
-			logging.error('Response:'+message)
+			focus_logger.error('Response:'+message)
 
 def end_relative_move(x, port):
 
@@ -364,10 +371,10 @@ def end_relative_move(x, port):
 	message = common.send_command_two_response(command, port)
 		
 	if message == 'STOPPED':
-		logging.info('Focuser '+str(x)+ ' motion stopped.')
+		focus_logger.info('Focuser '+str(x)+ ' motion stopped.')
 
 	else:
-		logging.error('Response:'+message)
+		focus_logger.error('Response:'+message)
 
 def get_focuser_status(x, port, return_dict=False):
 	"""
@@ -517,7 +524,7 @@ def set_device_name(x, port, device_name):
 	# check the length of the new device nickname
 	name_length = len(device_name)
 	if name_length > 16 or name_length <= 0:
-		logging.error('Invalid device name given')
+		focus_logger.error('Invalid device name given')
 		raise ValueError('Invalid device name given')
 
 	else:
@@ -526,10 +533,10 @@ def set_device_name(x, port, device_name):
 		message = common.send_command_two_response(command, port)
 
 		if message == 'SET':
-			logging.info('Name for Focuser '+str(x)+ ' set as: ' + str(device_name))
+			focus_logger.info('Name for Focuser '+str(x)+ ' set as: ' + str(device_name))
 
 		else:
-			logging.error('Response:'+message)
+			focus_logger.error('Response:'+message)
 
 
 def set_device_type(x, port, device_type = 'OB'):
@@ -571,7 +578,7 @@ def set_device_type(x, port, device_type = 'OB'):
 
 	if device_type not in valid_device_types:
 
-		logging.error(str(device_type) + ' is not a valid device type.')
+		focus_logger.error(str(device_type) + ' is not a valid device type.')
 		raise ValueError(str(device_type) + ' is not a valid device type.')
 
 	else:
@@ -580,10 +587,10 @@ def set_device_type(x, port, device_type = 'OB'):
 		message = common.send_command_two_response(command, port)
 
 		if message == 'SET':
-			logging.info('Device Type for Focuser '+str(x)+ ' set as: ' + str(device_type))
+			focus_logger.info('Device Type for Focuser '+str(x)+ ' set as: ' + str(device_type))
 
 		else:
-			logging.error('Response:'+message)
+			focus_logger.error('Response:'+message)
 
 
 
@@ -609,7 +616,7 @@ def set_temp_comp(x, port, temp_comp = False):
 	else:
 		#print(temp_comp)
 		#print(type(temp_comp))
-		logging.error('Invalid input for temperature compensation control. True=Enable, False=Disable')
+		focus_logger.error('Invalid input for temperature compensation control. True=Enable, False=Disable')
 		raise ValueError('Invalid input for temperature compensation control. True=Enable, False=Disable')
 
 	x = str(check_focuser_no(x))
@@ -618,10 +625,10 @@ def set_temp_comp(x, port, temp_comp = False):
 	message = common.send_command_two_response(command, port)
 
 	if message == 'SET':
-		logging.info('Temperature compensation ' + tc_state + ' for focuser '+str(x))
+		focus_logger.info('Temperature compensation ' + tc_state + ' for focuser '+str(x))
 
 	else:
-		logging.error('Response:'+message)
+		focus_logger.error('Response:'+message)
 
 def set_temp_comp_mode(x, port, mode='A'):
 
@@ -640,7 +647,7 @@ def set_temp_comp_mode(x, port, mode='A'):
 
 	valid_modes = ['A','B','C','D','E']
 	if mode not in valid_modes:
-		logging.error(str(mode)+ ' is not a valid mode for the temperature compensation.')
+		focus_logger.error(str(mode)+ ' is not a valid mode for the temperature compensation.')
 		raise ValueError(str(mode) + ' is not a valid mode for the temperature compensation.')
 
 	else:
@@ -649,10 +656,10 @@ def set_temp_comp_mode(x, port, mode='A'):
 		message = common.send_command_two_response(command, port)
 
 		if message == 'SET':
-			logging.info('Temperature compensation mode ' + str(mode) + ' set for focuser '+str(x))
+			focus_logger.info('Temperature compensation mode ' + str(mode) + ' set for focuser '+str(x))
 
 		else:
-			logging.error('Response:'+message)
+			focus_logger.error('Response:'+message)
 
 def set_temp_comp_coeff(x, port, mode, temp_coeff_val):
 
@@ -670,30 +677,31 @@ def set_temp_comp_coeff(x, port, mode, temp_coeff_val):
 
 	valid_modes = ['A','B','C','D','E']
 	if mode not in valid_modes:
-		logging.error(str(mode)+ ' is not a valid mode for the temperature compensation.')
+		focus_logger.error(str(mode)+ ' is not a valid mode for the temperature compensation.')
 		raise ValueError(str(mode) + ' is not a valid mode for the temperature compensation.')
 
 
 	if isinstance(temp_coeff_val, int) == False:
-		logging.error('Temperature compensation coefficient must be an integer')
+		focus_logger.error('Temperature compensation coefficient must be an integer')
 	else:
 
 		if temp_coeff_val < -9999 or temp_coeff_val > 9999:
-			logging.error('Invalid value enter for the temperature compensation coefficient')
+			focus_logger.error('Invalid value enter for the temperature compensation coefficient')
 
 		else:
 
 			x = str(check_focuser_no(x))
 			formatted_coeff = '{0:=+05}'.format(temp_coeff_val)
 			command = get_start_end_char('F'+ x +'SCTC'+str(mode)+formatted_coeff)
+			
 			message = common.send_command_two_response(command, port)
 
 			if message == 'SET':
-				logging.info('Temperature compensation coefficient set as ' + formatted_coeff +
-				' for mode: '+ str(mode) + 'and for focuser '+str(x))
+				focus_logger.info('Temperature compensation coefficient set as ' + formatted_coeff +
+				' for mode: '+ str(mode) + ' and for focuser '+str(x))
 
 			else:
-				logging.error('Response:'+message)
+				focus_logger.error('Response:'+message)
 
 
 def set_temp_comp_start_state(x, port, temp_comp_start = False):
@@ -717,7 +725,7 @@ def set_temp_comp_start_state(x, port, temp_comp_start = False):
 		tcs_state = 'ENABLED'
 		set_no =1
 	else:
-		logging.error('Invalid input for "temperature compensation at start" control. True=Enable, False=Disable')
+		focus_logger.error('Invalid input for "temperature compensation at start" control. True=Enable, False=Disable')
 		raise ValueError('Invalid input for "temperature compensation at start" control. True=Enable, False=Disable')
 
 
@@ -726,10 +734,10 @@ def set_temp_comp_start_state(x, port, temp_comp_start = False):
 	message = common.send_command_two_response(command, port)
 
 	if message == 'SET':
-		logging.info('"Temperature compensation at start" state set to ' + tcs_state + ' for focuser '+str(x))
+		focus_logger.info('"Temperature compensation at start" state set to ' + tcs_state + ' for focuser '+str(x))
 
 	else:
-		logging.error('Response:'+message)
+		focus_logger.error('Response:'+message)
 
 
 def set_backlash_comp(x, port, backlash_comp = False):
@@ -755,7 +763,7 @@ def set_backlash_comp(x, port, backlash_comp = False):
 		bl_state = 'ENABLED'
 		set_no =1
 	else:
-		logging.error('Invalid input for backlash compensation control. True=Enable, False=Disable')
+		focus_logger.error('Invalid input for backlash compensation control. True=Enable, False=Disable')
 		raise ValueError('Invalid input for backlash compensation control. True=Enable, False=Disable')
 
 
@@ -764,10 +772,10 @@ def set_backlash_comp(x, port, backlash_comp = False):
 	message = common.send_command_two_response(command, port)
 
 	if message == 'SET':
-		logging.info('Backlash compensation state set to ' + bl_state + ' for focuser '+str(x))
+		focus_logger.info('Backlash compensation state set to ' + bl_state + ' for focuser '+str(x))
 
 	else:
-		logging.error('Response:'+message)
+		focus_logger.error('Response:'+message)
 
 def set_backlash_steps(x, port, backlash_steps = 10):
 
@@ -785,11 +793,11 @@ def set_backlash_steps(x, port, backlash_steps = 10):
 	"""
 	#make sure value is an integer
 	if isinstance(backlash_steps, int) == False:
-		logging.error('Backlash steps value must be an integer.')
+		focus_logger.error('Backlash steps value must be an integer.')
 		
 	else:
 		if backlash_steps<=0 or backlash_steps >99:
-			logging.error('Backlash steps must be between 0 and 99')
+			focus_logger.error('Backlash steps must be between 0 and 99')
 
 		else:
 			x = str(check_focuser_no(x))
@@ -798,10 +806,10 @@ def set_backlash_steps(x, port, backlash_steps = 10):
 			message = common.send_command_two_response(command, port)
 
 			if message == 'SET':
-				logging.info('Backlash steps set to ' + formatted_steps + ' for focuser '+str(x))
+				focus_logger.info('Backlash steps set to ' + formatted_steps + ' for focuser '+str(x))
 
 			else:
-				logging.error('Response:'+message)
+				focus_logger.error('Response:'+message)
 
 def set_LED_brightness(brightness, port):
 
@@ -816,25 +824,26 @@ def set_LED_brightness(brightness, port):
 	
 	"""
 	
-	try:
-		brightness = int(brightness)
-	except:
-		logging.error('Check value entered for brightness setting.')
-	else:
+
+	if isinstance(brightness, int):
 	
 		if brightness > 100 or brightness < 0:
-			logging.error(str(brightness)+ ' is an invalid value for brightness setting.')
-
-		format_bright = '{0:>03}'.format(brightness)
-
-		command = get_start_end_char('FHSCLB'+format_bright)
-
-		message = common.send_command_two_response(command, port)
-
-		if message == 'SET':
-			logging.info('LED brightness set to: ' + str(format_bright))
+			focus_logger.error(str(brightness)+ ' is an invalid value for brightness setting.')
 		else:
-			logging.error('Response:'+message)
+			format_bright = '{0:>03}'.format(brightness)
+
+			command = get_start_end_char('FHSCLB'+format_bright)
+
+			message = common.send_command_two_response(command, port)
+
+			if message == 'SET':
+				focus_logger.info('LED brightness set to: ' + str(format_bright))
+			else:
+				focus_logger.error('Response:'+message)
+
+	else:
+	
+		focus_logger.error('Check value entered for brightness setting.')
 
 
 """
@@ -844,7 +853,6 @@ Group OBSERVING FUNCTIONS
 """
 
 def focuser_initial_configuration(config_file_name, config_file_loc = 'configs/'):
-#def focuser_initial_configuration(open_p, config_file_name, config_file_loc = 'configs/'):
 	"""
 	***** NEEDS TESTING *****
 	
@@ -922,9 +930,41 @@ def startup_focuser(config_file_name, config_file_loc = 'configs/'):
 	focuser_no = config_dict['focuser_no']
 
 	home_focuser(focuser_no, open_p)
+	
+	
+	current_config=get_focuser_stored_config(focuser_no, open_p, return_dict=True)
+	if current_config['TComp ON'] == 1:
+		focus_logger.info('Focuser '+str(focuser_no)+': Temperature compensation - ON')
+	else:
+		focus_logger.info('Focuser '+str(focuser_no)+': Temperature compensation - OFF')
+	if current_config['BLC En'] == 1:
+		focus_logger.info('Focuser '+str(focuser_no)+': Backlash compensation - ON')
+	else:
+		focus_logger.info('Focuser '+str(focuser_no)+': Backlash compensation - OFF')
+
+	focus_logger.info('Startup for Focuser '+str(focuser_no)+' complete.')
 
 	return focuser_no, open_p
 
+def shutdown_focuser(x, open_p):
+	"""
+	
+	**** NEEDS TESTING ****
+	
+	This function will perform any shutdown operations at the end of the night or during shutdown.
+		It will center the focuser and then close the serial port connection
+
+	PARAMETERS:
+		
+		open_p = an open serial port connection to the focuser
+		x = focuser number
+	
+	"""
+
+	center_focuser(x, open_p)
+	open_p.close()
+
+	focus_logger.info('Serial port connection to focuser '+str(x)+' has been closed')
 
 """
 	#Might be used for testing the status setup

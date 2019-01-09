@@ -11,6 +11,14 @@ import logging
 import dummy_serial
 import numpy as np
 
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+fileHand = logging.FileHandler(filename = 'logfiles/common.log', mode = 'w')
+fileHand.setLevel(logging.INFO)
+formatter = logging.Formatter('%(asctime)s [%(name)s] %(levelname)s - %(message)s')
+fileHand.setFormatter(formatter)
+logger.addHandler(fileHand)
+
 def load_config(fileName, path='/.'):
 
 	"""
@@ -75,19 +83,21 @@ def load_config(fileName, path='/.'):
 				# Try to identify lists by splitting on commas. Even single entries will succeed but will
 				#	only have one value e.g. ['target_name']. If more than one found try to convert to ints
 				#	or floats etc, and leave a a list of strings if not.
-				
-				comma_split_list = config_dict[param_name].split(',')
-
-				if len(comma_split_list)>1:
-					try:
-						config_dict[param_name] = np.array(comma_split_list,dtype=int)
-					except:
-						try:
-							config_dict[param_name] = np.array(comma_split_list,dtype=float)
-						except:
-							config_dict[param_name] = np.array(comma_split_list)
-				else:
+				try:
+					comma_split_list = config_dict[param_name].split(',')
+				except:
 					pass
+				else:
+					if len(comma_split_list)>1:
+						try:
+							config_dict[param_name] = np.array(comma_split_list,dtype=int)
+						except:
+							try:
+								config_dict[param_name] = np.array(comma_split_list,dtype=float)
+							except:
+								config_dict[param_name] = np.array(comma_split_list)
+					else:
+						pass
 	
 	return config_dict
 """
@@ -227,12 +237,11 @@ def send_command_two_response(command, port_name, expected_end='\n', sleep_time 
 				message = open_p.read_until().decode('utf-8').strip()
 
 				if message != '!':
-					print(command +' was unsuccessful.' + message)
-					logging.info(command + ' unsuccessful')
-					logging.error(message)
+					#print(command +' was unsuccessful.' + message)
+					logger.error(command + ' unsuccessful:'+ message)
 				else:
 					message = open_p.read_until(expected_end).decode('utf-8').strip()
-					logging.info(command + ' successfully passed')
+					logger.info(command + ' successfully passed')
 
 		else:
 			port_name.write((command).encode('utf-8'))
@@ -241,13 +250,13 @@ def send_command_two_response(command, port_name, expected_end='\n', sleep_time 
 
 			if message != '!':
 				#print(command +' was unsuccessful.' + message)
-				logging.info(command + ' unsuccessful')
-				logging.error(message)
+				logger.error(command + ' unsuccessful:'+ message)
+				#logger.error(message)
 			else:
 				message = port_name.read(1000)
 				#print('Second: '+message)
 				message = message.decode('utf-8').strip()
-				#logging.info(command + ' successfully passed')
+				#logger.info(command + ' successfully passed')
 		
 		return message
 

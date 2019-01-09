@@ -1,4 +1,5 @@
 import unittest
+from unittest.mock import patch
 import focuser_control as fc
 import dummy_serial
 
@@ -7,7 +8,6 @@ Note all unit tests that send/receive information to/from an open serial port ar
  using a mock serial port. Tests to ensure the actual devices are sending the information that is expected
  have so far not been possible (30/10/18)
 """
-
 
 class test_config_port_values(unittest.TestCase):
 	"""
@@ -247,7 +247,7 @@ class test_move_to_position(unittest.TestCase):
 		self.dummy_port = dummy_serial.Serial(port='test_port', timeout=0.00001)
 		dummy_serial.DEFAULT_BAUDRATE = 115200
 		# Setup up the expected responses
-		dummy_serial.RESPONSES = {'<F1MA042000>': '!\nM','<F2045023>': '!\nM'}
+		dummy_serial.RESPONSES = {'<F1MA042000>': '!\nM','<F2MA045023>': '!\nM'}
 
 	def test_wrong_focuser_no_move_pos(self):
 
@@ -532,13 +532,13 @@ class test_set_temp_comp_state(unittest.TestCase):
 		with self.assertLogs(level='INFO') as cm:
 			fc.logging.getLogger().info(fc.set_temp_comp(1,self.dummy_port,True))
 			logging_response = cm.output[0]#.split(':')[0]
-		self.assertEqual(logging_response, 'INFO:root:Temperature compensation ENABLED for focuser 1')
+		self.assertEqual(logging_response, 'INFO:'+fc.__name__+':Temperature compensation ENABLED for focuser 1')
 
 	def test_set_temp_comp_disabled(self):
 		with self.assertLogs(level='INFO') as cm:
 			fc.logging.getLogger().info(fc.set_temp_comp(1,self.dummy_port,False))
 			logging_response = cm.output[0]#.split(':')[0]
-		self.assertEqual(logging_response, 'INFO:root:Temperature compensation DISABLED for focuser 1')
+		self.assertEqual(logging_response, 'INFO:'+fc.__name__+':Temperature compensation DISABLED for focuser 1')
 	
 	def tearDown(self):
 		self.dummy_port.close()
@@ -584,7 +584,7 @@ class test_set_temp_comp_coeff(unittest.TestCase):
 		self.dummy_port = dummy_serial.Serial(port='test_port', timeout=0.00001)
 		dummy_serial.DEFAULT_BAUDRATE = 115200
 		# Setup up the expected responses
-		dummy_serial.RESPONSES = {'<F1SCTCD+0092>': '!\nSET','<F1SCTCE-0001>':'!\nSET','<F1SCTCE+0000>':'!\nSET'}
+		dummy_serial.RESPONSES = {'<F1SCTCA+0092>': '!\nSET','<F1SCTCA-0001>':'!\nSET','<F1SCTCA+0000>':'!\nSET'}
 
 	def test_wrong_focuser_no_temp_coeff_set(self):
 		with self.assertRaises(ValueError):
@@ -655,13 +655,13 @@ class test_set_temp_comp_start_state(unittest.TestCase):
 		with self.assertLogs(level='INFO') as cm:
 			fc.logging.getLogger().info(fc.set_temp_comp_start_state(1,self.dummy_port,True))
 			logging_response = cm.output[0]#.split(':')[0]
-		self.assertEqual(logging_response, 'INFO:root:"Temperature compensation at start" state set to ENABLED for focuser 1')
+		self.assertEqual(logging_response, 'INFO:'+fc.__name__+':"Temperature compensation at start" state set to ENABLED for focuser 1')
 
 	def test_set_temp_comp_disabled(self):
 		with self.assertLogs(level='INFO') as cm:
 			fc.logging.getLogger().info(fc.set_temp_comp_start_state(1,self.dummy_port,False))
 			logging_response = cm.output[0]#.split(':')[0]
-		self.assertEqual(logging_response, 'INFO:root:"Temperature compensation at start" state set to DISABLED for focuser 1')
+		self.assertEqual(logging_response, 'INFO:'+fc.__name__+':"Temperature compensation at start" state set to DISABLED for focuser 1')
 	
 	def tearDown(self):
 		self.dummy_port.close()
@@ -691,13 +691,13 @@ class test_set_backlash_comp(unittest.TestCase):
 		with self.assertLogs(level='INFO') as cm:
 			fc.logging.getLogger().info(fc.set_backlash_comp(1,self.dummy_port,True))
 			logging_response = cm.output[0]#.split(':')[0]
-		self.assertEqual(logging_response, 'INFO:root:Backlash compensation state set to ENABLED for focuser 1')
+		self.assertEqual(logging_response, 'INFO:'+fc.__name__+':Backlash compensation state set to ENABLED for focuser 1')
 
 	def test_set_backlash_comp_disabled(self):
 		with self.assertLogs(level='INFO') as cm:
 			fc.logging.getLogger().info(fc.set_backlash_comp(1,self.dummy_port,False))
 			logging_response = cm.output[0]#.split(':')[0]
-		self.assertEqual(logging_response, 'INFO:root:Backlash compensation state set to DISABLED for focuser 1')
+		self.assertEqual(logging_response, 'INFO:'+fc.__name__+':Backlash compensation state set to DISABLED for focuser 1')
 	
 	def tearDown(self):
 		self.dummy_port.close()
@@ -777,7 +777,7 @@ class test_set_LED_brightness(unittest.TestCase):
 			fc.logging.getLogger().info(fc.set_LED_brightness(1000,self.dummy_port))
 			logging_response = cm.output[0].split(':')[0]
 		self.assertEqual(logging_response, 'ERROR')
-
+		
 		with self.assertLogs(level='ERROR') as cm:
 			fc.logging.getLogger().info(fc.set_LED_brightness('fds',self.dummy_port))
 			logging_response = cm.output[0].split(':')[0]
@@ -790,13 +790,18 @@ class test_set_LED_brightness(unittest.TestCase):
 
 	def tearDown(self):
 		self.dummy_port.close()
-"""
-class test_initial_focuser_config(unittest.TestCase):
 
+
+@patch("common.open_port_from_config_param")
+@patch("common.load_config")
+class test_focuser_initial_configuration(unittest.TestCase):
+	
 	def setUp(self):
-		self.dummy_port = dummy_serial.Serial(port='test_port', timeout=0.00001)
+		self.test_dict = dict({'focuser_name': 'focuser1-south', 'focuser_no': 1, 'port_name': 'focus1', 'baud_rate': 115200, 'data_bits': 8, 'stop_bits': 1, 'parity': 'N', 'device_type': 'OB', 'LED_brightness': 10, 'center_position': 56000, 'min_position': 0, 'max_position': 112000, 'temp_compen': False, 'temp_compen_mode': 'A', 'temp_compen_at_start': False, 'temp_coeffA': 86, 'temp_coeffB': 46, 'temp_coeffC': 74, 'temp_coeffD': 23, 'temp_coeffE': 23, 'backlash_compen': 1, 'backlash_steps': 10})
+		
+		self.dummy_port = dummy_serial.Serial(port=self.test_dict['port_name'], timeout=0.00001)
 		dummy_serial.DEFAULT_BAUDRATE = 115200
-		# Setup up the expected responses
+	
 		dummy_serial.RESPONSES = {'<F1SCNNtestname>': '!\nSET', #device name
 				'<F1SCDTOB>': '!\nSET', #device type
 				'<FFSCLB010>': '!\nSET', # LED Brightness
@@ -806,18 +811,73 @@ class test_initial_focuser_config(unittest.TestCase):
 					'<F1SCTCD+0023>': '!\nSET', '<F1SCTCE+0023>': '!\nSET', #temp comp set coeff
 				'<F1SCTS1>': '!\nSET','<F1SCTS0>': '!\nSET', #temp comp at start
 				'<F1SCBE1>': '!\nSET','<F1SCBE0>': '!\nSET', #backlash comp
-				'<F1SCBS10>': '!\nSET','<F1SCBS01>': '!\nSET', # backlash comp steps
-				'<F1GETCONFIG>': '!\nCONFIG\nNickname = focuser-south\nMax Pos = 112000\nDevTyp = OB\nTComp ON = 0\nTempCo A = +0086\nTempCo B = +0046\nTempCo C = +0074\nTempCo D = +0023\nTempCo E = +0023\nTCMode = A\nBLC En = 1\nBLC Stps = +10\nLED Brt = 10\nTC@Start = 0\nEND'} # backlash comp steps
+				}
 
-	def test_set_config_settings(self):
-		with self.assertLogs(level='INFO') as cm:
-			fc.logging.getLogger().info(fc.focuser_initial_configuration(self.dummy_port,'focuser_testfile.cfg'))
-			logging_response = cm.output[0]#.split(':')[0]
-		#self.assertEqual(logging_response, 'INFO')
+	def test_can_set_configs(self, mock_dict, mock_port):
 
+		mock_dict.return_value = self.test_dict
+		mock_port.return_value = self.dummy_port
+
+		fc.focuser_initial_configuration('focuser1-south.cfg')
+		expected_port_open = False
+		actual_port_open = self.dummy_port._isOpen
+		self.assertEqual(expected_port_open,actual_port_open)
+
+
+@patch("focuser_control.get_focuser_stored_config")
+@patch("common.open_port_from_config_param")
+@patch("common.load_config")
+class test_startup_focuser(unittest.TestCase):
+
+	def setUp(self):
+		self.test_dict = dict({'focuser_name': 'focuser1-south', 'focuser_no': 1, 'port_name': 'focus1', 'baud_rate': 115200, 'data_bits': 8, 'stop_bits': 1, 'parity': 'N', 'device_type': 'OB', 'LED_brightness': 10, 'center_position': 56000, 'min_position': 0, 'max_position': 112000, 'temp_compen': False, 'temp_compen_mode': 'A', 'temp_compen_at_start': False, 'temp_coeffA': 86, 'temp_coeffB': 46, 'temp_coeffC': 74, 'temp_coeffD': 23, 'temp_coeffE': 23, 'backlash_compen': 1, 'backlash_steps': 10})
+		
+		self.dummy_port = dummy_serial.Serial(port=self.test_dict['port_name'], timeout=0.00001)
+		dummy_serial.DEFAULT_BAUDRATE = 115200
+		# Setup up the expected responses
+		dummy_serial.RESPONSES = {'<F1HOME>': '!\nH'}
+		
+	
+	def test_return_focuser_and_port(self, mock_dict, mock_port, mock_get_config):
+		mock_dict.return_value = self.test_dict
+		mock_port.return_value = self.dummy_port
+		mock_get_config.return_value = dict({'TComp ON': 1, 'BLC En': 1}) #Don't care about other settings
+		
+		expected_focuser_no = 1
+		expected_port_open = True
+		
+		actual_focuser_no, actual_port = fc.startup_focuser('focuser1-south',config_file_loc='configs/')
+		actual_port_open = actual_port._isOpen
+		
+		mock_port.assert_called_once_with(self.test_dict)
+		mock_dict.assert_called_once_with('focuser1-south',path='configs/')
+		self.assertEqual(expected_port_open,actual_port_open)
+		self.assertEqual(expected_focuser_no, actual_focuser_no)
+		
+		
 	def tearDown(self):
 		self.dummy_port.close()
-"""
+
+		
+class test_shutdown_focuser(unittest.TestCase):
+
+	def setUp(self):
+		self.dummy_port = dummy_serial.Serial(port='port1', timeout=0.00001)
+		dummy_serial.DEFAULT_BAUDRATE = 115200
+		# Setup up the expected responses
+		dummy_serial.RESPONSES = {'<F1CENTER>': '!\nM','<F2CENTER>': '!\nM'}
+		
+	def test_it_runs(self):
+	
+		with self.assertLogs(level='INFO') as cm:
+			fc.logging.getLogger().info(fc.shutdown_focuser(1,self.dummy_port))
+			logging_response = cm.output[0].split(':')[0]
+		self.assertEqual(logging_response, 'INFO')
+
+		expected_port_open = False
+		actual_port_open = self.dummy_port._isOpen
+		self.assertEqual(expected_port_open, actual_port_open)
+
 
 
 if __name__=="__main__":

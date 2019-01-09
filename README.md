@@ -27,19 +27,37 @@ Documentation and software for the Xamidimura telescopes
 
 * **observing.py** - Will contain the main functions to carry out the observing, and other functions required by this main function. Currently can create fits file with only header information, store an observing record in the obslog2 table in the xamidimura database. No unit tests created yet.  
 
-* **PLC_interaction_functions.py** - Contains functions will will open/close the roof, get the roof/rain/plc status, swap to/from main/battery power etc. Have been modified from the original version. Messages are now logged, and errors (a user defined PLC_ERROR) are raised if a problem occurs instead of exiting Python. Function which check the status of something will return the info as a dictionary and not just print the messages to screen. **CURRENTLY No new functions have been added, so the new tilt checks etc are not in place**  
+* **PLC_interaction_functions.py** - Contains functions that will open/close the roof, get the roof/rain/plc status, swap to/from main/battery power etc. Has been modified from the original version. Messages are now logged, and errors (a user defined PLC_ERROR) are raised if a problem occurs instead of exiting Python. Functions which check the status of something will return the info as a dictionary and not just print the messages to screen. These functions also have the option to log the statu info or not. There is a function to get the tilt status of the telescope. There is a function to request telescope drive control. **CURRENTLY new tilt checks etc are NOT in place, i.e. before roof closes**. Adjustments might have to be made if the battery/mains sysyem is not being used any more.  
 
-* **roof_control_functions.py** - Equivalent to the 'intelligent_roof_controller_functions' script written in PHP on the gateway machine. Responsible for the low level communication with the PLC box. Added a function to get the information containing the tilt bits, but not tested.  
+* **roof_control_functions.py** - Equivalent to the 'intelligent_roof_controller_functions' script written in PHP on the gateway machine. Responsible for the low level communication with the PLC box. Added a function to get the information containing the tilt bits, but not tested. Error codes are taken from dictionaries in the settings_and_error_code.py script.  
 
 * **settings_and_error_codes.py** - Somewhere to keep all the error code definitions, timeouts, etc so you don't need to go hunting through all the code to find them. Plus, if they are used multiple times, only have to change them once. Can try to make error codes unique.  
 
 * **tcs_control.py** - Can control much of the communication with the TCS machine, both in terms of initial connection and then sending over subsequent commands. Note, most of this has only been tested by using the script to ssh into the gateway machine, tests to send the commands directly from the gateway will only be possible once the new machine (with a newer version of python) is ready. Now includes a function to obtain exposures  
 
 
-#### Unit test scripts	  
-* **ifw_test.py** - contains unitest for filter wheel control functions (All functions tested apart from initialisations function). In a terminal use "python ifw_test.py" to run.  
+#### Unit test scripts
+
+* **TO RUN TESTS** use ```python test_focuser_control.py''' to run just one of the test scripts, or ```python -m unittest test_roof_control_functions'''. This second example can be modified to run one particular class, or even function within a class, e.g.  
+
+	```
+	> python -m unittest test_roof_control_functions.test_set_hex_bit
+	> python -m unittest test_roof_control_functions.test_set_hex_bit.test-set_bit_5
+	'''
+	  
+	To run all tests scripts in the directory, use
+	
+	```
+	> python -m unittest discover .
+	'''  
 	
 * **test_focuser_control.py** - Unit tests for the focuser_control functions.  
+
+* **test_ifw_control.py** Contains unitest for filter wheel control functions (All functions tested apart from initialisations function).  
+
+* **test_plc_interaction_func.py** Contains the unit tests for the plc interaction functions.  
+
+* **test_roof_control_functions.py** Provides test for the functions contained in the roof_control_functions.py script. Note that the majority of the test example used are what have been inferred from the PLC documentation, I have not yet been able to check that the inputs are realistic values. Only part not tested is the line that actually send the commands to the PLC box, as this can't be done without the box connected or changing the function to work with dummy serial.  
                
 
 ## Observing recipes
