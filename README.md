@@ -38,18 +38,18 @@ Documentation and software for the Xamidimura telescopes
 
 #### Unit test scripts
 
-* **TO RUN TESTS** use ```python test_focuser_control.py''' to run just one of the test scripts, or ```python -m unittest test_roof_control_functions'''. This second example can be modified to run one particular class, or even function within a class, e.g.  
+* **TO RUN TESTS** use ```python test_focuser_control.py``` to run just one of the test scripts, or ```python -m unittest test_roof_control_functions```. This second example can be modified to run one particular class, or even function within a class, e.g.  
 
 	```
 	> python -m unittest test_roof_control_functions.test_set_hex_bit
 	> python -m unittest test_roof_control_functions.test_set_hex_bit.test-set_bit_5
-	'''
+	```
 	  
 	To run all tests scripts in the directory, use
 	
 	```
 	> python -m unittest discover .
-	'''  
+	```  
 	
 * **test_focuser_control.py** - Unit tests for the focuser_control functions.  
 
