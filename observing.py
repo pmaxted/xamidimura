@@ -44,7 +44,7 @@ observing.py
 	
 	- get_observing_recipe(target_name, path = 'obs_recipes/')
 	
-	- take_exposure(obs_recipe, image_type, target_info, timeout_time=set_err_code.telescope_coms_timeout)
+	- take_exposure(obs_recipe, image_type, target_info, timeout_time=set_err_codes.telescope_coms_timeout)
 	
 	- [async] change_filters(filter_name, ifw_port, ifw_config,status)
 	
@@ -82,7 +82,7 @@ import timeout_decorator
 import tcs_control as tcs
 import roof_control_functions as rcf
 import PLC_interaction_functions as plc
-import settings_and_error_codes as set_err_code
+import settings_and_error_codes as set_err_codes
 
 # Status code for taking exposure
 STATUS_CODE_OK = 0
@@ -102,9 +102,6 @@ fileHand.setLevel(logging.INFO)
 formatter = logging.Formatter('%(asctime)s [%(name)s] %(levelname)s - %(message)s')
 fileHand.setFormatter(formatter)
 logger.addHandler(fileHand)
-
-#logging.basicConfig(filename = 'logfiles/observingScript.log',filemode='w',level=logging.INFO, format='%(asctime)s %(levelname)s %(message)s')
-observe_log_DBtable = 'obslog2'
 
 
 def get_current_UTC_time_in_isot_format():
@@ -428,7 +425,7 @@ def sort_all_logging_info(exposure_class, target_class, focuser_info, conn, curs
 	aa = ','.join(obs_dict.keys())
 	values_place_holder = len(obs_dict.keys())*'?,'
 	#Set up SQL request
-	sql ='''INSERT INTO '''+str(observe_log_DBtable)+'''('''+aa+''') VALUES('''+(values_place_holder)[:-1]+')'
+	sql ='''INSERT INTO '''+str(set_err_codes.OBSERVING_LOG_DATABASE_TABLE )+'''('''+aa+''') VALUES('''+(values_place_holder)[:-1]+')'
 	curs.execute(sql,tuple(obs_dict.values()))
 	conn.commit()
 
@@ -563,7 +560,7 @@ def get_observing_recipe(target_name, path = 'obs_recipes/'):
 
 		return observing_recipe
 
-def take_exposure(obs_recipe, image_type, target_info, timeout_time=set_err_code.telescope_coms_timeout):
+def take_exposure(obs_recipe, image_type, target_info, timeout_time=set_err_codes.telescope_coms_timeout):
 	
 	"""
 	Part of the functions used to execute the exposures Need to add the actual call to the 
@@ -600,14 +597,14 @@ def take_exposure(obs_recipe, image_type, target_info, timeout_time=set_err_code
 		exp_objN = exposure_obj(obs_recipe['N_EXPO'][j],obs_recipe['N_FILT'][j],image_type,2, ifw2_config['name'], next_no2)
 		exp_objS = exposure_obj(obs_recipe['S_EXPO'][j],obs_recipe['S_FILT'][j],image_type,1, ifw1_config['name'], next_no1)
 
-		"""
+
 		#Change the filters if need be, don't want to have to wait for one filter to change before starting
 		#  on the second, so the asyncio module will allow the to be change simultaneously
 		filter_loop1 = asyncio.get_event_loop()
 		filterS = filter_loop1.create_task(change_filters(exp_objS.filter, ifw1_port, ifw1_confi,statusS))
 		filterN = filter_loop1.create_task(change_filters(exp_objN.filter, ifw2_port, ifw2_config,statusN))
 		filter_loop1.run_until_complete(asyncio.gather(filterS,filterN))
-		"""
+		
 
 		try:
 			# First send the command to the telescope and expect an '0' acknowledgement if it was received
@@ -620,8 +617,8 @@ def take_exposure(obs_recipe, image_type, target_info, timeout_time=set_err_code
 		
 		except TimeoutError:
 			logger.error('TIMEOUT: No response from TCS. Exposure abandoned.')
-			statusS = set_err_code.STATUS_CODE_NO_RESPONSE
-			statusN = set_err_code.STATUS_CODE_NO_RESPONSE
+			statusS = set_err_codes.STATUS_CODE_NO_RESPONSE
+			statusN = set_err_codes.STATUS_CODE_NO_RESPONSE
 
 		#Do observing log and fits header
 		next_no1 = sort_all_logging_info(exp_objS,'target_class',focuser1_info,dbconn,dbcurs,statusS)
@@ -643,13 +640,13 @@ async def change_filters(filter_name, ifw_port, ifw_config,status):
 		
 		except fwc.FilterwheelError:
 			logger.error('Problem with check/change filterwheel request: ' + ifw_config[name])
-			status.set_result(set_err_code.STATUS_CODE_FILTER_WHEEL_TIMEOUT)
+			status.set_result(set_err_codes.STATUS_CODE_FILTER_WHEEL_TIMEOUT)
 		except timeout_decorator.TimeoutError():
 			logger.error('Timeout on filterwheel connection (120 sec) for filterwheel: '+ifw_config[name])
-			status.set_result(set_err_code.STATUS_CODE_FILTER_WHEEL_TIMEOUT)
+			status.set_result(set_err_codes.STATUS_CODE_FILTER_WHEEL_TIMEOUT)
 
 
-def exposure_TCS_response(expObN, expObS, timeout):
+def exposure_TCS_response(expObN, expObS):
 	"""
 	Send command to TCS to carry out exposure. Will expect an immediate response to be returned.
 	 Response will be
@@ -677,10 +674,10 @@ def exposure_TCS_response(expObN, expObS, timeout):
 	expObS.set_start_time()
 	
 	#SEND EXPOSURE COMMAND TO TCS - get status depending on response
-	tcs.exposure_request(expObN.image_type, exp_objN.exptime)
+	response_stat = tcs.tcs_exposure_request(expObN.image_type, duration=expObN.exptime)
 	
-	statN = set_err_code.STATUS_CODE_OK#this will really be whatever the function returns to acknowledge command recieved
-	statS = set_err_code.STATUS_CODE_OK
+	statN = response_stat#set_err_codes.STATUS_CODE_OK#this will really be whatever the function returns to acknowledge command recieved
+	statS = response_stat#set_err_codes.STATUS_CODE_OK
 
 	return statN, statS
 
@@ -708,45 +705,216 @@ def exposureTCSerrorcode(statN,statS, exptime):
 		telescope - either North/South depending on the telescope doing the requesting
 	"""
 	#return num
-	OK_to_Exp_North = statN == set_err_code.STATUS_CODE_OK or statN == set_err_code.STATUS_CODE_CCD_WARM
-	OK_to_Exp_South = statS == set_err_code.STATUS_CODE_OK or statS == set_err_code.STATUS_CODE_CCD_WARM
+	OK_to_Exp_North = statN == set_err_codes.STATUS_CODE_OK or statN == set_err_codes.STATUS_CODE_CCD_WARM
+	OK_to_Exp_South = statS == set_err_codes.STATUS_CODE_OK or statS == set_err_codes.STATUS_CODE_CCD_WARM
 	if OK_to_Exp_North or OK_to_Exp_South:
 	
-		if statN == set_err_code.STATUS_CODE_CCD_WARM:
+		if statN == set_err_codes.STATUS_CODE_CCD_WARM:
 			logger.warning('North CCD Temp > -20')
-		if statS == set_err_code.STATUS_CODE_CCD_WARM:
+		if statS == set_err_codes.STATUS_CODE_CCD_WARM:
 			logger.warning('South CCD Temp > -20')
 		#while [no weather alert]
 		# change to using the wait command on the TCS
 		time.sleep(exptime)# put in here something to stop this if there is a weather alert
 		logger.info('Exposure complete.')
 		#else:
-		#	num.set_result(set_err_code.STATUS_CODE_WEATHER_INTERRUPT)
+		#	num.set_result(set_err_codes.STATUS_CODE_WEATHER_INTERRUPT)
 		#	logger.warning('Weather alert during exposure')
-		# or (set_err_code.STATUS_CODE_OTHER_INTERRUPT exposure interrupted - non weather)
-	elif statN == set_err_code.STATUS_CODE_EXPOSURE_NOT_STARTED or statS == set_err_code.STATUS_CODE_EXPOSURE_NOT_STARTED:
-		logger.error('Command recieved by TCS, but exposure not started')
+		# or (set_err_codes.STATUS_CODE_OTHER_INTERRUPT exposure interrupted - non weather)
+	elif statN == set_err_codes.STATUS_CODE_EXPOSURE_NOT_STARTED or statS == set_err_codes.STATUS_CODE_EXPOSURE_NOT_STARTED:
+		logger.error('Command received by TCS, but exposure not started')
 
 	else:
 		logger.error('Unexpected response')
-		statN = set_err_code.STATUS_CODE_UNEXPECTED_RESPONSE
-		statS = set_err_code.STATUS_CODE_UNEXPECTED_RESPONSE
+		statN = set_err_codes.STATUS_CODE_UNEXPECTED_RESPONSE
+		statS = set_err_codes.STATUS_CODE_UNEXPECTED_RESPONSE
 
 	return statN, statS
 
+
+def wait_for_roof_to_stop_moving(roof_dict,roof_timeout = set_err_codes.roof_moving_timeout):
+
+	"""
+	This function is used to find out if the roof is open or closed when it finishes moving. An error 
+	 is logged if the movement times out. Should add in an alert later.
+	 
+	PARAMETERS:
+	
+		roof_dict = dictionary containing the current status of the roof
+		
+	RETURN:
+	
+		roof_open_bool = True if the roof is open.
+	
+	"""
+
+	if 'Roof_Moving' not in roof_dict.keys():
+		logger.error("Invalid dictionary supplied. Requires 'Roof_Moving' as a key.")
+		raise KeyError("Invalid dictionary supplied. Requires 'Roof_Moving' as a key.")
+	
+	elif roof_dict['Roof_Moving'] == False:
+		logger.warning('The roof is not moving')
+
+	else:
+		# While it's still move keep checking the roof status and when it has stopped
+		# moving
+		roof_moving_timeout_count = 0
+		roof_open_bool=roof_dict['Roof_Open']
+		while roof_dict['Roof_Moving'] == True and roof_moving_timeout_count < roof_timeout:
+			logger.info('Roof still moving')
+			roof_moving_timeout_count += 1
+			time.sleep(1)
+			roof_dict = plc.plc_get_roof_status(log_messages = False)
+
+		if roof_moving_timeout_count >= roof_timeout:
+			# Probably have some alert here...
+			print("ROOF STUCK MOVING ALERT IN HERE")
+			logger.critical('Timeout on the roof movement - ROOF STUCK MOVING!')
+			raise TimeoutError('Timeout on the roof movement - ROOF STUCK MOVING!')
+
+
+		if roof_dict['Roof_Closed'] == True and roof_dict['Roof_Open'] == False:
+			logger.info('ROOF NOW CLOSED')
+			roof_open_bool = False
+			
+		elif roof_dict['Roof_Open'] == True and roof_dict['Roof_Closed'] == False:
+			logger.info('ROOF NOW OPEN')
+			roof_open_bool = True
+		
+		else:
+			logger.critical("ROOF ERROR - Thinks it's open and closed!")
+			raise RuntimeError("ROOF ERROR - Thinks it's open and closed!")
+
+
+		return roof_open_bool, roof_dict
+
+
+def check_control_motor_stop_and_power_safety(roof_dict):
+	"""
+	This function will check whether the Roof_control, motor stop and Power failure settings are set correctly
+	 to allow the roof to open. If the roof control is set to manual it will try to request it to be set to
+	 remote.
+	
+	
+	PARAMETERS:
+		
+		roof_dict = A dictionary containing the status of the roof.
+		
+	RETURN:
+	
+		safe_to_open = Is True if all the checks are passed, and False otherwise.
+			
+		roof_dict = The most uptodate version of the roof status
+
+	"""
+
+	if 'Roof_Control' not in roof_dict.keys() or 'Roof_Motor_Stop' not in roof_dict.keys() or 'Roof_Power_Failure' not in roof_dict.keys():
+		logger.error("Invalid dictionary supplied. Requires 'Roof_Control', 'Roof_Motor_Stop' and 'Roof_Power_Failure' keys")
+		raise KeyError("Invalid dictionary supplied. Requires 'Roof_Control', 'Roof_Motor_Stop' and 'Roof_Power_Failure' keys")
+
+	if roof_dict['Roof_Control'] == 'Remote' and roof_dict['Roof_Motor_Stop'] == 'Not Pressed' and roof_dict['Roof_Power_Failure'] == False:
+		# The conditions above need to be true before the roof will open
+		safe_to_open = True
+
+	elif roof_dict['Roof_Control'] == 'Manual' and roof_dict['Roof_Motor_Stop'] == 'Not Pressed' and roof_dict['Roof_Power_Failure'] == False:
+		# If the roof control is set to manual, could try requesting it to go to remote, if the other two conditions aren't an issue.
+		try:
+			ok_response = plc.plc_request_roof_control()
+			roof_dict = plc.plc_get_roof_status(log_messages = False)
+				
+		except:
+			logger.error('Unable to set roof control to remote')
+			safe_to_open = False
+				
+		else:
+			safe_to_open = True
+	else:
+		logger.error('Current status: Roof control - '+ str(roof_dict['Roof_Control'])+', Motor stop - '+str(roof_dict['Roof_Motor_Stop'])+', Power failure - '+str(roof_dict['Roof_Power_Failure']))
+			
+		logger.error('Check roof control, motor stop and power failure')
+					
+		#pack up and go to bed, although might be able to do something about the remote thing?
+		"""**** CLOSE UP****"""
+		print("ADD INSTRUCTIONS TO SHUTDOWN EVERYTHING ELSE")
+		safe_to_open = False
+
+	return safe_to_open, roof_dict
+
+def its_raining_instructions():
+	"""
+	This function should be executed if there is rain detected, i.e close up and shutdown...
+	
+	CURRENTLY INCOMPLETE!!!
+	"""
+	
+	logger.critical("IT'S RAINING, unsafe to open")
+	"""
+	Either add instructions to give up for the night or to monitor for improvement
+	"""
+
+def check_safe_to_open_roof(roof_dict):
+	"""
+	This function carries out the check needed to insure the roof would be safe to open
+	 i.e. make sure it's not raining, the roof isn't between open/closed, there isn't
+	 an issue with the power failure, motor stop or if the roof control is set to manual.
+		
+	If the roof is moving, the function will wait to see if ends up being open/closed,
+	 before deciding what to next.
+	 
+	If the roof control is set to 'Manual' it will try to set it to Remote.
+	
+	PARAMETERS:
+	
+		roof_dict = a dictionary containing the current state of the roof.
+		
+	RETURN:
+	
+		roof_open_bool = True is the roof is open.
+		
+		safe_to_open = True if there is no reason the roof can't be opened
+		
+		roof_dict = the most up to date roof status in dictionary format
+	
+	"""
+	
+	# Check if it's raining, no point trying to open
+	if roof_dict['Roof_Raining'] == True:
+		its_raining_instructions()
+	
+			
+	else:
+		
+		roof_open_bool = False
+		safe_to_open = False # Assume it is not safe
+		# It might not be open, but it might be opening or closing..
+		if roof_dict['Roof_Moving'] == True:
+			
+			roof_open_bool, roof_dict = wait_for_roof_to_stop_moving(roof_dict)
+		
+		
+		# If the roof is closed (or now closed), can it be safely opened
+		if roof_open_bool == False:
+			safe_to_open, roof_dict = check_control_motor_stop_and_power_safety(roof_dict)
+
+		return roof_open_bool, safe_to_open, roof_dict
+
+
 def go_to_target(coordsArr):
 	"""
-	Will do the necessary steps require to get the telescope to move to a new target position.
+	Will carry out the necessary steps require to get the telescope to move to a new target position.
+	 These include ensure the new coordinates are valid and that telescope actually needs to change 
+	 position. Will check if the roof is open. If the roof is closed, it will check whether or not it 
+	 is safe to open, i.e. is it raining, etc. If the roof is moving will see if the roof is open/closed
+	 before continuing.
 	
 	PARAMETERS
+		
 		coordsArr = array of the form [RA,DEC], contains the coordinates of the target.
+		
 		timeout = Time to wait for a response from the telescope regarding taking the new coords
 	
 	"""
 
-	"""
-	Valid coords? Check limits
-	"""
 	# Check the supplied coordinates are ok to be passed
 	try:
 		tcs.check_tele_coords(coordsArr, False)
@@ -754,117 +922,79 @@ def go_to_target(coordsArr):
 	except:
 		logger.error('Target coordinates have wrong format for telescope.')
 		valid_coord = False
-	"""
-	NEeed to change: Check current position, is it the same as new pos?
-	"""
+
+
 	# Get current telescope pointing, do we need to change position?
-	current_ra_dec = tcs.get_tel_target[0:2]
+	current_ra_dec = tcs.get_tel_target()[0:2]
 	if current_ra_dec == coordsArr:
 		logger.info('Same coordinates, do not need to move target')
 		need_to_change = False
 	else:
 		need_to_change = True
 
-	"""
-	Is roof open?
-	"""
-
-
-	
 	
 	# Check that the roof is open, first get status
 	try:
-		roof_open_bool = plc.is_roof_open()
+		roof_dict = plc.plc_get_roof_status(log_messages = False)
 
 	except:
-		logger.critical('Cannot communicate with PLC, cannot tell roof status')
 		"""**** CLOSE UP****"""
+		print("ADD INSTRUCTIONS TO SHUTDOWN EVERYTHING ELSE")
+		logger.critical('Cannot communicate with PLC, cannot get roof status')
 
-	if roof_open_bool == False:
-		# get roof status
-		try:
-			roof_dict = plc.plc_get_roof_status(log_messages = True)
-		except:
-			logger.critical('Unable to communicate with PLC box: Cannot open roof')
-		
-		else:
-			safe_to_open = False
-			# Check if it's raining, no point trying to open
-			if roof_dict['Roof_Raining'] == True:
-				logger.critical("PLC Thinks it's raining, unsafe to open")
-			
-			
-			# It might not be open, but it might be opening or closing..
-			if roof_dict['Roof_Moving'] == True:
-				# While it's still move keep checking the roof status and when it has stopped
-				# moving
-				while roof_dict['Roof_Moving'] == True:
-					roof_dict = plc.plc_get_roof_status(log_messages = False)
-					if roof_dict['Roof_Closed'] == True:
-						logger.info('Roof now closed')
-						#still unsafe to open
-					elif roof_dict['Roof_Open'] == True
-						logger.info('Roof now open')
-						roof_open_bool = True
-						# but no point setting 'safe to open' or it will try to open an already open roof
-			
-			if roof_dict['Roof_Control'] == 'Remote' and roof_dict['Roof_Motor_Stop'] == 'Not Pressed' and roof_dict['Roof_Power_Failure'] == False:
-				# The conditions above need to be true before the roof will open
-				safe_to_open = True
-			else:
-				logger.critical('Check roof control, Motor Stop and Power failure')
-				#pack up and go to bed, although might be able to do something about the remote thing?
+	else:
+		roof_open_bool = roof_dict['Roof_Open']
+		if roof_open_bool == False:
+			# check for rain, movement, remote control, motor stop and power failure
+			roof_bool_open, safe_to_open, roof_dict = check_safe_to_open_roof(roof_dict)
 
-
-			if safe_to_open == True
+			if safe_to_open == True and roof_bool_open == False:
 				# Try to open the roof
 				try:
-					plc.plc_open_roof()
+					response_code = plc.plc_open_roof()
 				
 				except:
 					logger.critical('Cannot open roof')
 				else:
 					# Keep an eye on the roof status to check when it has stopped moving
-					roof_dict = plc.plc_get_roof_status(log_messages = False)
-					roof_moving_timeout_count = 0
-					
-					while roof_dict['Roof_Moving'] == True and roof_moving_timeout_count<set_err_code.roof_moving_timeout:
-						time.sleep(1)
-						roof_dict = plc.plc_get_roof_status(log_messages = False)
-						roof_moving_timeout_count += 1
-					if roof_moving_timeout_count = set_err_code.roof_moving_timeout:
-						# Probably have some alert here...
-						logger.error('Timeout on the roof movement')
-			else:
-				"""
-				PUT THIS CODE IN HERE
-				"""
-				#if not safe, put telescope to bed...
-				print('Need to close up for now....')
-
-
-	
-	if valid_coord == True and roof_open_bool == True and need_to_change == True:
+					roof_open_bool, roof_dict = wait_for_roof_to_stop_moving(roof_dict)
 		
-		pass_coord_attempts_count = 0
-		while pass_coord_attempts_count < pass_coord_attempts:
-			try:
-				send_coords(coordsArr)
-			except timeout_decorator.TimeoutError:
-				pass_coord_attempts_count += 1
-				logger.error('Request timed out. Could not pass coordinates to telescope.')
-			else:
-				print('Could pass the coords to mount')
-				break
-		if pass_coord_attempts_count == pass_coord_attempts:
-			logger.critical('Too many attempts to pass telescope coords! Closing up')
-			#Add in code to close
+			elif safe_to_open == True and roof_bool_open == True:
 			
-	else:
-		print('No coordinate change applied')
-		logger.error('No coordinate change applied')
+				logging.info('Roof is open')
+		
+			else:
+				"""**** CLOSE UP****"""
+				#if not safe, put telescope to bed...
+				print("Need to close up for now....")
+				logger.critical("Need to close up for now....")
 
-@timeout_decorator.timeout(set_err_code.telescope_coms_timeout, use_signals=False)
+		else:
+			logger.info('Roof is open')
+
+		# Should now be ok to tell the telescope to move
+		if valid_coord == True and roof_open_bool == True and need_to_change == True:
+	
+			pass_coord_attempts_count = 0
+			while pass_coord_attempts_count < set_err_codes.pass_coord_attempts:
+				try:
+					send_coords(coordsArr)
+				except timeout_decorator.TimeoutError:
+					pass_coord_attempts_count += 1
+					logger.error('Request timed out. Could not pass coordinates to telescope.')
+				else:
+					logging.info('Coordinates pass successfully.')
+					break
+			if pass_coord_attempts_count >= set_err_codes.pass_coord_attempts:
+				logger.critical('Too many attempts to pass telescope coords! Closing up')
+				#Add in code to close
+				"""**** CLOSE UP****"""
+				print("ADD INSTRUCTIONS TO SHUTDOWN EVERYTHING ELSE")
+			
+		else:
+			logger.info('Telescope pointing unchanged')
+
+@timeout_decorator.timeout(set_err_codes.telescope_coms_timeout, use_signals=False)
 def send_coords(coords,equinox='J2000'):
 	"""
 	Once working this function will be what sends the target coordinates to the telescope.
@@ -872,8 +1002,8 @@ def send_coords(coords,equinox='J2000'):
 	 
 	Assumes the coords are sent as RA/DEC with equinox=J2000
 	"""
-	#respond = tcs.slew_or_track_target(coords, tcs_conn, equinox = equinox)
-	print('ASSUMED TO BE SLEWING!!!')
+	tcs.slew_or_track_target(coords, tcs_conn, equinox = equinox)
+	#print('ASSUMED TO BE SLEWING!!!')
 
 
 def main():
@@ -932,14 +1062,23 @@ def main():
 #			logger.critical('Attempt to connect to TCS '+str(tcs_conn_tries+1)+'/'+str(tcs_conn_tries_total)+' has failed')
 #			open_to_TCS = False
 #			tcs_conn_tries += 1
+
+	#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	# Start running telescope processes on TCS
+	#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	
+	"""
+	Maybe add appropriate code here to check telescope commands are running on TCS, take steps if not
+	"""
+
 	#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	#Connect to table in the database, so that an observing log can be stored
 	#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	global dbconn,dbcurs
 	dbconn, dbcurs = connect_database.connect_to()
 	#Not permenant, just here while testing so dont end up with a huge database with pointless rows
-	connect_database.remove_table_if_exists(dbcurs, observe_log_DBtable)
-	dbcurs.execute('CREATE TABLE '+observe_log_DBtable+' (IMAGE_ID INTEGER, CCD_ID INTERGER, FILE text, TAR_NAME text, TAR_TYPE text, DATE_OBS text, MJD_OBS real, IMAGETYP text, FILT_NAM text, EXPTIME real, OBJ_RA text, OBJ_DEC text, TEL_RA text, TEL_DEC text, IMAG_RA text, IMAG_DEC text, INSTRUME text, FOCUSER text, STATUS INTEGER, SAVED int2);')
+	connect_database.remove_table_if_exists(dbcurs, set_err_codes.OBSERVING_LOG_DATABASE_TABLE )
+	dbcurs.execute('CREATE TABLE '+set_err_codes.OBSERVING_LOG_DATABASE_TABLE +' (IMAGE_ID INTEGER, CCD_ID INTERGER, FILE text, TAR_NAME text, TAR_TYPE text, DATE_OBS text, MJD_OBS real, IMAGETYP text, FILT_NAM text, EXPTIME real, OBJ_RA text, OBJ_DEC text, TEL_RA text, TEL_DEC text, IMAG_RA text, IMAG_DEC text, INSTRUME text, FOCUSER text, STATUS INTEGER, SAVED int2);')
 	dbconn.commit()
 	#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	#Get next file number for each ccd
@@ -959,7 +1098,15 @@ def main():
 			Name
 	"""
 	next_target_name = 'test_target_single_Texp'
-	loaded_target_info = 'target_class' #need to write a function to do get this info once there is a database
+	target_db_rows = connect_database.match_target_name(next_target_name,set_err_codes.TARGET_INFORMATION_TABLE, dbcurs)
+	
+	if len(target_db_rows)>1:
+		logger.warning('Multiple targets found, selecting first one: '+ rows[0][3])
+	elif len(target_db_rows < 1):
+		logger.warning('No target name found')
+	else:
+		loaded_target_info = 'target_class' #turn it into object? / organise the info
+
 	#what to do if no observing recipe for target??
 	obs_recipe = get_observing_recipe(next_target_name)
 	
@@ -996,7 +1143,7 @@ def main():
 
 	#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	#This is testing stuff to show all the rows in the obslog2 table
-	connect_database.show_all_rows_in_table(observe_log_DBtable,dbcurs)
+	connect_database.show_all_rows_in_table(set_err_codes.OBSERVING_LOG_DATABASE_TABLE ,dbcurs)
 	connect_database.close_connection(dbconn,dbcurs)
 	#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	# Close connection to TCS

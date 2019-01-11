@@ -198,7 +198,7 @@ def close_gateway_ssh(open_conn):
   Commands to interact with telescope on TCS over ssh
  ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 """
-@timeout_decorator(set_err_code.tcs_coms_timeout, use_signals=False)
+@timeout_decorator.timeout(set_err_code.tcs_coms_timeout, use_signals=False)
 def send_command(command, open_conn, expected_prompt = '[wasp@tcs ~]$'):
 	""" 
 	Send a 'command' to the TCS computer over the 'open_conn' ssh connection.
@@ -407,7 +407,7 @@ def get_roof_status_from_tcs(open_conn):
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def stop_telescope_move(open_conn):
 	""" 
-	Sends the 'stoptel' command to the TCS computer. This will stop an motion of the
+	Sends the 'stoptel' command to the TCS computer. This will stop any motion of the
 		telescope mount.
 
 	 PARAMETERS:
@@ -430,7 +430,7 @@ def startTel(open_conn, startAll = False):
 	 
 	 	open_conn = the parameter storing the open ssh connection to the TCS
 		startAll = True/False, set to True to run all 'telescoped, xobs, camerad, shm, camera,
-			xephem and telsched processed. If set to False, only the telescoped and xobs will
+			xephem and telsched processes. If set to False, only the telescoped and xobs will
 			run.
 	
 	"""
@@ -553,7 +553,7 @@ def check_tele_coords(coords, is_alt_az):
 def slew_or_track_target(coords, open_conn, track_target=True, is_alt_az = False, equinox='J2000'):
 
 	""" 
-	Send the command require to get the telescope to point at a target,
+	Send the command required to get the telescope to point at a target,
 	 with the option to track the target. Uses the TCS cli commands.
 	
 	Coordinates can be sent as RA and DEC or altitude/azimuth (if is_alt_az = True). If they are
@@ -712,11 +712,13 @@ def tcs_exposure_request(type, duration = 0, number = 1):
 
 	if number <= 1:
 		logger.error('Invalid number of exposures requested')
-		return respond = set_err_code.STATUS_CODE_EXPOSURE_NOT_STARTED
+		respond = set_err_code.STATUS_CODE_EXPOSURE_NOT_STARTED
+		return respond
 
 	if duration <=0:
 		logger.error('Invalid exposure time requested')
-		return respond = set_err_code.STATUS_CODE_EXPOSURE_NOT_STARTED
+		respond = set_err_code.STATUS_CODE_EXPOSURE_NOT_STARTED
+		return respond
 
 	command_str = 'expose ' + type
 	if number != 1:

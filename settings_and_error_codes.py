@@ -23,7 +23,7 @@ plc_serial_port_timeout =30
 plc_comms_timeout = 60
 plc_power_timeout = 60
 
-roof_moving_timeout = 120
+roof_moving_timeout = 600
 telescope_coms_timeout = 30
 tcs_coms_timeout = 60
 
@@ -31,6 +31,17 @@ tcs_coms_timeout = 60
 #Other parameters
 pass_coord_attempts = 2
 tcs_conn_tries_total = 3
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#              DATABASE
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+DATABASE_NAME = 'xamidimura.db'
+DATABASE_PATH = 'database/'
+
+TARGET_INFORMATION_TABLE = 'target_info'
+OBSERVING_LOG_DATABASE_TABLE = 'obslog2'
+
 
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -51,7 +62,6 @@ PLC_STATUS_STATUS = dict({	'0': 'Normal',
 							'1':'Fatal Error',
 							'8':'FALS Error'})
 PLC_STATUS_UNKNOWN_STATUS = 'Unknown error code: '
-#PLC_STATUS_REQUEST_RESPONSE_ERROR = 15
 
 PLC_STATUS_WRITE_ERROR_MESSAGE = dict({	'00': "Normal Completion",
 										'13': "FCS error",

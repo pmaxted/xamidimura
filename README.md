@@ -15,6 +15,7 @@ Documentation and software for the Xamidimura telescopes
 
 * **plc_scripts** - Contains scripts which will be equivalent to the PHP scripts currently on the Gateway machine. These scripts will open/close the roof, get the roof/rain/plc status, swap to/from main/battery power etc. They use the roof_control_functions.py and PLC_interaction_function.py scripts. Also one of the first line of each script puts the these scripts in the PATH, so it can import the functions. Currently that path will need to set when the scripts are in the right place on the 'observer' machine.  
 
+* **tests** - All the scripts for the different collections of unit tests. Was getting messy in the main directory.  
 
 ## Files
 * **common.py** - contains function that are useful to both focuser and filter wheel control.  
@@ -38,18 +39,25 @@ Documentation and software for the Xamidimura telescopes
 
 #### Unit test scripts
 
-* **TO RUN TESTS** use ```python test_focuser_control.py``` to run just one of the test scripts, or ```python -m unittest test_roof_control_functions```. This second example can be modified to run one particular class, or even function within a class, e.g.  
-
-	```
-	> python -m unittest test_roof_control_functions.test_set_hex_bit
-	> python -m unittest test_roof_control_functions.test_set_hex_bit.test-set_bit_5
-	```
-	  
-	To run all tests scripts in the directory, use
+* **TO RUN TESTS** from the main xamidimura directory, use the following:
 	
+	- To run all tests scripts in the directory, use 
+		```
+		>python -m unittest discover .
+		```
+	- To run specific file of tests e.g. test_roof_control_functions.py
+		```
+		> python -m unittest tests.test_roof_control_functions
+		```
+	- To run a specific test class e.g. test_set_hex_bit
 	```
-	> python -m unittest discover .
-	```  
+	> python -m unittest tests.test_roof_control_functions.test_set_hex_bit
+	```
+	- To run one specific test in a test class e.g. test_set_bit_5
+	```
+	> python -m unittest tests.test_roof_control_functions.test_set_hex_bit.test_set_bit_5
+	```
+
 	
 * **test_focuser_control.py** - Unit tests for the focuser_control functions.  
 
@@ -57,7 +65,7 @@ Documentation and software for the Xamidimura telescopes
 
 * **test_plc_interaction_func.py** Contains the unit tests for the plc interaction functions.  
 
-* **test_roof_control_functions.py** Provides test for the functions contained in the roof_control_functions.py script. Note that the majority of the test example used are what have been inferred from the PLC documentation, I have not yet been able to check that the inputs are realistic values. Only part not tested is the line that actually send the commands to the PLC box, as this can't be done without the box connected or changing the function to work with dummy serial.  
+* **test_roof_control_functions.py** Provides test for the functions contained in the roof_control_functions.py script. Note that the majority of the test example used are what have been inferred from the PLC documentation, I have not yet been able to check that the inputs are realistic values. Only part not tested are the lines that actually send the commands to the PLC box, as this can't be done without the box connected or changing the function to work with dummy serial.  
                
 
 ## Observing recipes
@@ -136,8 +144,9 @@ Status codes are defined in settings_and_error_codes.py.
 
 The code for the interuptions need to be written.  
 	
-- Exposure requests that are not completed (due to weather alert, TCS timeout etc) are noted in the observing log table, by fits headers are not saved.  
+- Exposure requests that are not completed (due to weather alert, TCS timeout etc) are noted in the observing log table, by fits headers are not saved. 
+
+- Started working on the code to load target information from the database, not completed. 
 
 
-
-- No unit tests created yet.  
+- Some unit tests have been created for the telescope slewing and some of the exposure functions, but not yet complete.  

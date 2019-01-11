@@ -1,7 +1,8 @@
 import sqlite3
 import pandas as pd
+import settings_and_error_codes as set_err_codes
 
-def connect_to(database_name = 'xamidimura.db', path_to_database= 'database/'):
+def connect_to(database_name = set_err_codes.DATABASE_NAME, path_to_database= set_err_codes.DATABASE_PATH):
 	
 	conn = sqlite3.connect(path_to_database+database_name)
 	curs_obj = conn.cursor() # need a cursor object to send stuff to DB
@@ -34,6 +35,14 @@ def show_all_rows_in_table(table_name, curs_obj):
 	for row in curs_obj.execute('SELECT * FROM '+str(table_name)):
 		print(row)
 
+def match_target_name(target_name, table_name, curs):
+
+
+	curs.execute("SELECT * FROM "+str(table_name)+" WHERE TAR_NAME="+str(target_name))
+	rows = curs.fetchall()
+
+	return rows
+
 def get_table_into_pandas(table_name, connection_name):
 
 	dat_frame = pd.read_sql_query('SELECT * FROM '+str(table_name), connection_name)
@@ -47,3 +56,13 @@ def remove_table_if_exists(curs, table_name):
 #create table obslog.tb (IMAGE_ID INTEGER, CCD_ID INTERGER, TAR_NAME text, TAR_TYPE text, DATE_OBS text, MJD_OBS real, IMAGTYP text, FILT_NAM text, EXPTIME real, OBJ_RA text, OBJ_DEC text, TEL_RA text, TEL_DEC text, IMAG_RA text, IMAG_DEC text, INSTRUME text, FOCUSER text, STATUS INTEGER)
 
 #cur.execute('CREATE TABLE obslog2 (IMAGE_ID INTEGER, CCD_ID INTERGER, FILE text, TAR_NAME text, TAR_TYPE text, DATE_OBS text, MJD_OBS real, IMAGETYP text, FILT_NAM text, EXPTIME real, OBJ_RA text, OBJ_DEC text, TEL_RA text, TEL_DEC text, IMAG_RA text, IMAG_DEC text, INSTRUME text, FOCUSER text, STATUS INTEGER);')
+
+
+# create target_info_table....
+"""
+dbcurs.execute('CREATE TABLE '+set_err_codes.TARGET_INFORMATION_TABLE+' (TARGET_ID INTEGER, TARGET_NAME text, RA text, DEC text);')
+dbconn.commit()
+
+connect_database.remove_table_if_exists(dbcurs, set_err_codes.OBSERVING_LOG_DATABASE_TABLE )
+
+"""

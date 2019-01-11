@@ -53,6 +53,10 @@ PLC_interaction_functions.py
 	----------------------------------------------------------------------
 	NEW python functions
 	----------------------------------------------------------------------
+	- plc_get_telescope_tilt_status()
+	
+	- plc_request_telescope_drive_control()
+	
 	- plc_is_roof_open()
 
 """
