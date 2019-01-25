@@ -69,13 +69,15 @@ import settings_and_error_codes as set_err_codes
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
-fileHand = logging.FileHandler(filename = '/Users/Jessica/PostDoc/ScriptsNStuff/current_branch/xamidimura/logfiles/plc.log', mode = 'w')
+fileHand = logging.FileHandler(filename = \
+	set_err_codes.LOGFILES_DIRECTORY+'plc_status.log', mode = 'w')
 fileHand.setLevel(logging.INFO)
-formatter = logging.Formatter('%(asctime)s [%(name)s] %(levelname)s - %(message)s')
+logging.Formatter.converter = time.gmtime
+formatter = logging.Formatter('%(asctime)s [%(name)s] %(levelname)s - '\
+		'%(message)s','%Y-%m-%d_%H:%M:%S_UTC')
 fileHand.setFormatter(formatter)
 logger.addHandler(fileHand)
 
-#logging.basicConfig(filename = '/Users/Jessica/PostDoc/ScriptsNStuff/current_branch/xamidimura/logfiles/plc.log',filemode='w',level=logging.INFO, format='%(asctime)s  %(levelname)s %(message)s')
 
 class PLC_ERROR(Exception):
 	"""
@@ -277,8 +279,8 @@ def plc_close_roof():
 	status_hex = rcf.set_hex_bit(status_hex, rcf.PLC_CMD_BIT_WATCHDOG_RESET)
 	logger.debug('Closed bit set status hex: '+str(status_hex))
 	# Set the close roof command bit and unset the open roof command bit
-	status_hex = rcf.set_hex_bit(status_hex, rcf.PLC_CMD_BIT_CLOSE)
 	status_hex = rcf.unset_hex_bit(status_hex, rcf.PLC_CMD_BIT_OPEN)
+	status_hex = rcf.set_hex_bit(status_hex, rcf.PLC_CMD_BIT_CLOSE)
 	logger.debug('Open bit unset status hex: '+ str(status_hex))
 
 	create_and_send_new_command(status_hex,power_timeout_hex,comms_timeout_hex)
@@ -293,27 +295,28 @@ def plc_get_plc_status(log_messages = True):
 	
 	PARAMETERS:
 	
-		log_messages = If True, messages will be logged in the file plc.log. Error messages will still be
-			logged even if false.
+		log_messages = If True, messages will be logged in the file plc.log. 
+			Error messages will still be logged even if false.
 		
 	RETURN 
 	
-		plc_status_dict = Dictionary containing the current response code, status ans operating mode of the 
-			plc box.
+		plc_status_dict = Dictionary containing the current response code, 
+			status and operating mode of the plc box.
 	"""
 
 	response = rcf.plc_command_response(rcf.PLC_Status_Request)
 	plc_status_dict = dict()
 
 	plc_status_dict['PLC_Response_Code'] = response
-	#plc_status_dict['PLC_Status'] = rcf.plc_status_message(rcf.plc_status_request_response_plc(response))
-	plc_status_dict['PLC_Status'] = rcf.plc_status_request_response_plc(response)
+	plc_status_dict['PLC_Status'] = rcf.plc_status_request_response_plc(
+		response)
 	plc_status_dict['PLC_Operating_Mode'] = rcf.plc_mode(response)
 
 	if log_messages == True:
 		dict_keys_list = list(plc_status_dict.keys())
 		for i in range(len(plc_status_dict.keys())):
-			logger.info(dict_keys_list[i] +' = '+ plc_status_dict[dict_keys_list[i]])
+			logger.info(dict_keys_list[i] +' = '+ \
+							plc_status_dict[dict_keys_list[i]])
 
 	return plc_status_dict
 
@@ -324,13 +327,14 @@ def plc_get_rain_status(log_messages = True):
 	
 	PARAMETERS:
 	
-		log_messages = If True, messages will be logged in the file plc.log. Error messages will still be
-			logged even if false.
+		log_messages = If True, messages will be logged in the file plc.log. 
+			Error messages will still be logged even if false.
 		
 	RETURN:
 	
-		rain_status_dict =  A dictionary containing the response code, the rain status (either 'Check
-		 Rain' or 'Ignore Rain') and the PC Comm and Power Failure timeouts.
+		rain_status_dict =  A dictionary containing the response code, the rain 
+			status (either 'Check Rain' or 'Ignore Rain') and the PC Comm and 
+			Power Failure timeouts.
 	"""
 	
 	response = rcf.plc_command_response(rcf.PLC_Request_Roof_Status)
@@ -338,8 +342,10 @@ def plc_get_rain_status(log_messages = True):
 	rain_status_dict['Response Code'] = response
 	
 	if rcf.plc_status_end_code(response):
-		logger.error('Error getting roof status from PLC: '+ rcf.plc_status_error_message(rcf.plc_status_end_code(response)))
-		raise PLC_ERROR('Error getting roof status from PLC: '+ rcf.plc_status_error_message(rcf.plc_status_end_code(response)))
+		logger.error('Error getting roof status from PLC: '+ \
+			rcf.plc_status_error_message(rcf.plc_status_end_code(response)))
+		raise PLC_ERROR('Error getting roof status from PLC: '+ \
+			rcf.plc_status_error_message(rcf.plc_status_end_code(response)))
 	
 	else:
 		rain_status_dict = dict()
@@ -349,28 +355,34 @@ def plc_get_rain_status(log_messages = True):
 		else:
 			rain_status_dict['Rain_status'] = 'Ignore Rain'
 
-	rain_status_dict['PC_Communication_Timeout'] = rcf.plc_status_comms_timeout(response)
-	rain_status_dict['Power_Failure_Timeout'] = rcf.plc_status_comms_timeout(response)
+	rain_status_dict['PC_Communication_Timeout'] = rcf.plc_status_comms_timeout(
+			response)
+	rain_status_dict['Power_Failure_Timeout'] = rcf.plc_status_power_timeout(
+		response)
 
 	if log_messages == True:
 		dict_keys_list = list(rain_status_dict.keys())
 		for i in range(len(rain_status_dict.keys())):
-			logger.info(dict_keys_list[i] +' = '+ str(rain_status_dict[dict_keys_list[i]]))
+			logger.info(dict_keys_list[i] +' = '+ str(
+				rain_status_dict[dict_keys_list[i]]))
 
 	return rain_status_dict
 
 
 def plc_get_roof_status(log_messages=True):
 	"""
-	Sends the commands needed to get the roof status from the PLC box. Will also log the information
+	Sends the commands needed to get the roof status from the PLC box. Will 
+	 also log the information
 
 	PARAMETERS:
 	
-		log_messages = If true, the status of the various parameters will be logged. Error messages will still be logged even if false.
+		log_messages = If true, the status of the various parameters will be 
+			logged. Error messages will still be logged even if false.
 	
 	RETURN
 	
-		roof_dict = A dictionary containing the status of all parameters relating to the roof.
+		roof_dict = A dictionary containing the status of all parameters 
+			relating to the roof.
 		
 	"""
 	
@@ -378,21 +390,26 @@ def plc_get_roof_status(log_messages=True):
 	roof_dict = dict()
 	roof_dict['Response Code'] = response
 	if rcf.plc_status_end_code(response):
-		logger.error('Error getting roof status from PLC:'+ rcf.plc_status_error_message(rcf.plc_status_end_code(response)))
-		raise PLC_ERROR('Error getting roof status from PLC:'+ rcf.plc_status_error_message(rcf.plc_status_end_code(response)))
+		logger.error('Error getting roof status from PLC:'+ \
+			rcf.plc_status_error_message(rcf.plc_status_end_code(response)))
+		raise PLC_ERROR('Error getting roof status from PLC:'+ \
+			rcf.plc_status_error_message(rcf.plc_status_end_code(response)))
 
 	else:
-		roof_dict = dict()
+		#roof_dict = dict()
 		roof_status = rcf.plc_status_status_code(response)
 
 		# Roof Closed?
-		roof_dict['Roof_Closed'] = rcf.int_bit_is_set(roof_status, rcf.PLC_Roof_Closed)
+		roof_dict['Roof_Closed'] = rcf.int_bit_is_set(roof_status,
+			rcf.PLC_Roof_Closed)
 
 		# Roof open?
-		roof_dict['Roof_Open'] = rcf.int_bit_is_set(roof_status, rcf.PLC_Roof_Open)
+		roof_dict['Roof_Open'] = rcf.int_bit_is_set(roof_status,
+			rcf.PLC_Roof_Open)
 
 		# Roof moving?
-		roof_dict['Roof_Moving'] = rcf.int_bit_is_set(roof_status, rcf.PLC_Roof_Moving)
+		roof_dict['Roof_Moving'] = rcf.int_bit_is_set(roof_status,
+			rcf.PLC_Roof_Moving)
 
 		#Check Roof control Remote/Manual
 		if rcf.int_bit_is_set(roof_status,rcf.PLC_Roof_Remote_Control):
@@ -401,13 +418,16 @@ def plc_get_roof_status(log_messages=True):
 			roof_dict['Roof_Control'] = 'Manual'
 
 		# Check rain status
-		roof_dict['Roof_Raining'] = rcf.int_bit_is_set(roof_status,rcf.PLC_Roof_Raining)
+		roof_dict['Roof_Raining'] = rcf.int_bit_is_set(roof_status,
+			rcf.PLC_Roof_Raining)
 
 		# Check for forced rain closure
-		roof_dict['Roof_Forced_Close'] = rcf.int_bit_is_set(roof_status, rcf.PLC_Roof_Forced_Rain_Closure)
+		roof_dict['Roof_Forced_Close'] = rcf.int_bit_is_set(roof_status,
+			rcf.PLC_Roof_Forced_Rain_Closure)
 
 		# Building Temp High:
-		roof_dict['High_Building_Temp'] = rcf.int_bit_is_set(roof_status, rcf.PLC_Roof_Building_Temp_High)
+		roof_dict['High_Building_Temp'] = rcf.int_bit_is_set(roof_status,
+			rcf.PLC_Roof_Building_Temp_High)
 
 		# extractor fan
 		if rcf.int_bit_is_set(roof_status, rcf.PLC_Roof_Extractor_Fan_On):
@@ -422,7 +442,8 @@ def plc_get_roof_status(log_messages=True):
 			roof_dict['Roof_Motor_Stop'] = 'Not Pressed'
 
 		# AC Motor has tripped
-		roof_dict['Roof_AC_Motor_Tripped'] = rcf.int_bit_is_set(roof_status, rcf.PLC_Roof_AC_Motor_Tripped)
+		roof_dict['Roof_AC_Motor_Tripped'] = rcf.int_bit_is_set(roof_status,
+			rcf.PLC_Roof_AC_Motor_Tripped)
 
 		# Using DC motor
 		if rcf.int_bit_is_set(roof_status, rcf.PLC_Roof_DC_Motor_In_Use):
@@ -432,35 +453,44 @@ def plc_get_roof_status(log_messages=True):
 
 
 		#Close Proximity
-		roof_dict['Roof_Close_Proximity'] = rcf.int_bit_is_set(roof_status, rcf.PLC_Roof_Close_Proximity)
+		roof_dict['Roof_Close_Proximity'] = rcf.int_bit_is_set(roof_status,
+			rcf.PLC_Roof_Close_Proximity)
 
 		#Power failure
-		roof_dict['Roof_Power_Failure'] = rcf.int_bit_is_set(roof_status, rcf.PLC_Roof_Power_Failure)
+		roof_dict['Roof_Power_Failure'] = rcf.int_bit_is_set(roof_status,
+			rcf.PLC_Roof_Power_Failure)
 
 		#Force_Power_closure
-		roof_dict['Roof_Forced_Power_Closure'] = rcf.int_bit_is_set(roof_status,rcf.PLC_Roof_Forced_Power_Closure)
+		roof_dict['Roof_Forced_Power_Closure'] = rcf.int_bit_is_set(
+			roof_status,rcf.PLC_Roof_Forced_Power_Closure)
 
 		# Open proximity
-		roof_dict['Roof_Open_Proximity'] = rcf.int_bit_is_set(roof_status, rcf.PLC_Roof_Open_Proximity)
+		roof_dict['Roof_Open_Proximity'] = rcf.int_bit_is_set(roof_status,
+			rcf.PLC_Roof_Open_Proximity)
 
 		#Door open
-		roof_dict['Roof_Door_Open'] = rcf.int_bit_is_set(roof_status, rcf.PLC_Roof_Door_Open)
+		roof_dict['Roof_Door_Open'] = rcf.int_bit_is_set(roof_status,
+			rcf.PLC_Roof_Door_Open)
 
-	roof_dict['PC_Communication_Timeout'] = rcf.plc_status_comms_timeout(response)
-	roof_dict['Power_Failure_Timeout'] = rcf.plc_status_comms_timeout(response)
+	roof_dict['PC_Communication_Timeout'] = rcf.plc_status_comms_timeout(
+		response)
+	roof_dict['Power_Failure_Timeout'] = rcf.plc_status_power_timeout(
+		response)
 
 	if log_messages == True:
 		dict_keys_list = list(roof_dict.keys())
 		for i in range(len(roof_dict.keys())):
-			logger.info(dict_keys_list[i] +' = '+ str(roof_dict[dict_keys_list[i]]))
+			logger.info(dict_keys_list[i] +' = '+ str(
+				roof_dict[dict_keys_list[i]]))
 
 	return roof_dict
 
 def plc_get_telescope_tilt_status():
 
 	"""
-	This function looks at the integer representing bits 8-13 inclusive of D-memory
-	 location 153. The bits represent the different tilt options as follows:
+	This function looks at the integer representing bits 8-13 inclusive of 
+	 D-memory location 153. The bits represent the different tilt options as 
+	 follows:
 	
 		PLC_Tilt_1hour_East = 8
 		PLC_Tilt_1hour_West = 9
@@ -471,14 +501,13 @@ def plc_get_telescope_tilt_status():
 	
 	They are defined at the top of this script.
 	
-	Check whether or not PLC_Telescope_Drive_Control = 14, is set so it can adjust 
-		the tilt code accordingly
-		
-	** Note assumes for example the 1 hour East bit will still be set after 6hours
+	Check whether or not PLC_Telescope_Drive_Control = 14, is set so it can 
+	 adjust the tilt code accordingly
 	
 	RETURN
 	
-		tilt_dict = A dictionary containing the status of all parameters relating to the roof.
+		tilt_dict = A dictionary containing the status of all parameters 
+			relating to the roof.
 	
 	"""
 	response = rcf.plc_command_response(rcf.PLC_Request_Roof_Status)
@@ -487,8 +516,10 @@ def plc_get_telescope_tilt_status():
 
 	
 	if rcf.plc_status_end_code(response):
-		logger.error('Error getting roof status from PLC:'+ rcf.plc_status_error_message(rcf.plc_status_end_code(response)))
-		raise PLC_ERROR('Error getting roof status from PLC:'+ rcf.plc_status_error_message(rcf.plc_status_end_code(response)))
+		logger.error('Error getting roof status from PLC:'+ \
+			rcf.plc_status_error_message(rcf.plc_status_end_code(response)))
+		raise PLC_ERROR('Error getting roof status from PLC:'+ \
+			rcf.plc_status_error_message(rcf.plc_status_end_code(response)))
 	
 	else:
 		tilt_code = rcf.plc_status_tilt_status(response)
@@ -503,15 +534,11 @@ def plc_get_telescope_tilt_status():
 		valid_tilt_values = dict({	0:"1h East < x < 1h West",
 								256:"1h East <= x < 6h East",
 								1280:"6h East <= x < RA East limit", #two bits
-								1024: "6h East <= x < RA East limit ONE BIT", #one bit
 								5376: "RA East limit", #3 bits
-								4096: "RA East limit ONE BIT", # 1 bit
 								
 								512: "1h West <= x < 6h West",
-								2560: "6h West <= x RA West limit", #two bits
-								2048: "6h West <= x RA West limit ONE BIT", #one bit
+								2560: "6h West <= x < RA West limit", #two bits
 								10752: "RA West limit", #3 bits
-								8192: "RA West limit ONE BIT", # 1 bit
 								})
 								
 		try:
@@ -534,14 +561,17 @@ def plc_open_roof():
 	 
 	 RETURN
 	 
-		PLC_CODE_OK, from the settings and errors codes script, to show that the code has completed
+		PLC_CODE_OK, from the settings and errors codes script, to show that 
+			the code has completed
 	 
 	"""
 	response = rcf.plc_command_response(rcf.PLC_Request_Roof_Status)
 	logger.debug("Response: "+ response)
 	if rcf.plc_status_end_code(response):
-		logger.error('Error getting roof status from PLC:'+ rcf.plc_status_error_message(rcf.plc_status_end_code(response)))
-		raise PLC_ERROR('Error getting roof status from PLC:'+ rcf.plc_status_error_message(rcf.plc_status_end_code(response)))
+		logger.error('Error getting roof status from PLC:'+ \
+			rcf.plc_status_error_message(rcf.plc_status_end_code(response)))
+		raise PLC_ERROR('Error getting roof status from PLC:'+ \
+			rcf.plc_status_error_message(rcf.plc_status_end_code(response)))
 
 	roof_status = rcf.plc_status_status_code(response)
 	logger.debug('Roof_stat:' + str(roof_status))
@@ -565,7 +595,8 @@ def plc_open_roof():
 	# Get the current status of the command buffer words D-100 to D-102
 	response = get_D100_D102_status()
 	logger.debug('D100 response: '+str(response))
-	frame, status_hex,power_timeout_hex, comms_timeout_hex, fcs_hex, tilt_hex = split_up_response(response)
+	frame, status_hex,power_timeout_hex, comms_timeout_hex, fcs_hex, \
+		tilt_hex = split_up_response(response)
 	
 	logger.debug('Before WATCHDOG set status hex: '+str(status_hex))
 	# Reset the watchdog timer bit
@@ -588,12 +619,14 @@ def plc_request_roof_control():
 	
 	RETURN
 	 
-		PLC_CODE_OK, from the settings and errors codes script, to show that the code has completed
+		PLC_CODE_OK, from the settings and errors codes script, to show that 
+			the code has completed
 		
 	"""
 	response = get_D100_D102_status()
 
-	frame, status_hex,power_timeout_hex, comms_timeout_hex, fcs_hex,tilt_hex = split_up_response(response)
+	frame, status_hex,power_timeout_hex, comms_timeout_hex, fcs_hex, \
+		tilt_hex = split_up_response(response)
 	logger.debug('Before WATCHDOG set status hex: '+str(status_hex))
 	# Reset the watchdog timer bit
 	status_hex = rcf.set_hex_bit(status_hex, rcf.PLC_CMD_BIT_WATCHDOG_RESET)
@@ -618,12 +651,14 @@ def plc_request_telescope_drive_control():
 	
 	RETURN
 	 
-		PLC_CODE_OK, from the settings and errors codes script, to show that the code has completed
+		PLC_CODE_OK, from the settings and errors codes script, to show that 
+			the code has completed
 		
 	"""
 	response = get_D100_D102_status()
 
-	frame, status_hex,power_timeout_hex, comms_timeout_hex, fcs_hex,tilt_hex = split_up_response(response)
+	frame, status_hex,power_timeout_hex, comms_timeout_hex, fcs_hex, \
+		tilt_hex = split_up_response(response)
 	logger.debug('Before WATCHDOG set status hex: '+str(status_hex))
 	# Reset the watchdog timer bit
 	status_hex = rcf.set_hex_bit(status_hex, rcf.PLC_CMD_BIT_WATCHDOG_RESET)
@@ -647,14 +682,16 @@ def plc_reset_watchdog():
 	
 	RETURN
 	 
-		PLC_CODE_OK, from the settings and errors codes script, to show that the code has completed
+		PLC_CODE_OK, from the settings and errors codes script, to show that 
+			the code has completed
 	
 	"""
 	
 	# Get the current status of the command buffer words D-100 to D-102
 	response = get_D100_D102_status()
 
-	frame, status_hex,power_timeout_hex, comms_timeout_hex, fcs_hex,tilt_hex = split_up_response(response)
+	frame, status_hex,power_timeout_hex, comms_timeout_hex, fcs_hex, \
+		tilt_hex = split_up_response(response)
 	logger.debug('reset watchdog:Before request: '+str(status_hex))
 	# Reset the watchdog timer bit
 	status_hex = rcf.set_hex_bit(status_hex, rcf.PLC_CMD_BIT_WATCHDOG_RESET)
@@ -671,13 +708,15 @@ def plc_select_battery():
 	
 	RETURN
 	 
-		PLC_CODE_OK, from the settings and errors codes script, to show that the code has completed
+		PLC_CODE_OK, from the settings and errors codes script, to show that 
+			the code has completed
 		
 	"""
 	
 	response = get_D100_D102_status()
 
-	frame, status_hex,power_timeout_hex, comms_timeout_hex, fcs_hex,tilt_hex = split_up_response(response)
+	frame, status_hex,power_timeout_hex, comms_timeout_hex, fcs_hex, \
+		tilt_hex = split_up_response(response)
 
 
 	logger.debug('Select Battery:Before request: '+str(status_hex))
@@ -699,13 +738,15 @@ def plc_select_mains():
 	
 	RETURN
 	 
-		PLC_CODE_OK, from the settings and errors codes script, to show that the code has completed
+		PLC_CODE_OK, from the settings and errors codes script, to show that 
+			the code has completed
 		
 	"""
 	
 	response = get_D100_D102_status()
 
-	frame, status_hex,power_timeout_hex, comms_timeout_hex, fcs_hex,tilt_hex = split_up_response(response)
+	frame, status_hex,power_timeout_hex, comms_timeout_hex, fcs_hex, \
+		tilt_hex = split_up_response(response)
 
 	logger.debug('Select Main:Before request: '+str(status_hex))
 	# Reset the watchdog timer bit
@@ -729,20 +770,25 @@ def plc_set_comms_timeout(timeout=set_err_codes.plc_comms_timeout):
 
 	RETURN
 	 
-		PLC_CODE_OK, from the settings and errors codes script, to show that the code has completed
+		PLC_CODE_OK, from the settings and errors codes script, to show that 
+			the code has completed
 
 	"""
 
 	
 	if isinstance(timeout,int)==False or timeout < 0 or timeout >9999:
-		logger.error('Invalid timeout value, use integer: 0 <= Timeout <= 9999')
-		raise ValueError('Invalid timeout value, use integer: 0 <= Timeout <= 9999')
+		logger.error('Invalid timeout value, use integer: 0 <= Timeout '\
+			'<= 9999')
+		raise ValueError('Invalid timeout value, use integer: 0 <= Timeout '\
+			'<= 9999')
 
 	response = get_D100_D102_status()
 
-	frame, status_hex,power_timeout_hex, comms_timeout_hex, fcs_hex,tilt_hex = split_up_response(response)
+	frame, status_hex,power_timeout_hex, comms_timeout_hex, fcs_hex, \
+		tilt_hex = split_up_response(response)
 
-	logger.debug('Set comms:Before request: '+str(status_hex)+' Comms:'+str(comms_timeout_hex))
+	logger.debug('Set comms:Before request: '+str(status_hex)+' Comms:'+str(
+			comms_timeout_hex))
 	# Reset the watchdog timer bit
 	status_hex = rcf.set_hex_bit(status_hex, rcf.PLC_CMD_BIT_WATCHDOG_RESET)
 
@@ -752,11 +798,13 @@ def plc_set_comms_timeout(timeout=set_err_codes.plc_comms_timeout):
 	# Set update timeout bit
 	status_hex = rcf.set_hex_bit(status_hex, rcf.PLC_CMD_BIT_SET_COMMS_DELAY)
 	create_and_send_new_command(status_hex,power_timeout_hex,comms_timeout_hex)
-	logger.debug('Mid request: '+str(status_hex)+' Comms:'+str(comms_timeout_hex))
+	logger.debug('Mid request: '+str(status_hex)+' Comms:'+str(
+			comms_timeout_hex))
 	#Unset timeout bit
 	status_hex = rcf.unset_hex_bit(status_hex, rcf.PLC_CMD_BIT_SET_COMMS_DELAY)
 	create_and_send_new_command(status_hex,power_timeout_hex,comms_timeout_hex)
-	logger.debug('After request: '+str(status_hex)+' Comms:'+str(comms_timeout_hex))
+	logger.debug('After request: '+str(status_hex)+' Comms:'+str(
+			comms_timeout_hex))
 
 	return set_err_codes.PLC_CODE_OK
 
@@ -770,18 +818,23 @@ def plc_set_power_timeout(timeout=set_err_codes.plc_power_timeout):
 		
 	RETURN
 	 
-		PLC_CODE_OK, from the settings and errors codes script, to show that the code has completed
+		PLC_CODE_OK, from the settings and errors codes script, to show that 
+			the code has completed
 	"""
 	
 	if isinstance(timeout,int)==False or timeout < 0 or timeout >9999:
-		logger.error('Invalid timeout value, use integer: 0 <= Timeout <= 9999')
-		raise ValueError('Invalid timeout value, use integer: 0 <= Timeout <= 9999')
+		logger.error('Invalid timeout value, use integer: 0 <= Timeout '\
+			'<= 9999')
+		raise ValueError('Invalid timeout value, use integer: 0 <= Timeout '\
+			'<= 9999')
 
 			
 	response = get_D100_D102_status()
 
-	frame, status_hex,power_timeout_hex, comms_timeout_hex, fcs_hex, tilt_hex = split_up_response(response)
-	logger.debug('Set comms:Before request: '+str(status_hex)+' Power:'+str(power_timeout_hex))
+	frame, status_hex,power_timeout_hex, comms_timeout_hex, fcs_hex, \
+		tilt_hex = split_up_response(response)
+	logger.debug('Set comms:Before request: '+str(status_hex)+' Power:'+str(
+		power_timeout_hex))
 	# Reset the watchdog timer bit
 	status_hex = rcf.set_hex_bit(status_hex, rcf.PLC_CMD_BIT_WATCHDOG_RESET)
 
@@ -791,11 +844,13 @@ def plc_set_power_timeout(timeout=set_err_codes.plc_power_timeout):
 	# Set update timeout bit
 	status_hex = rcf.set_hex_bit(status_hex, rcf.PLC_CMD_BIT_SET_POWER_DELAY)
 	create_and_send_new_command(status_hex,power_timeout_hex,comms_timeout_hex)
-	logger.debug('Mid request: '+str(status_hex)+' Power:'+str(power_timeout_hex))
+	logger.debug('Mid request: '+str(status_hex)+' Power:'+str(
+		power_timeout_hex))
 	#Unset timeout bit
 	status_hex = rcf.unset_hex_bit(status_hex, rcf.PLC_CMD_BIT_SET_POWER_DELAY)
 	create_and_send_new_command(status_hex,power_timeout_hex,comms_timeout_hex)
-	logger.debug('After request: '+str(status_hex)+' Power:'+str(power_timeout_hex))
+	logger.debug('After request: '+str(status_hex)+' Power:'+str(
+		power_timeout_hex))
 
 	return set_err_codes.PLC_CODE_OK
 
@@ -807,13 +862,15 @@ def plc_stop_roof():
 	
 	RETURN
 	 
-		PLC_CODE_OK, from the settings and errors codes script, to show that the code has completed
+		PLC_CODE_OK, from the settings and errors codes script, to show that 
+			the code has completed
 		
 		
 	"""
 	response = get_D100_D102_status()
 
-	frame, status_hex,power_timeout_hex, comms_timeout_hex, fcs_hex, tilt_hex = split_up_response(response)
+	frame, status_hex,power_timeout_hex, comms_timeout_hex, fcs_hex, \
+		tilt_hex = split_up_response(response)
 
 	logger.debug('Set comms:Before request: '+str(status_hex))
 	# Reset the watchdog timer bit
@@ -837,8 +894,10 @@ def plc_is_roof_open():
 
 	response = rcf.plc_command_response(rcf.PLC_Request_Roof_Status)
 	if rcf.plc_status_end_code(response):
-		logger.error('Error getting roof status from PLC: '+ rcf.plc_status_error_message(rcf.plc_status_end_code(response)))
-		raise PLC_ERROR('Error getting roof status from PLC: '+ rcf.plc_status_error_message(rcf.plc_status_end_code(response)))
+		logger.error('Error getting roof status from PLC: '+ \
+			rcf.plc_status_error_message(rcf.plc_status_end_code(response)))
+		raise PLC_ERROR('Error getting roof status from PLC: '+ \
+			rcf.plc_status_error_message(rcf.plc_status_end_code(response)))
 	else:
 		roof_status = rcf.plc_status_status_code(response)
 		roof_open = rcf.int_bit_is_set(roof_status, rcf.PLC_Roof_Open)
