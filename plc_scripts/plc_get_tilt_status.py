@@ -6,9 +6,9 @@ Equivalent to the PHP executables, but now written in python. This is a new exec
 """
 
 import sys
-print(sys.path)
-sys.path.append('/Users/Jessica/PostDoc/ScriptsNStuff/current_branch/xamidimura')
-print(sys.path)
+sys.path.append('/home/observer/xamidimura/xamidimura')
 import PLC_interaction_functions as plc
 
-plc.plc_get_telescope_tilt_status()
+status_dict = plc.plc_get_telescope_tilt_status()
+for i in status_dict.keys():
+	print(i, ' = ', status_dict[i])

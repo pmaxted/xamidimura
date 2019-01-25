@@ -1,56 +1,56 @@
-2019-01-09 09:23:43,780 [PLC_interaction_functions] ERROR - Command failed:@00WD0152*
-2019-01-09 09:23:43,782 [PLC_interaction_functions] ERROR - Error getting command status from PLC: Format error
-2019-01-09 09:23:43,783 [PLC_interaction_functions] ERROR - Error getting roof status from PLC:Not executable
-2019-01-09 09:23:43,784 [PLC_interaction_functions] ERROR - Unexpected combination of tilt bits set
-2019-01-09 09:23:43,784 [PLC_interaction_functions] WARNING - NEED TO PUT TILT CHECK IN ROOF CLOSE FUNCTION!!!!
-2019-01-09 09:23:43,784 [PLC_interaction_functions] ERROR - Power failure and AC motor selected
-2019-01-09 09:23:43,785 [PLC_interaction_functions] WARNING - NEED TO PUT TILT CHECK IN ROOF CLOSE FUNCTION!!!!
-2019-01-09 09:23:43,785 [PLC_interaction_functions] ERROR - AC motor has tripped.
-2019-01-09 09:23:43,786 [PLC_interaction_functions] WARNING - NEED TO PUT TILT CHECK IN ROOF CLOSE FUNCTION!!!!
-2019-01-09 09:23:43,786 [PLC_interaction_functions] ERROR - Error getting roof status from PLC:Not executable
-2019-01-09 09:23:43,787 [PLC_interaction_functions] WARNING - NEED TO PUT TILT CHECK IN ROOF CLOSE FUNCTION!!!!
-2019-01-09 09:23:43,787 [PLC_interaction_functions] ERROR - PLC motor stop is pressed
-2019-01-09 09:23:43,788 [PLC_interaction_functions] WARNING - NEED TO PUT TILT CHECK IN ROOF CLOSE FUNCTION!!!!
-2019-01-09 09:23:43,788 [PLC_interaction_functions] ERROR - PLC is not under remote control.
-2019-01-09 09:23:43,789 [PLC_interaction_functions] INFO - PLC_Response_Code = @00MS0000A827*
-2019-01-09 09:23:43,789 [PLC_interaction_functions] INFO - PLC_Status = Normal
-2019-01-09 09:23:43,789 [PLC_interaction_functions] INFO - PLC_Operating_Mode = Program mode
-2019-01-09 09:23:43,790 [PLC_interaction_functions] ERROR - Error getting roof status from PLC: Not executable
-2019-01-09 09:23:43,791 [PLC_interaction_functions] INFO - Rain_status = Ignore Rain
-2019-01-09 09:23:43,791 [PLC_interaction_functions] INFO - PC_Communication_Timeout = 1
-2019-01-09 09:23:43,791 [PLC_interaction_functions] INFO - Power_Failure_Timeout = 1
-2019-01-09 09:23:43,792 [PLC_interaction_functions] ERROR - Error getting roof status from PLC:Not executable
-2019-01-09 09:23:43,793 [PLC_interaction_functions] INFO - Roof_Closed = True
-2019-01-09 09:23:43,793 [PLC_interaction_functions] INFO - Roof_Open = False
-2019-01-09 09:23:43,793 [PLC_interaction_functions] INFO - Roof_Moving = False
-2019-01-09 09:23:43,793 [PLC_interaction_functions] INFO - Roof_Control = Remote
-2019-01-09 09:23:43,793 [PLC_interaction_functions] INFO - Roof_Raining = True
-2019-01-09 09:23:43,793 [PLC_interaction_functions] INFO - Roof_Forced_Close = True
-2019-01-09 09:23:43,793 [PLC_interaction_functions] INFO - High_Building_Temp = True
-2019-01-09 09:23:43,793 [PLC_interaction_functions] INFO - Extractor_Fan = On
-2019-01-09 09:23:43,793 [PLC_interaction_functions] INFO - Roof_Motor_Stop = Pressed
-2019-01-09 09:23:43,793 [PLC_interaction_functions] INFO - Roof_AC_Motor_Tripped = True
-2019-01-09 09:23:43,793 [PLC_interaction_functions] INFO - Roof_Motor_Being_Used = DC
-2019-01-09 09:23:43,793 [PLC_interaction_functions] INFO - Roof_Close_Proximity = True
-2019-01-09 09:23:43,793 [PLC_interaction_functions] INFO - Roof_Power_Failure = True
-2019-01-09 09:23:43,793 [PLC_interaction_functions] INFO - Roof_Forced_Power_Closure = True
-2019-01-09 09:23:43,793 [PLC_interaction_functions] INFO - Roof_Open_Proximity = True
-2019-01-09 09:23:43,793 [PLC_interaction_functions] INFO - Roof_Door_Open = True
-2019-01-09 09:23:43,793 [PLC_interaction_functions] INFO - PC_Communication_Timeout = 1
-2019-01-09 09:23:43,793 [PLC_interaction_functions] INFO - Power_Failure_Timeout = 1
-2019-01-09 09:23:43,794 [PLC_interaction_functions] ERROR - Error getting roof status from PLC: Memory write protected
-2019-01-09 09:23:43,795 [PLC_interaction_functions] ERROR - Error getting roof status from PLC:Not executable
-2019-01-09 09:23:43,795 [PLC_interaction_functions] ERROR - PLC motor stop is pressed
-2019-01-09 09:23:43,796 [PLC_interaction_functions] ERROR - PLC not under remote control
-2019-01-09 09:23:43,797 [PLC_interaction_functions] ERROR - Power failure
-2019-01-09 09:23:43,797 [PLC_interaction_functions] ERROR - It's RAINING!!
-2019-01-09 09:23:43,801 [PLC_interaction_functions] ERROR - Invalid timeout value, use integer: 0 <= Timeout <= 9999
-2019-01-09 09:23:43,801 [PLC_interaction_functions] ERROR - Invalid timeout value, use integer: 0 <= Timeout <= 9999
-2019-01-09 09:23:43,802 [PLC_interaction_functions] ERROR - Invalid timeout value, use integer: 0 <= Timeout <= 9999
-2019-01-09 09:23:43,802 [PLC_interaction_functions] ERROR - Invalid timeout value, use integer: 0 <= Timeout <= 9999
-2019-01-09 09:23:43,803 [PLC_interaction_functions] ERROR - Invalid timeout value, use integer: 0 <= Timeout <= 9999
-2019-01-09 09:23:43,803 [PLC_interaction_functions] ERROR - Invalid timeout value, use integer: 0 <= Timeout <= 9999
-2019-01-09 09:23:43,804 [PLC_interaction_functions] ERROR - Invalid timeout value, use integer: 0 <= Timeout <= 9999
-2019-01-09 09:23:43,804 [PLC_interaction_functions] ERROR - Invalid timeout value, use integer: 0 <= Timeout <= 9999
-2019-01-09 09:23:43,804 [PLC_interaction_functions] ERROR - Roof status FCS check fail: @00RD0080060001000100005E*
-2019-01-09 09:23:43,804 [PLC_interaction_functions] ERROR - Got invalid roof status from PLC: 00RD0080060001000100005D*
+2019-01-11 16:36:30,231 [PLC_interaction_functions] ERROR - Command failed:@00WD0152*
+2019-01-11 16:36:30,232 [PLC_interaction_functions] ERROR - Error getting command status from PLC: Format error
+2019-01-11 16:36:30,233 [PLC_interaction_functions] ERROR - Error getting roof status from PLC:Not executable
+2019-01-11 16:36:30,233 [PLC_interaction_functions] ERROR - Unexpected combination of tilt bits set
+2019-01-11 16:36:30,234 [PLC_interaction_functions] WARNING - NEED TO PUT TILT CHECK IN ROOF CLOSE FUNCTION!!!!
+2019-01-11 16:36:30,234 [PLC_interaction_functions] ERROR - Power failure and AC motor selected
+2019-01-11 16:36:30,235 [PLC_interaction_functions] WARNING - NEED TO PUT TILT CHECK IN ROOF CLOSE FUNCTION!!!!
+2019-01-11 16:36:30,235 [PLC_interaction_functions] ERROR - AC motor has tripped.
+2019-01-11 16:36:30,235 [PLC_interaction_functions] WARNING - NEED TO PUT TILT CHECK IN ROOF CLOSE FUNCTION!!!!
+2019-01-11 16:36:30,236 [PLC_interaction_functions] ERROR - Error getting roof status from PLC:Not executable
+2019-01-11 16:36:30,237 [PLC_interaction_functions] WARNING - NEED TO PUT TILT CHECK IN ROOF CLOSE FUNCTION!!!!
+2019-01-11 16:36:30,237 [PLC_interaction_functions] ERROR - PLC motor stop is pressed
+2019-01-11 16:36:30,237 [PLC_interaction_functions] WARNING - NEED TO PUT TILT CHECK IN ROOF CLOSE FUNCTION!!!!
+2019-01-11 16:36:30,238 [PLC_interaction_functions] ERROR - PLC is not under remote control.
+2019-01-11 16:36:30,239 [PLC_interaction_functions] INFO - PLC_Response_Code = @00MS0000A827*
+2019-01-11 16:36:30,239 [PLC_interaction_functions] INFO - PLC_Status = Normal
+2019-01-11 16:36:30,239 [PLC_interaction_functions] INFO - PLC_Operating_Mode = Program mode
+2019-01-11 16:36:30,240 [PLC_interaction_functions] ERROR - Error getting roof status from PLC: Not executable
+2019-01-11 16:36:30,241 [PLC_interaction_functions] INFO - Rain_status = Ignore Rain
+2019-01-11 16:36:30,241 [PLC_interaction_functions] INFO - PC_Communication_Timeout = 1
+2019-01-11 16:36:30,241 [PLC_interaction_functions] INFO - Power_Failure_Timeout = 1
+2019-01-11 16:36:30,242 [PLC_interaction_functions] ERROR - Error getting roof status from PLC:Not executable
+2019-01-11 16:36:30,243 [PLC_interaction_functions] INFO - Roof_Closed = True
+2019-01-11 16:36:30,243 [PLC_interaction_functions] INFO - Roof_Open = False
+2019-01-11 16:36:30,243 [PLC_interaction_functions] INFO - Roof_Moving = False
+2019-01-11 16:36:30,243 [PLC_interaction_functions] INFO - Roof_Control = Remote
+2019-01-11 16:36:30,243 [PLC_interaction_functions] INFO - Roof_Raining = True
+2019-01-11 16:36:30,243 [PLC_interaction_functions] INFO - Roof_Forced_Close = True
+2019-01-11 16:36:30,243 [PLC_interaction_functions] INFO - High_Building_Temp = True
+2019-01-11 16:36:30,243 [PLC_interaction_functions] INFO - Extractor_Fan = On
+2019-01-11 16:36:30,243 [PLC_interaction_functions] INFO - Roof_Motor_Stop = Pressed
+2019-01-11 16:36:30,243 [PLC_interaction_functions] INFO - Roof_AC_Motor_Tripped = True
+2019-01-11 16:36:30,243 [PLC_interaction_functions] INFO - Roof_Motor_Being_Used = DC
+2019-01-11 16:36:30,243 [PLC_interaction_functions] INFO - Roof_Close_Proximity = True
+2019-01-11 16:36:30,243 [PLC_interaction_functions] INFO - Roof_Power_Failure = True
+2019-01-11 16:36:30,243 [PLC_interaction_functions] INFO - Roof_Forced_Power_Closure = True
+2019-01-11 16:36:30,243 [PLC_interaction_functions] INFO - Roof_Open_Proximity = True
+2019-01-11 16:36:30,243 [PLC_interaction_functions] INFO - Roof_Door_Open = True
+2019-01-11 16:36:30,243 [PLC_interaction_functions] INFO - PC_Communication_Timeout = 1
+2019-01-11 16:36:30,243 [PLC_interaction_functions] INFO - Power_Failure_Timeout = 1
+2019-01-11 16:36:30,244 [PLC_interaction_functions] ERROR - Error getting roof status from PLC: Memory write protected
+2019-01-11 16:36:30,246 [PLC_interaction_functions] ERROR - Error getting roof status from PLC:Not executable
+2019-01-11 16:36:30,246 [PLC_interaction_functions] ERROR - PLC motor stop is pressed
+2019-01-11 16:36:30,247 [PLC_interaction_functions] ERROR - PLC not under remote control
+2019-01-11 16:36:30,248 [PLC_interaction_functions] ERROR - Power failure
+2019-01-11 16:36:30,249 [PLC_interaction_functions] ERROR - It's RAINING!!
+2019-01-11 16:36:30,254 [PLC_interaction_functions] ERROR - Invalid timeout value, use integer: 0 <= Timeout <= 9999
+2019-01-11 16:36:30,254 [PLC_interaction_functions] ERROR - Invalid timeout value, use integer: 0 <= Timeout <= 9999
+2019-01-11 16:36:30,254 [PLC_interaction_functions] ERROR - Invalid timeout value, use integer: 0 <= Timeout <= 9999
+2019-01-11 16:36:30,255 [PLC_interaction_functions] ERROR - Invalid timeout value, use integer: 0 <= Timeout <= 9999
+2019-01-11 16:36:30,256 [PLC_interaction_functions] ERROR - Invalid timeout value, use integer: 0 <= Timeout <= 9999
+2019-01-11 16:36:30,256 [PLC_interaction_functions] ERROR - Invalid timeout value, use integer: 0 <= Timeout <= 9999
+2019-01-11 16:36:30,256 [PLC_interaction_functions] ERROR - Invalid timeout value, use integer: 0 <= Timeout <= 9999
+2019-01-11 16:36:30,256 [PLC_interaction_functions] ERROR - Invalid timeout value, use integer: 0 <= Timeout <= 9999
+2019-01-11 16:36:30,257 [PLC_interaction_functions] ERROR - Roof status FCS check fail: @00RD0080060001000100005E*
+2019-01-11 16:36:30,257 [PLC_interaction_functions] ERROR - Got invalid roof status from PLC: 00RD0080060001000100005D*

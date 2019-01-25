@@ -1,9 +1,12 @@
 """
 settings_and_error_codes.py
 
-Contains a list of all the various error codes from the various scripts, and also the various settings such as timeouts and connection attempts.
+Contains a list of all the various error codes from the various scripts,
+ and also the various settings such as timeouts and connection attempts.
 
 """
+
+LOGFILES_DIRECTORY = 'logfiles/'
 
 # Status code for taking exposure
 STATUS_CODE_OK = 0
@@ -23,7 +26,7 @@ plc_serial_port_timeout =30
 plc_comms_timeout = 60
 plc_power_timeout = 60
 
-roof_moving_timeout = 120
+roof_moving_timeout = 600
 telescope_coms_timeout = 30
 tcs_coms_timeout = 60
 
@@ -32,11 +35,24 @@ tcs_coms_timeout = 60
 pass_coord_attempts = 2
 tcs_conn_tries_total = 3
 
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#              DATABASE
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+DATABASE_NAME = 'xamidimura.db'
+DATABASE_PATH = 'database/'
+
+TARGET_INFORMATION_TABLE = 'target_info'
+OBSERVING_LOG_DATABASE_TABLE = 'obslog2'
+
+
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #              PLC
 # -As taken from the original manual
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+PLC_MEMORY_MAP_FILE_LOC = 'mem_map/maptest.txt'
 
 PLC_CODE_OK = 0
 
@@ -51,16 +67,16 @@ PLC_STATUS_STATUS = dict({	'0': 'Normal',
 							'1':'Fatal Error',
 							'8':'FALS Error'})
 PLC_STATUS_UNKNOWN_STATUS = 'Unknown error code: '
-#PLC_STATUS_REQUEST_RESPONSE_ERROR = 15
 
-PLC_STATUS_WRITE_ERROR_MESSAGE = dict({	'00': "Normal Completion",
-										'13': "FCS error",
-										'14': "Format error",
-										'15': "Entry number data error",
-										'18': "Frame length error",
-										'19': "Not executable",
-										'21': "Not executable due to CPU Unit CPU error"
-										})
+PLC_STATUS_WRITE_ERROR_MESSAGE = dict(
+							{'00': "Normal Completion",
+							'13': "FCS error",
+							'14': "Format error",
+							'15': "Entry number data error",
+							'18': "Frame length error",
+							'19': "Not executable",
+							'21': "Not executable due to CPU Unit CPU error"
+							})
 
 PLC_STATUS_ERROR_MESSAGE = dict({	'00': "Normal Completion",
 									'01': "Not executable in RUN mode",
@@ -79,11 +95,12 @@ PLC_STATUS_ERROR_MESSAGE = dict({	'00': "Normal Completion",
 									'A8': "Frame Length Error in transmit data"
 										})
 
-PLC_STATUS_DATA_ERROR_MESSAGE = dict({	'00': "Normal Completion",
-										'13': "FCS error",
-										'14': "Format error",
-										'15': "Entry number data error",
-										'18': "Frame length error",
-										'21': "Not executable due to CPU Unit CPU error"
-										})
+PLC_STATUS_DATA_ERROR_MESSAGE = dict(
+						{'00': "Normal Completion",
+						'13': "FCS error",
+						'14': "Format error",
+						'15': "Entry number data error",
+						'18': "Frame length error",
+						'21': "Not executable due to CPU Unit CPU error"
+						})
 PLC_STATUS_FAIL_TO_DECODE_RESPONSE = 255

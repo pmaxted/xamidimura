@@ -1,0 +1,103 @@
+2019-01-11 16:36:30,171 [focuser_control] INFO - Focuser 1 moving to center
+2019-01-11 16:36:30,171 [focuser_control] INFO - Focuser 2 moving to center
+2019-01-11 16:36:30,171 [focuser_control] ERROR - 6 is not a valid focuser number.
+2019-01-11 16:36:30,171 [focuser_control] ERROR - 6 is not a valid focuser number.
+2019-01-11 16:36:30,172 [focuser_control] ERROR - 1.2 is not a valid focuser number.
+2019-01-11 16:36:30,172 [focuser_control] ERROR - 1 is not a valid focuser number.
+2019-01-11 16:36:30,172 [focuser_control] ERROR - hi is not a valid focuser number.
+2019-01-11 16:36:30,172 [focuser_control] CRITICAL - No baud rate found in config file.
+2019-01-11 16:36:30,172 [focuser_control] CRITICAL - Unexpected baud rate for focuser, 115200 is expected
+2019-01-11 16:36:30,172 [focuser_control] CRITICAL - No data bits number found in config file
+2019-01-11 16:36:30,172 [focuser_control] CRITICAL - Unexpected number for data bits, 8 is expected
+2019-01-11 16:36:30,173 [focuser_control] CRITICAL - No parity values found in config file
+2019-01-11 16:36:30,173 [focuser_control] CRITICAL - Unexpected parity values, "N" is expected
+2019-01-11 16:36:30,173 [focuser_control] CRITICAL - No stop bits number found in config file
+2019-01-11 16:36:30,173 [focuser_control] CRITICAL - Unexpected number for stop bits, 1 is expected
+2019-01-11 16:36:30,173 [focuser_control] INFO - Focuser 1 motion stopped.
+2019-01-11 16:36:30,173 [focuser_control] INFO - Focuser 2 motion stopped.
+2019-01-11 16:36:30,174 [focuser_control] ERROR - 6 is not a valid focuser number.
+2019-01-11 16:36:30,175 [focuser_control] ERROR - Response:NONE
+2019-01-11 16:36:30,175 [focuser_control] INFO - Device Type for Focuser 1 set as: OB
+2019-01-11 16:36:30,175 [focuser_control] ERROR - Response:NONE
+2019-01-11 16:36:30,175 [focuser_control] INFO - Temperature compensation DISABLED for focuser 1
+2019-01-11 16:36:30,175 [focuser_control] INFO - "Temperature compensation at start" state set to DISABLED for focuser 1
+2019-01-11 16:36:30,175 [focuser_control] ERROR - Response:NONE
+2019-01-11 16:36:30,176 [focuser_control] INFO - Temperature compensation coefficient set as +0046 for mode: B and for focuser 1
+2019-01-11 16:36:30,176 [focuser_control] INFO - Temperature compensation coefficient set as +0074 for mode: C and for focuser 1
+2019-01-11 16:36:30,176 [focuser_control] INFO - Temperature compensation coefficient set as +0023 for mode: D and for focuser 1
+2019-01-11 16:36:30,176 [focuser_control] INFO - Temperature compensation coefficient set as +0023 for mode: E and for focuser 1
+2019-01-11 16:36:30,176 [focuser_control] INFO - Temperature compensation mode A set for focuser 1
+2019-01-11 16:36:30,176 [focuser_control] INFO - Backlash compensation state set to ENABLED for focuser 1
+2019-01-11 16:36:30,176 [focuser_control] ERROR - Response:NONE
+2019-01-11 16:36:30,177 [focuser_control] ERROR - 6 is not a valid focuser number.
+2019-01-11 16:36:30,177 [focuser_control] INFO - Motion of Focuser 1 HALTED
+2019-01-11 16:36:30,178 [focuser_control] INFO - Motion of Focuser 2 HALTED
+2019-01-11 16:36:30,178 [focuser_control] ERROR - 6 is not a valid focuser number.
+2019-01-11 16:36:30,178 [focuser_control] INFO - Focuser 1 moving to home
+2019-01-11 16:36:30,178 [focuser_control] INFO - Focuser 2 moving to home
+2019-01-11 16:36:30,178 [focuser_control] ERROR - 6 is not a valid focuser number.
+2019-01-11 16:36:30,179 [focuser_control] INFO - Focuser 1 moving inwards
+2019-01-11 16:36:30,179 [focuser_control] INFO - Focuser 2 moving inwards
+2019-01-11 16:36:30,179 [focuser_control] ERROR - 3 is not a valid move speed. 0 = High, 1 = low.
+2019-01-11 16:36:30,179 [focuser_control] ERROR - -0.3 is not a valid move speed. 0 = High, 1 = low.
+2019-01-11 16:36:30,179 [focuser_control] ERROR - hi is not a valid move speed. 0 = High, 1 = low.
+2019-01-11 16:36:30,179 [focuser_control] ERROR - 6 is not a valid focuser number.
+2019-01-11 16:36:30,180 [focuser_control] INFO - Focuser 1 moving outwards
+2019-01-11 16:36:30,180 [focuser_control] INFO - Focuser 2 moving outwards
+2019-01-11 16:36:30,180 [focuser_control] ERROR - 3 is not a valid move speed. 0 = High, 1 = low.
+2019-01-11 16:36:30,180 [focuser_control] ERROR - -0.3 is not a valid move speed. 0 = High, 1 = low.
+2019-01-11 16:36:30,180 [focuser_control] ERROR - hi is not a valid move speed. 0 = High, 1 = low.
+2019-01-11 16:36:30,180 [focuser_control] ERROR - 6 is not a valid focuser number.
+2019-01-11 16:36:30,180 [focuser_control] INFO - Focuser 1 moving to position: 042000
+2019-01-11 16:36:30,181 [focuser_control] INFO - Focuser 2 moving to position: 045023
+2019-01-11 16:36:30,181 [focuser_control] ERROR - 6 is not a valid focuser number.
+2019-01-11 16:36:30,181 [focuser_control] ERROR - Check value entered for brightness setting.
+2019-01-11 16:36:30,181 [focuser_control] ERROR - 1000 is an invalid value for brightness setting.
+2019-01-11 16:36:30,181 [focuser_control] ERROR - Check value entered for brightness setting.
+2019-01-11 16:36:30,181 [focuser_control] ERROR - Check value entered for brightness setting.
+2019-01-11 16:36:30,181 [focuser_control] INFO - Backlash compensation state set to DISABLED for focuser 1
+2019-01-11 16:36:30,182 [focuser_control] INFO - Backlash compensation state set to ENABLED for focuser 1
+2019-01-11 16:36:30,182 [focuser_control] ERROR - Invalid input for backlash compensation control. True=Enable, False=Disable
+2019-01-11 16:36:30,182 [focuser_control] ERROR - 6 is not a valid focuser number.
+2019-01-11 16:36:30,182 [focuser_control] ERROR - Backlash steps must be between 0 and 99
+2019-01-11 16:36:30,183 [focuser_control] ERROR - Backlash steps must be between 0 and 99
+2019-01-11 16:36:30,183 [focuser_control] ERROR - Backlash steps value must be an integer.
+2019-01-11 16:36:30,183 [focuser_control] ERROR - Backlash steps value must be an integer.
+2019-01-11 16:36:30,183 [focuser_control] INFO - Backlash steps set to 01 for focuser 1
+2019-01-11 16:36:30,183 [focuser_control] INFO - Backlash steps set to 10 for focuser 1
+2019-01-11 16:36:30,183 [focuser_control] ERROR - 6 is not a valid focuser number.
+2019-01-11 16:36:30,184 [focuser_control] INFO - Name for Focuser 1 set as: testname
+2019-01-11 16:36:30,184 [focuser_control] ERROR - Invalid device name given
+2019-01-11 16:36:30,184 [focuser_control] ERROR - Invalid device name given
+2019-01-11 16:36:30,184 [focuser_control] ERROR - 6 is not a valid focuser number.
+2019-01-11 16:36:30,184 [focuser_control] ERROR - BC is not a valid device type.
+2019-01-11 16:36:30,184 [focuser_control] ERROR - 0.12 is not a valid device type.
+2019-01-11 16:36:30,185 [focuser_control] ERROR - 5 is not a valid focuser number.
+2019-01-11 16:36:30,185 [focuser_control] INFO - Device Type for Focuser 1 set as: OB
+2019-01-11 16:36:30,185 [focuser_control] ERROR - Invalid value enter for the temperature compensation coefficient
+2019-01-11 16:36:30,185 [focuser_control] ERROR - Invalid value enter for the temperature compensation coefficient
+2019-01-11 16:36:30,185 [focuser_control] ERROR - Temperature compensation coefficient must be an integer
+2019-01-11 16:36:30,185 [focuser_control] ERROR - Temperature compensation coefficient must be an integer
+2019-01-11 16:36:30,186 [focuser_control] INFO - Temperature compensation coefficient set as +0092 for mode: A and for focuser 1
+2019-01-11 16:36:30,186 [focuser_control] INFO - Temperature compensation coefficient set as -0001 for mode: A and for focuser 1
+2019-01-11 16:36:30,186 [focuser_control] INFO - Temperature compensation coefficient set as +0000 for mode: A and for focuser 1
+2019-01-11 16:36:30,186 [focuser_control] ERROR - 3 is not a valid focuser number.
+2019-01-11 16:36:30,186 [focuser_control] ERROR - hiiii is not a valid mode for the temperature compensation.
+2019-01-11 16:36:30,186 [focuser_control] ERROR - 0.323 is not a valid mode for the temperature compensation.
+2019-01-11 16:36:30,186 [focuser_control] ERROR - N is not a valid mode for the temperature compensation.
+2019-01-11 16:36:30,187 [focuser_control] INFO - Temperature compensation mode A set for focuser 1
+2019-01-11 16:36:30,187 [focuser_control] ERROR - 3 is not a valid focuser number.
+2019-01-11 16:36:30,187 [focuser_control] INFO - "Temperature compensation at start" state set to DISABLED for focuser 1
+2019-01-11 16:36:30,187 [focuser_control] INFO - "Temperature compensation at start" state set to ENABLED for focuser 1
+2019-01-11 16:36:30,187 [focuser_control] ERROR - 6 is not a valid focuser number.
+2019-01-11 16:36:30,188 [focuser_control] ERROR - Invalid input for "temperature compensation at start" control. True=Enable, False=Disable
+2019-01-11 16:36:30,188 [focuser_control] INFO - Temperature compensation DISABLED for focuser 1
+2019-01-11 16:36:30,188 [focuser_control] INFO - Temperature compensation ENABLED for focuser 1
+2019-01-11 16:36:30,188 [focuser_control] ERROR - 6 is not a valid focuser number.
+2019-01-11 16:36:30,189 [focuser_control] ERROR - Invalid input for temperature compensation control. True=Enable, False=Disable
+2019-01-11 16:36:30,189 [focuser_control] INFO - Focuser 1 moving to center
+2019-01-11 16:36:30,189 [focuser_control] INFO - Serial port connection to focuser 1 has been closed
+2019-01-11 16:36:30,190 [focuser_control] INFO - Focuser 1 moving to home
+2019-01-11 16:36:30,190 [focuser_control] INFO - Focuser 1: Temperature compensation - ON
+2019-01-11 16:36:30,190 [focuser_control] INFO - Focuser 1: Backlash compensation - ON
+2019-01-11 16:36:30,190 [focuser_control] INFO - Startup for Focuser 1 complete.

@@ -5,9 +5,8 @@ Equivalent to the PHP executables, but now written in python
 """
 
 import sys
-print(sys.path)
-sys.path.append('/Users/Jessica/PostDoc/ScriptsNStuff/current_branch/xamidimura')
-print(sys.path)
+sys.path.append('/home/observer/xamidimura/xamidimura')
 import PLC_interaction_functions as plc
 
 plc.plc_select_battery()
+print('BATTERY selected')
