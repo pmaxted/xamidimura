@@ -6,8 +6,8 @@ Contains a list of all the various error codes from the various scripts,
 
 """
 
-LOGFILES_DIRECTORY = '/Users/Jessica/PostDoc/ScriptsNStuff/current_branch/xamidimura/logfiles/'
-#LOGFILES_DIRECTORY = 'logfiles/'
+#LOGFILES_DIRECTORY = '/Users/Jessica/PostDoc/ScriptsNStuff/current_branch/xamidimura/logfiles/'
+LOGFILES_DIRECTORY = 'logfiles/'
 DATA_FILE_DIRECTORY = 'fits_file_tests/'
 
 # Status code for taking exposure
@@ -19,8 +19,6 @@ STATUS_CODE_EXPOSURE_NOT_STARTED = -3
 STATUS_CODE_UNEXPECTED_RESPONSE = -4
 STATUS_CODE_NO_RESPONSE = -5
 STATUS_CODE_FILTER_WHEEL_TIMEOUT = -6
-
-
 
 
 # Timeouts in seconds
