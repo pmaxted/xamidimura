@@ -6,7 +6,9 @@ Contains a list of all the various error codes from the various scripts,
 
 """
 
-LOGFILES_DIRECTORY = 'logfiles/'
+LOGFILES_DIRECTORY = '/Users/Jessica/PostDoc/ScriptsNStuff/current_branch/xamidimura/logfiles/'
+#LOGFILES_DIRECTORY = 'logfiles/'
+DATA_FILE_DIRECTORY = 'fits_file_tests/'
 
 # Status code for taking exposure
 STATUS_CODE_OK = 0
@@ -53,6 +55,8 @@ OBSERVING_LOG_DATABASE_TABLE = 'obslog2'
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 PLC_MEMORY_MAP_FILE_LOC = 'mem_map/maptest.txt'
+PLC_STATUS_CHANGE_FILE = 'mya.py'
+
 
 PLC_CODE_OK = 0
 

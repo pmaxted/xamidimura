@@ -77,11 +77,15 @@ FOCUSER CONTROL FUNCTIONS
 import common
 import serial
 import logging
+import time
+import settings_and_error_codes as set_err_codes
 
 focus_logger = logging.getLogger(__name__)
 focus_logger.setLevel(logging.INFO)
-focusHand = logging.FileHandler(filename = 'logfiles/focuser.log', mode = 'a')
+focusHand = logging.FileHandler(filename = set_err_codes.LOGFILES_DIRECTORY+\
+						'focuser.log', mode = 'a')
 focusHand.setLevel(logging.INFO)
+logging.Formatter.converter = time.gmtime
 formatter = logging.Formatter('%(asctime)s [%(name)s] %(levelname)s - '\
 		'%(message)s','%Y-%m-%d_%H:%M:%S_UTC')
 focusHand.setFormatter(formatter)
@@ -1072,7 +1076,7 @@ def startup_focuser(config_file_name, config_file_loc = 'configs/'):
 
 	return focuser_no, open_p
 
-def shutdown_focuser(open_p):
+def shutdown_focuser(open_p, x=1):
 	"""
 	
 	This function will perform any shutdown operations at the end of the night 

@@ -1,0 +1,110 @@
+2019-01-30_10:20:06_UTC [plcd] INFO - Roof close checks:
+2019-01-30_10:20:06_UTC [plcd] INFO - Roof control set to remote
+2019-01-30_10:20:06_UTC [plcd] WARNING - DC motor bit is set, requesting use of AC motor..
+2019-01-30_10:20:06_UTC [plcd] ERROR - Cannot request AC motor use
+2019-01-30_10:20:06_UTC [plcd] INFO - Roof close checks:
+2019-01-30_10:20:06_UTC [plcd] INFO - Roof control set to remote
+2019-01-30_10:20:06_UTC [plcd] WARNING - DC motor bit is set, requesting use of AC motor..
+2019-01-30_10:20:06_UTC [plcd] ERROR - Error getting roof status from PLC:Not executable
+2019-01-30_10:20:06_UTC [plcd] INFO - Roof close checks:
+2019-01-30_10:20:06_UTC [plcd] INFO - Roof control set to remote
+2019-01-30_10:20:06_UTC [plcd] WARNING - DC motor bit is set, requesting use of AC motor..
+2019-01-30_10:20:06_UTC [plcd] ERROR - Cannot request AC motor.
+2019-01-30_10:20:06_UTC [plcd] INFO - No power failure, or still thinks battery in use.
+2019-01-30_10:20:06_UTC [plcd] INFO - No motor trip
+2019-01-30_10:20:06_UTC [plcd] INFO - Telescope drive control is normal
+2019-01-30_10:20:06_UTC [plcd] CRITICAL - CANNOT CLOSE ROOF!!
+2019-01-30_10:20:07_UTC [plcd] ERROR - Error getting roof status from PLC:Not executable
+2019-01-30_10:20:07_UTC [plcd] INFO - Roof close checks:
+2019-01-30_10:20:07_UTC [plcd] INFO - Roof control set to remote
+2019-01-30_10:20:07_UTC [plcd] INFO - Battery not in use
+2019-01-30_10:20:07_UTC [plcd] INFO - No power failure, or still thinks battery in use.
+2019-01-30_10:20:07_UTC [plcd] ERROR - AC motor has tripped.
+2019-01-30_10:20:07_UTC [plcd] INFO - Roof close checks:
+2019-01-30_10:20:07_UTC [plcd] INFO - Roof control set to remote
+2019-01-30_10:20:07_UTC [plcd] INFO - Battery not in use
+2019-01-30_10:20:07_UTC [plcd] INFO - No power failure, or still thinks battery in use.
+2019-01-30_10:20:07_UTC [plcd] INFO - No motor trip
+2019-01-30_10:20:07_UTC [plcd] INFO - Going to attempt to close roof....
+2019-01-30_10:20:07_UTC [plcd] INFO - Roof closing....
+2019-01-30_10:20:07_UTC [plcd] INFO - Roof is still moving...
+2019-01-30_10:20:07_UTC [plcd] INFO - Roof is still moving...
+2019-01-30_10:20:07_UTC [plcd] INFO - Roof is still moving...
+2019-01-30_10:20:07_UTC [plcd] INFO - Roof is still moving...
+2019-01-30_10:20:07_UTC [plcd] INFO - ROOF CLOSED
+2019-01-30_10:20:07_UTC [plcd] INFO - Roof close checks:
+2019-01-30_10:20:07_UTC [plcd] INFO - Roof control set to remote
+2019-01-30_10:20:07_UTC [plcd] INFO - Battery not in use
+2019-01-30_10:20:07_UTC [plcd] INFO - No power failure, or still thinks battery in use.
+2019-01-30_10:20:07_UTC [plcd] INFO - No motor trip
+2019-01-30_10:20:07_UTC [plcd] INFO - Going to attempt to close roof....
+2019-01-30_10:20:07_UTC [plcd] ERROR - Unable to request telescope drive control, telescope maybe drifting
+2019-01-30_10:20:07_UTC [plcd] INFO - Roof close checks:
+2019-01-30_10:20:07_UTC [plcd] INFO - Roof control set to remote
+2019-01-30_10:20:07_UTC [plcd] INFO - Battery not in use
+2019-01-30_10:20:07_UTC [plcd] INFO - No power failure, or still thinks battery in use.
+2019-01-30_10:20:07_UTC [plcd] INFO - No motor trip
+2019-01-30_10:20:07_UTC [plcd] ERROR - Unable to request telescope drive control, telescope maybe drifting
+2019-01-30_10:20:07_UTC [plcd] INFO - Going to attempt to close roof....
+2019-01-30_10:20:07_UTC [plcd] ERROR - Unable to request telescope drive control, telescope maybe drifting
+2019-01-30_10:20:07_UTC [plcd] INFO - Roof close checks:
+2019-01-30_10:20:07_UTC [plcd] WARNING - Roof is already closed
+2019-01-30_10:20:07_UTC [plcd] ERROR - Command failed:@00WD0152*
+2019-01-30_10:20:07_UTC [plcd] ERROR - Unexpected combination of tilt bits set
+2019-01-30_10:20:07_UTC [plcd] ERROR - Error getting command status from PLC: Format error
+2019-01-30_10:20:07_UTC [plcd] ERROR - PLC motor stop is pressed
+2019-01-30_10:20:07_UTC [plcd] ERROR - PLC motor stop is pressed
+2019-01-30_10:20:07_UTC [plcd] INFO - Motor stop NOT pressed
+2019-01-30_10:20:07_UTC [plcd] INFO - Motor stop NOT pressed
+2019-01-30_10:20:07_UTC [plcd] INFO - Roof open checks:
+2019-01-30_10:20:07_UTC [plcd] INFO - Telescopes ARE parked.
+2019-01-30_10:20:07_UTC [plcd] INFO - Roof control set to remote
+2019-01-30_10:20:07_UTC [plcd] ERROR - Unable to OPEN roof.
+2019-01-30_10:20:07_UTC [plcd] ERROR - Error getting roof status from PLC:Not executable
+2019-01-30_10:20:07_UTC [plcd] INFO - Roof open checks:
+2019-01-30_10:20:07_UTC [plcd] ERROR - It's RAINING!!
+2019-01-30_10:20:07_UTC [plcd] INFO - Roof open checks:
+2019-01-30_10:20:07_UTC [plcd] WARNING - Roof is already open
+2019-01-30_10:20:07_UTC [plcd] INFO - Roof open checks:
+2019-01-30_10:20:07_UTC [plcd] INFO - Telescopes ARE parked.
+2019-01-30_10:20:07_UTC [plcd] INFO - Roof control set to remote
+2019-01-30_10:20:07_UTC [plcd] ERROR - Unable to request telescope drive control, telescope maybe drifting
+2019-01-30_10:20:07_UTC [plcd] INFO - Going to attempt to open roof....
+2019-01-30_10:20:07_UTC [plcd] INFO - Roof opening....
+2019-01-30_10:20:07_UTC [plcd] INFO - Roof is still moving...
+2019-01-30_10:20:07_UTC [plcd] INFO - Roof is still moving...
+2019-01-30_10:20:07_UTC [plcd] INFO - ROOF OPENED
+2019-01-30_10:20:07_UTC [plcd] INFO - Roof open checks:
+2019-01-30_10:20:07_UTC [plcd] WARNING - Telescopes NOT parked - Unsafe to move
+2019-01-30_10:20:07_UTC [plcd] INFO - Roof control set to remote
+2019-01-30_10:20:07_UTC [plcd] ERROR - Unable to OPEN roof.
+2019-01-30_10:20:07_UTC [plcd] INFO - Roof control set to remote
+2019-01-30_10:20:07_UTC [plcd] WARNING - PLC is not under remote control. Attempting to request control
+2019-01-30_10:20:07_UTC [plcd] INFO - Remote control succesfully requested.
+2019-01-30_10:20:07_UTC [plcd] WARNING - PLC is not under remote control. Attempting to request control
+2019-01-30_10:20:07_UTC [plcd] INFO - Remote control succesfully requested.
+2019-01-30_10:20:07_UTC [plcd] WARNING - PLC is not under remote control. Attempting to request control
+2019-01-30_10:20:07_UTC [plcd] ERROR - Cannot request remote roof control
+2019-01-30_10:20:07_UTC [plcd] ERROR - Roof status FCS check fail: @00RD0080060001000100005E*
+2019-01-30_10:20:07_UTC [plcd] ERROR - Got invalid roof status from PLC: 00RD0080060001000100005D*
+2019-01-30_10:20:07_UTC [plcd] WARNING - Telescopes NOT parked - Requesting move...
+2019-01-30_10:20:07_UTC [plcd] ERROR - Failed to park telescopes. Exit code:1
+2019-01-30_10:20:07_UTC [plcd] CRITICAL - CANNOT CLOSE ROOF, TELESCOPES NOT PARKED AND CANNOT BE MOVED
+2019-01-30_10:20:07_UTC [plcd] WARNING - Telescopes NOT parked - Requesting move...
+2019-01-30_10:20:07_UTC [plcd] ERROR - Failed to park telescopes. Exit code:1
+2019-01-30_10:20:07_UTC [plcd] CRITICAL - CANNOT CLOSE ROOF, TELESCOPES NOT PARKED AND CANNOT BE MOVED
+2019-01-30_10:20:07_UTC [plcd] WARNING - Telescopes NOT parked - Requesting move...
+2019-01-30_10:20:07_UTC [plcd] CRITICAL - CANNOT CLOSE ROOF, TELESCOPES NOT PARKED AND CANNOT BE MOVED
+2019-01-30_10:20:07_UTC [plcd] WARNING - Telescopes NOT parked - Requesting move...
+2019-01-30_10:20:07_UTC [plcd] CRITICAL - CANNOT CLOSE ROOF, TELESCOPES NOT PARKED AND CANNOT BE MOVED
+2019-01-30_10:20:07_UTC [plcd] INFO - Telescopes ARE parked.
+2019-01-30_10:20:07_UTC [plcd] WARNING - Telescopes NOT parked - Requesting move...
+2019-01-30_10:20:07_UTC [plcd] ERROR - Error getting roof status from PLC:Not executable
+2019-01-30_10:20:07_UTC [plcd] WARNING - Telescopes NOT parked - Requesting move...
+2019-01-30_10:20:07_UTC [plcd] INFO - Telescopes now parked
+2019-01-30_10:20:07_UTC [plcd] WARNING - Telescopes NOT parked - Requesting move...
+2019-01-30_10:20:07_UTC [plcd] INFO - Telescopes now parked
+2019-01-30_10:20:07_UTC [plcd] WARNING - Telescopes NOT parked - Requesting move...
+2019-01-30_10:20:07_UTC [plcd] CRITICAL - CANNOT CLOSE ROOF, TELESCOPES NOT PARKED AND CANNOT BE MOVED
+2019-01-30_10:20:07_UTC [plcd] WARNING - Telescopes NOT parked - Requesting move...
+2019-01-30_10:20:07_UTC [plcd] CRITICAL - CANNOT CLOSE ROOF, TELESCOPES NOT PARKED AND CANNOT BE MOVED

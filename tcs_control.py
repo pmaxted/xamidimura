@@ -14,12 +14,16 @@ import logging
 import settings_and_error_codes as set_err_codes
 import timeout_decorator
 import subprocess
+import time
+
 
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
-fileHand = logging.FileHandler(filename = 'logfiles/tcs.log', mode = 'a')
+fileHand = logging.FileHandler(filename = set_err_codes.LOGFILES_DIRECTORY+\
+		'tcs.log', mode = 'a')
 fileHand.setLevel(logging.INFO)
+logging.Formatter.converter = time.gmtime
 formatter = logging.Formatter('%(asctime)s [%(name)s] %(levelname)s - '\
 		'%(message)s','%Y-%m-%d_%H:%M:%S_UTC')
 fileHand.setFormatter(formatter)
@@ -596,10 +600,7 @@ def stopcam():
 		that may be in progress.
 		
 	**Not sure if will work with new system**
-	
-	PARAMETERS:
-	
-	 	open_conn = the parameter storing the open ssh connection to the TCS
+
 
 	RETURN:
 	
@@ -608,7 +609,7 @@ def stopcam():
 
 	respond = send_command('stopcam')
 
-def wait_till_read_out(open_conn):
+def wait_till_read_out():
 
 	""" 
 	Send the 'waitreadout' command to the TCS. This command will wait for the 
@@ -617,11 +618,7 @@ def wait_till_read_out(open_conn):
 
 	**Not sure if will work with new system**
 
-
-	PARAMETERS:
-	
-	 	open_conn = the parameter storing the open ssh connection to the TCS
 	
 	"""
 
-	respond = send_command('waitreadout', open_conn)
+	respond = send_command('waitreadout')

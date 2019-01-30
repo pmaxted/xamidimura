@@ -5,7 +5,8 @@ Jessica A. Evans
 
 Contains unit tests for the plcd script.
 	
-	Currently tests:
+	NOTE: no tests for the main function because haven't worked out how to
+	 test the while loop
 	
 
 """
@@ -434,5 +435,404 @@ class test_stop_roof_instructions(unittest.TestCase):
 	
 		self.assertEqual(mock_plc_response.call_count,2)
 
+
+@patch("plcd.request_telescope_drive_control")
+@patch("plcd.select_mains")
+@patch("plcd.motor_stop_check")
+@patch("plcd.telescope_tilt_check")
+@patch("roof_control_functions.plc_command_response_port_open")
+class test_close_roof(unittest.TestCase):
+
+	def setUp(self):
+		self.port = serial.Serial(baudrate = plcd.rcf.PLC_BAUD_RATE,
+			parity=plcd.rcf.PLC_PARITY, stopbits = plcd.rcf.PLC_STOP_BITS,
+			bytesize = plcd.rcf.PLC_CHARACTER_LENGTH,
+			timeout = plcd.rcf.PLC_PORT_TIMEOUT)
+
+	@patch("plcd.get_D100_D102_status")
+	def test_error_getting_roof_status_error(self, mock_d100, mock_response,
+		mock_tilt_check, mock_motor_stop_check, mock_select_mains,
+		mock_tele_drive):
+
+		mock_response.return_value = "@00RD190009270F0000000024*\r"
+
+		with self.assertRaises(plcd.PLC_ERROR):
+			plcd.close_roof_instructions(self.port)
+	
+		mock_response.assert_called_once()
+		mock_tilt_check.not_called()
+		mock_motor_stop_check.not_called()
+		mock_select_mains.not_called()
+		mock_tele_drive.not_called()
+		mock_d100.not_called()
+
+	@patch("plcd.get_D100_D102_status")
+	def test_roof_all_ready_closed(self, mock_d100, mock_response,
+		mock_tilt_check, mock_motor_stop_check, mock_select_mains,
+		mock_tele_drive):
+
+		mock_response.return_value = "@00RD008105000100010A002B*\r"
+
+		expected = 0
+		actual = plcd.close_roof_instructions(self.port)
+		self.assertEqual(expected,actual)
+
+		mock_response.called_once()
+		mock_tilt_check.not_called()
+		mock_motor_stop_check.not_called()
+		mock_select_mains.not_called()
+		mock_tele_drive.not_called()
+		mock_d100.not_called()
+
+	@patch("plcd.get_D100_D102_status")
+	def test_battery_in_use_select_mains_give_error(self, mock_d100, mock_response,
+			mock_tilt_check, mock_motor_stop_check, mock_select_mains,
+			mock_tele_drive):
+		
+		mock_response.return_value = "@00RD00040A02580258020021*\r"
+		mock_tilt_check.return_value = True, dict(
+			{'Tilt_Angle':"6h West <= x < RA West limit", 'Tel_drive_control':
+				"Normal - PC"})
+
+		mock_motor_stop_check.return_value = False
+		mock_select_mains.side_effect = plcd.PLC_ERROR
+		
+		with self.assertLogs(level='WARNING') as cm:
+			plcd.logging.getLogger().error(plcd.close_roof_instructions(self.port))
+			logging_actual_response1 = cm.output[0].split(':')[0]
+			logging_actual_response2 = cm.output[1].split(':')[0]
+			logging_actual_response3 = cm.output[2].split(':')[0]
+			logging_actual_response4 = cm.output[3].split(':')[0]
+		self.assertEqual(logging_actual_response1, 'INFO')
+		self.assertEqual(logging_actual_response2, 'INFO')
+		self.assertEqual(logging_actual_response3, 'WARNING')
+		self.assertEqual(logging_actual_response4, 'ERROR')
+		
+
+		mock_response.called_once()
+		mock_tilt_check.called_once()
+		mock_motor_stop_check.called_once()
+		mock_select_mains.called_once()
+		mock_tele_drive.called_once()
+		mock_d100.not_called()
+
+	@patch("plcd.get_D100_D102_status")
+	def test_battery_in_use_response_error(self, mock_d100, mock_response,
+		mock_tilt_check, mock_motor_stop_check, mock_select_mains,
+		mock_tele_drive):
+
+		mock_response.side_effect = ["@00RD00040A02580258020021*\r",
+			"@00RD190009270F0000000024*\r"]
+		mock_tilt_check.return_value = True, dict(
+			{'Tilt_Angle':"6h West <= x < RA West limit", 'Tel_drive_control':
+				"Normal - PC"})
+
+		mock_motor_stop_check.return_value = False
+		
+		with self.assertRaises(plcd.PLC_ERROR):
+			plcd.close_roof_instructions(self.port)
+
+		self.assertEqual(mock_response.call_count,2)
+		mock_tilt_check.called_once()
+		mock_motor_stop_check.called_once()
+		mock_select_mains.called_once()
+		mock_tele_drive.called_once()
+		mock_d100.not_called()
+
+	@patch("plcd.get_D100_D102_status")
+	def test_battery_in_use_after_request(self, mock_d100, mock_response,
+		mock_tilt_check, mock_motor_stop_check, mock_select_mains,
+		mock_tele_drive):
+
+		mock_response.side_effect = ["@00RD00040A02580258020021*\r",
+			"@00RD00040A02580258020021*\r"]
+		mock_tilt_check.return_value = True, dict(
+			{'Tilt_Angle':"6h West <= x < RA West limit", 'Tel_drive_control':
+				"Normal - PC"})
+
+		mock_motor_stop_check.return_value = False
+
+		with self.assertRaises(plcd.PLC_ERROR):
+			plcd.close_roof_instructions(self.port)
+
+		self.assertEqual(mock_response.call_count,2)
+		mock_tilt_check.called_once()
+		mock_motor_stop_check.called_once()
+		mock_select_mains.called_once()
+		mock_tele_drive.called_once()
+		mock_d100.not_called()
+
+	"""
+	TEST TO CHECK UPS STUFF: ----
+	"""
+	@patch("plcd.get_D100_D102_status")
+	def test_motor_trip(self, mock_d100, mock_response, mock_tilt_check,
+			mock_motor_stop_check, mock_select_mains, mock_tele_drive):
+			
+		mock_response.return_value = "@00RD00020A02580258020027*\r"
+		mock_tilt_check.return_value = True, dict(
+			{'Tilt_Angle':"6h West <= x < RA West limit", 'Tel_drive_control':
+				"Normal - PC"})
+
+		mock_motor_stop_check.return_value = False
+
+		with self.assertRaises(plcd.PLC_ERROR):
+			plcd.close_roof_instructions(self.port)
+
+		mock_response.called_once()
+		mock_tilt_check.called_once()
+		mock_motor_stop_check.called_once()
+		mock_select_mains.called_once()
+		mock_tele_drive.called_once()
+		mock_d100.not_called()
+	
+	
+	def test_request_tel_control_give_error(self,mock_response, mock_tilt_check,
+			mock_motor_stop_check, mock_select_mains, mock_tele_drive):
+	
+		mock_response.side_effect= ["@00RD00000A025802584A0052*\r",
+			"@00RD000010232802580A0022*\r","@00WD0053*\r"]
+		# plcd.PLC_ERROR]
+
+		mock_tilt_check.return_value = True, dict(
+			{'Tilt_Angle':"6h West <= x < RA West limit", 'Tel_drive_control':
+				"Roof Controller"})
+
+		mock_motor_stop_check.return_value = False
+		mock_tele_drive.side_effect = [plcd.PLC_ERROR]
+
+
+		with self.assertLogs(level='WARNING') as cm:
+			plcd.logging.getLogger().error(plcd.close_roof_instructions(self.port))
+			logging_actual_response1 = cm.output[0].split(':')[0]
+			logging_actual_response2 = cm.output[1].split(':')[0]
+			logging_actual_response3 = cm.output[2].split(':')[0]
+			logging_actual_response4 = cm.output[3].split(':')[0]
+			logging_actual_response5 = cm.output[4].split(':')[0]
+			logging_actual_response6 = cm.output[5].split(':')[0]
+		self.assertEqual(logging_actual_response1, 'INFO')
+		self.assertEqual(logging_actual_response2, 'INFO')
+		self.assertEqual(logging_actual_response3, 'INFO')
+		self.assertEqual(logging_actual_response4, 'INFO')
+		self.assertEqual(logging_actual_response5, 'INFO')
+		self.assertEqual(logging_actual_response6, 'ERROR')
+
+		mock_response.called_once()
+		mock_tilt_check.called_once()
+		mock_motor_stop_check.called_once()
+		mock_select_mains.called_once()
+		mock_tele_drive.called_once()
+	
+	
+	def test_passed_checks_set_to_close_tel_check_fail(self,mock_response,
+			mock_tilt_check, mock_motor_stop_check, mock_select_mains,
+			mock_tele_drive):
+
+		mock_response.side_effect= ["@00RD00000A025802580A0056*\r",
+			"@00RD000010232802580A0022*\r","@00WD0053*\r"]#, plcd.PLC_ERROR]
+
+		mock_tilt_check.return_value = True, dict(
+			{'Tilt_Angle':"6h West <= x < RA West limit", 'Tel_drive_control':
+				"Roof Controller"})
+
+		mock_motor_stop_check.return_value = False
+		mock_tele_drive.side_effect = ['ok',plcd.PLC_ERROR]
+		
+		with self.assertLogs(level='WARNING') as cm:
+			plcd.logging.getLogger().error(plcd.close_roof_instructions(self.port))
+		
+			logging_actual_response1 = cm.output[0].split(':')[0]
+			logging_actual_response2 = cm.output[1].split(':')[0]
+			logging_actual_response3 = cm.output[2].split(':')[0]
+			logging_actual_response4 = cm.output[3].split(':')[0]
+			logging_actual_response5 = cm.output[4].split(':')[0]
+			logging_actual_response6 = cm.output[5].split(':')[0]
+			logging_actual_response7 = cm.output[6].split(':')[0]
+		self.assertEqual(logging_actual_response1, 'INFO')
+		self.assertEqual(logging_actual_response2, 'INFO')
+		self.assertEqual(logging_actual_response3, 'INFO')
+		self.assertEqual(logging_actual_response4, 'INFO')
+		self.assertEqual(logging_actual_response5, 'INFO')
+		self.assertEqual(logging_actual_response6, 'INFO')
+		self.assertEqual(logging_actual_response7, 'ERROR')
+		
+		mock_response.called_once()
+		mock_tilt_check.called_once()
+		mock_motor_stop_check.called_once()
+		mock_select_mains.called_once()
+		mock_tele_drive.called_once(self.port)
+
+
+	@patch("time.sleep")
+	def test_passed_checks_set_to_close_moving(self,mock_sleep,mock_response,
+			mock_tilt_check, mock_motor_stop_check, mock_select_mains,
+			mock_tele_drive):
+
+		mock_response.side_effect= ["@00RD00000A025802580A0056*\r",
+			"@00RD000010232802580A0022*\r","@00WD0053*\r",
+			"@00RD00000C025802580A0054*\r","@00RD00000C025802580A0054*\r",
+			"@00RD00000C025802580A0054*\r", "@00RD00000C025802580A0054*\r",
+			"@00RD000009025802580A002E*\r"]
+
+		mock_tilt_check.return_value = True, dict(
+			{'Tilt_Angle':"6h West <= x < RA West limit", 'Tel_drive_control':
+				"Roof Controller"})
+
+		mock_motor_stop_check.return_value = False
+
+		mock_sleep = plcd.time.sleep(0.01)
+
+		with self.assertLogs(level='WARNING') as cm:
+			plcd.logging.getLogger().error(plcd.close_roof_instructions(self.port))
+			all_mess = [i.split(':')[0] for i in cm.output]
+			for i in all_mess[:-1]:
+				self.assertEqual(i, 'INFO')
+
+		mock_tilt_check.called_once()
+		mock_motor_stop_check.called_once()
+		mock_select_mains.called_once()
+
+
+@patch("plcd.request_telescope_drive_control")
+#@patch("plcd.select_mains")
+@patch("plcd.motor_stop_check")
+#@patch("plcd.telescope_tilt_check")
+@patch("roof_control_functions.plc_command_response_port_open")
+class test_open_roof(unittest.TestCase):
+
+	def setUp(self):
+		self.port = serial.Serial(baudrate = plcd.rcf.PLC_BAUD_RATE,
+			parity=plcd.rcf.PLC_PARITY, stopbits = plcd.rcf.PLC_STOP_BITS,
+			bytesize = plcd.rcf.PLC_CHARACTER_LENGTH,
+			timeout = plcd.rcf.PLC_PORT_TIMEOUT)
+
+
+	@patch("plcd.get_D100_D102_status")
+	def test_error_getting_roof_status_error(self, mock_d100, mock_response,
+		mock_motor_stop_check, mock_tele_drive):
+
+		mock_response.return_value = "@00RD190009270F0000000024*\r"
+
+		with self.assertRaises(plcd.PLC_ERROR):
+			plcd.open_roof_instructions(self.port)
+	
+		mock_response.assert_called_once()
+		mock_motor_stop_check.not_called()
+		mock_tele_drive.not_called()
+		mock_d100.not_called()
+
+	@patch("plcd.get_D100_D102_status")
+	def test_roof_all_ready_open(self, mock_d100, mock_response,
+		mock_motor_stop_check, mock_tele_drive):
+
+		mock_response.return_value = "@00RD00000A000100010A0056*\r"
+
+		expected = 0
+		actual = plcd.open_roof_instructions(self.port)
+		self.assertEqual(expected,actual)
+
+		mock_response.called_once()
+		mock_motor_stop_check.not_called()
+		mock_tele_drive.not_called()
+		mock_d100.not_called()
+
+	@patch("plcd.get_D100_D102_status")
+	def test_raining(self, mock_d100, mock_response,
+		mock_motor_stop_check, mock_tele_drive):
+
+		mock_response.return_value = "@00RD000019000100010A002F*\r"
+
+
+		with self.assertLogs(level='WARNING') as cm:
+			plcd.logging.getLogger().error(plcd.open_roof_instructions(self.port))
+			logging_actual_response1 = cm.output[0].split(':')[0]
+			logging_actual_response2 = cm.output[1].split(':')[0]
+		self.assertEqual(logging_actual_response1, 'INFO')
+		self.assertEqual(logging_actual_response2, 'ERROR')
+
+
+		mock_response.called_once()
+		mock_motor_stop_check.not_called()
+		mock_tele_drive.not_called()
+		mock_d100.not_called()
+
+
+	@patch("plcd.get_D100_D102_status")
+	def test_tilt_check_not_parked(self, mock_d100, mock_response,
+		mock_motor_stop_check, mock_tele_drive):
+
+		mock_response.return_value = "@00RD0000090001000102005D*\r"
+		mock_motor_stop_check.return_value = False
+
+		with self.assertLogs(level='WARNING') as cm:
+			plcd.logging.getLogger().error(plcd.open_roof_instructions(self.port))
+			logging_actual_response1 = cm.output[0].split(':')[0]
+			logging_actual_response2 = cm.output[1].split(':')[0]
+		self.assertEqual(logging_actual_response1, 'INFO')
+		self.assertEqual(logging_actual_response2, 'WARNING')
+
+		mock_response.called_once()
+		mock_motor_stop_check.not_called()
+		mock_tele_drive.not_called()
+		mock_d100.not_called()
+
+	@patch("plcd.get_D100_D102_status")
+	def test_check_power_fail(self, mock_d100, mock_response,
+		mock_motor_stop_check, mock_tele_drive):
+
+		mock_response.return_value = "@00RD001009000100010A002F*\r"
+		mock_motor_stop_check.return_value = False
+
+		with self.assertLogs(level='WARNING') as cm:
+			plcd.logging.getLogger().error(plcd.open_roof_instructions(self.port))
+			logging_actual_response1 = cm.output[0].split(':')[0]
+			logging_actual_response2 = cm.output[1].split(':')[0]
+			logging_actual_response3 = cm.output[2].split(':')[0]
+			logging_actual_response4 = cm.output[3].split(':')[0]
+		self.assertEqual(logging_actual_response1, 'INFO')
+		self.assertEqual(logging_actual_response2, 'INFO')
+		self.assertEqual(logging_actual_response3, 'INFO')
+		self.assertEqual(logging_actual_response4, 'ERROR')
+
+		mock_response.called_once()
+		mock_motor_stop_check.called_once()
+		mock_tele_drive.not_called()
+		mock_d100.not_called()
+
+
+	@patch("time.sleep")
+	def test_tel_drive_request_fail_still_open(self, mock_sleep, mock_response,
+		mock_motor_stop_check, mock_tele_drive):
+
+		mock_response.side_effect = ["@00RD000009000100014A002A*\r",
+			"@00RD000010232802580A0022*\r","@00WD0053*\r",
+			"@00RD00000C025802580A0054*\r","@00RD00000C025802580A0054*\r",
+			"@00RD00000A025802580A0056*\r"]
+		mock_tele_drive.side_effect = plcd.PLC_ERROR
+		mock_motor_stop_check.return_value = False
+		mock_sleep = plcd.time.sleep(0.01)
+
+		with self.assertLogs(level='WARNING') as cm:
+			plcd.logging.getLogger().error(plcd.open_roof_instructions(self.port))
+			logging_actual_response1 = cm.output[0].split(':')[0]
+			logging_actual_response2 = cm.output[1].split(':')[0]
+			logging_actual_response3 = cm.output[2].split(':')[0]
+			logging_actual_response4 = cm.output[3].split(':')[0] #error
+			logging_actual_response5 = cm.output[4].split(':')[0]
+			logging_actual_response6 = cm.output[5].split(':')[0]
+			logging_actual_response7 = cm.output[6].split(':')[0]
+			logging_actual_response8 = cm.output[7].split(':')[0]
+		self.assertEqual(logging_actual_response1, 'INFO')
+		self.assertEqual(logging_actual_response2, 'INFO')
+		self.assertEqual(logging_actual_response3, 'INFO')
+		self.assertEqual(logging_actual_response4, 'ERROR')
+		self.assertEqual(logging_actual_response5, 'INFO')
+		self.assertEqual(logging_actual_response6, 'INFO')
+		self.assertEqual(logging_actual_response7, 'INFO')
+		self.assertEqual(logging_actual_response8, 'INFO')
+
+		mock_response.called_once()
+		mock_motor_stop_check.called_once()
+		mock_tele_drive.called_once()
 
 

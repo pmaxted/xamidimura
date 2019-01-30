@@ -3,7 +3,9 @@ import ctypes
 import mmap
 import os
 import struct
+import sys
 
+new_char = str(sys.argv[1])
 
 def main():
 	# Create new empty file to back memory map on disk
@@ -19,23 +21,21 @@ def main():
 		# prot: PROT_WRITE means this process can write to this mmap
 		buf = mmap.mmap(fd, mmap.PAGESIZE, mmap.MAP_SHARED, mmap.PROT_WRITE)
 	except ValueError:
-		print('Got ValueError')
 		# Zero out the file to insure it's the right size
 		assert os.write(fd, b'\x00' * mmap.PAGESIZE) == mmap.PAGESIZE
 		buf = mmap.mmap(fd, mmap.PAGESIZE, mmap.MAP_SHARED, mmap.PROT_WRITE)
 
 
 	# Now create an int in the memory mapping
-	#i = ctypes.c_int.from_buffer(buf)
 	s_type = ctypes.c_char * len('c')
 	s = s_type.from_buffer(buf)
 
-	print('First 10 bytes of memory mapping: ', buf[:10])
+	#print('First 10 bytes of memory mapping: ', buf[:10])
 	
 	#new_i = input('Enter a new value for i: ')
 	#i.value = int(new_i)
 
-	s.raw = bytes(input('Enter a value for s:'), 'utf-8')
+	s.raw = bytes(new_char, 'utf-8')#input('Enter a value for s:'), 'utf-8')
 
 
 

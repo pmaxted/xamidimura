@@ -9,6 +9,7 @@ import serial
 import time
 import logging
 import numpy as np
+import settings_and_error_codes as set_err_codes
 
 try:
 	import dummyserial as dummy_serial
@@ -17,7 +18,7 @@ except ModuleNotFoundError:
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
-fileHand = logging.FileHandler(filename = 'logfiles/common.log', mode = 'w')
+fileHand = logging.FileHandler(filename = set_err_codes.LOGFILES_DIRECTORY+'common.log', mode = 'w')
 fileHand.setLevel(logging.INFO)
 logging.Formatter.converter = time.gmtime
 formatter = logging.Formatter('%(asctime)s [%(name)s] %(levelname)s - '\

@@ -66,6 +66,7 @@ import roof_control_functions as rcf
 import logging
 import sys
 import settings_and_error_codes as set_err_codes
+import time
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)

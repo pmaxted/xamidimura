@@ -1,35 +1,132 @@
-2019-01-11 16:36:30,191 [filter_wheel_control] INFO - Filter change successful. Current position: 1
-2019-01-11 16:36:30,191 [filter_wheel_control] CRITICAL - No baud rate found in config file.
-2019-01-11 16:36:30,191 [filter_wheel_control] CRITICAL - Unexpected baud rate for ifw filter wheels, 19200 is expected.
-2019-01-11 16:36:30,191 [filter_wheel_control] CRITICAL - No data bits number found in config file
-2019-01-11 16:36:30,192 [filter_wheel_control] CRITICAL - Unexpected number for data bits, 8 is expected
-2019-01-11 16:36:30,192 [filter_wheel_control] CRITICAL - No parity values found in config file
-2019-01-11 16:36:30,192 [filter_wheel_control] CRITICAL - Unexpected parity values, "N" is expected
-2019-01-11 16:36:30,192 [filter_wheel_control] CRITICAL - No stop bits number found in config file
-2019-01-11 16:36:30,192 [filter_wheel_control] CRITICAL - Unexpected number for stop bits, 1 is expected
-2019-01-11 16:36:30,193 [filter_wheel_control] INFO - Communication with filter wheel: Closed
-2019-01-11 16:36:30,193 [filter_wheel_control] WARNING - Communication port not closed
-2019-01-11 16:36:30,193 [filter_wheel_control] ERROR - £ in the name R£D is not a valid character. Please only use "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ=.#/-% or a space"
-2019-01-11 16:36:30,193 [filter_wheel_control] ERROR - Filter wheel ID not in config file.
-2019-01-11 16:36:30,193 [filter_wheel_control] ERROR - One of the names is too long or too short. Must be  <8 but >0
-2019-01-11 16:36:30,194 [filter_wheel_control] INFO - Filter ID: A set as home position, at position 1
-2019-01-11 16:36:30,194 [filter_wheel_control] INFO - Communication with filter wheel: Closed
-2019-01-11 16:36:30,194 [filter_wheel_control] INFO - Filter wheel shutdown.
-2019-01-11 16:36:30,195 [filter_wheel_control] INFO - Filter ID: A set as home position, at position 1
-2019-01-11 16:36:30,195 [filter_wheel_control] INFO - Filter wheel startup complete.
-2019-01-11 16:36:30,196 [filter_wheel_control] ERROR - ER=5. Invalid filter position supplied
-2019-01-11 16:36:30,196 [filter_wheel_control] INFO - Filter change successful. Current position: 1
-2019-01-11 16:36:30,196 [filter_wheel_control] ERROR - ER=4. Wheel stuck in position, or moving slowly.
-2019-01-11 16:36:30,197 [filter_wheel_control] ERROR - ER=6. WARNING! wheel slipping and taking too many step to next position
-2019-01-11 16:36:30,197 [filter_wheel_control] CRITICAL - Unexpected Error: TEST ERROR
-2019-01-11 16:36:30,197 [filter_wheel_control] CRITICAL - Unexpected Error: ERROR TEST
-2019-01-11 16:36:30,197 [filter_wheel_control] INFO - Filter ID: A set as home position, at position 1
-2019-01-11 16:36:30,198 [filter_wheel_control] INFO - Filter names successfully stored.
-2019-01-11 16:36:30,198 [filter_wheel_control] INFO - Stored filter names updated
-2019-01-11 16:36:30,198 [filter_wheel_control] WARNING - Names are identical, stored filter names not changed
-2019-01-11 16:36:30,199 [filter_wheel_control] INFO - Filter names successfully stored.
-2019-01-11 16:36:30,199 [filter_wheel_control] ERROR - Invalid wheel ID. Please select A,B,C,D,E,F,G or H
-2019-01-11 16:36:30,199 [filter_wheel_control] CRITICAL - Unexpected response message:NONE
-2019-01-11 16:36:30,200 [filter_wheel_control] CRITICAL - Failed to initialise filter wheel ifw1-SOUTH after 3 attempts..
-2019-01-11 16:36:30,200 [filter_wheel_control] INFO - Filter wheel initialisation complete
-2019-01-11 16:36:30,200 [filter_wheel_control] INFO - Filter wheel initialisation complete
+2019-01-24 15:26:24,212 [filter_wheel_control] INFO - No Filter change required..
+2019-01-24 15:26:24,213 [filter_wheel_control] CRITICAL - No baud rate found in config file.
+2019-01-24 15:26:24,213 [filter_wheel_control] CRITICAL - Unexpected baud rate for ifw filter wheels, 19200 is expected.
+2019-01-24 15:26:24,213 [filter_wheel_control] CRITICAL - No data bits number found in config file
+2019-01-24 15:26:24,213 [filter_wheel_control] CRITICAL - Unexpected number for data bits, 8 is expected
+2019-01-24 15:26:24,214 [filter_wheel_control] CRITICAL - No parity values found in config file
+2019-01-24 15:26:24,214 [filter_wheel_control] CRITICAL - Unexpected parity values, "N" is expected
+2019-01-24 15:26:24,214 [filter_wheel_control] CRITICAL - No stop bits number found in config file
+2019-01-24 15:26:24,214 [filter_wheel_control] CRITICAL - Unexpected number for stop bits, 1 is expected
+2019-01-24 15:26:24,214 [filter_wheel_control] INFO - Communication with filter wheel: Closed
+2019-01-24 15:26:24,215 [filter_wheel_control] WARNING - Communication port not closed
+2019-01-24 15:26:24,215 [filter_wheel_control] ERROR - £ in the name R£D is not a valid character. Please only use "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ=.#/-% or a space"
+2019-01-24 15:26:24,215 [filter_wheel_control] ERROR - Filter wheel ID not in config file.
+2019-01-24 15:26:24,215 [filter_wheel_control] ERROR - One of the names is too long or too short. Must be  <8 but >0
+2019-01-24 15:26:24,216 [filter_wheel_control] INFO - Filter wheel shutting down. This will take a few seconds
+2019-01-24 15:26:24,216 [filter_wheel_control] CRITICAL - Unexpected Error: NONE
+2019-01-24 15:26:24,216 [filter_wheel_control] INFO - Communication with filter wheel: Closed
+2019-01-24 15:26:24,216 [filter_wheel_control] INFO - Filter wheel shutdown.
+2019-01-24 15:26:24,216 [filter_wheel_control] INFO - Filter ID: A set as home position, at position 1
+2019-01-24 15:26:24,217 [filter_wheel_control] INFO - Filter wheel startup complete.
+2019-01-24 15:26:24,218 [filter_wheel_control] ERROR - ER=5. Invalid filter position supplied
+2019-01-24 15:26:24,218 [filter_wheel_control] INFO - Filter change successful. Current position: 1
+2019-01-24 15:26:24,219 [filter_wheel_control] ERROR - ER=4. Wheel stuck in position, or moving slowly.
+2019-01-24 15:26:24,219 [filter_wheel_control] ERROR - ER=6. WARNING! wheel slipping and taking too many step to next position
+2019-01-24 15:26:24,219 [filter_wheel_control] CRITICAL - Unexpected Error: TEST ERROR
+2019-01-24 15:26:24,219 [filter_wheel_control] CRITICAL - Unexpected Error: ERROR TEST
+2019-01-24 15:26:24,219 [filter_wheel_control] INFO - Filter ID: A set as home position, at position 1
+2019-01-24 15:26:24,220 [filter_wheel_control] INFO - Filter names successfully stored.
+2019-01-24 15:26:24,220 [filter_wheel_control] INFO - Stored filter names updated, display on box updated after next home
+2019-01-24 15:26:24,221 [filter_wheel_control] WARNING - Names are identical, stored filter names not changed
+2019-01-24 15:26:24,222 [filter_wheel_control] INFO - Filter names successfully stored.
+2019-01-24 15:26:24,222 [filter_wheel_control] ERROR - Invalid wheel ID. Please select A,B,C,D,E,F,G or H
+2019-01-24 15:26:24,222 [filter_wheel_control] CRITICAL - Unexpected response message:NONE
+2019-01-24 16:33:21,472 [filter_wheel_control] INFO - No Filter change required..
+2019-01-24 16:33:21,473 [filter_wheel_control] CRITICAL - No baud rate found in config file.
+2019-01-24 16:33:21,474 [filter_wheel_control] CRITICAL - Unexpected baud rate for ifw filter wheels, 19200 is expected.
+2019-01-24 16:33:21,474 [filter_wheel_control] CRITICAL - No data bits number found in config file
+2019-01-24 16:33:21,474 [filter_wheel_control] CRITICAL - Unexpected number for data bits, 8 is expected
+2019-01-24 16:33:21,475 [filter_wheel_control] CRITICAL - No parity values found in config file
+2019-01-24 16:33:21,475 [filter_wheel_control] CRITICAL - Unexpected parity values, "N" is expected
+2019-01-24 16:33:21,475 [filter_wheel_control] CRITICAL - No stop bits number found in config file
+2019-01-24 16:33:21,475 [filter_wheel_control] CRITICAL - Unexpected number for stop bits, 1 is expected
+2019-01-24 16:33:21,475 [filter_wheel_control] INFO - Communication with filter wheel: Closed
+2019-01-24 16:33:21,476 [filter_wheel_control] WARNING - Communication port not closed
+2019-01-24 16:33:21,476 [filter_wheel_control] ERROR - £ in the name R£D is not a valid character. Please only use "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ=.#/-% or a space"
+2019-01-24 16:33:21,476 [filter_wheel_control] ERROR - Filter wheel ID not in config file.
+2019-01-24 16:33:21,476 [filter_wheel_control] ERROR - One of the names is too long or too short. Must be  <8 but >0
+2019-01-24 16:33:21,477 [filter_wheel_control] INFO - Filter wheel shutting down. This will take a few seconds
+2019-01-24 16:33:21,477 [filter_wheel_control] CRITICAL - Unexpected Error: NONE
+2019-01-24 16:33:21,477 [filter_wheel_control] INFO - Communication with filter wheel: Closed
+2019-01-24 16:33:21,477 [filter_wheel_control] INFO - Filter wheel shutdown.
+2019-01-24 16:33:21,478 [filter_wheel_control] INFO - Filter ID: A set as home position, at position 1
+2019-01-24 16:33:21,478 [filter_wheel_control] INFO - Filter wheel startup complete.
+2019-01-24 16:33:21,479 [filter_wheel_control] ERROR - ER=5. Invalid filter position supplied
+2019-01-24 16:33:21,479 [filter_wheel_control] INFO - Filter change successful. Current position: 1
+2019-01-24 16:33:21,479 [filter_wheel_control] ERROR - ER=4. Wheel stuck in position, or moving slowly.
+2019-01-24 16:33:21,479 [filter_wheel_control] ERROR - ER=6. WARNING! wheel slipping and taking too many step to next position
+2019-01-24 16:33:21,480 [filter_wheel_control] CRITICAL - Unexpected Error: TEST ERROR
+2019-01-24 16:33:21,480 [filter_wheel_control] CRITICAL - Unexpected Error: ERROR TEST
+2019-01-24 16:33:21,480 [filter_wheel_control] INFO - Filter ID: A set as home position, at position 1
+2019-01-24 16:33:21,481 [filter_wheel_control] INFO - Filter names successfully stored.
+2019-01-24 16:33:21,481 [filter_wheel_control] INFO - Stored filter names updated, display on box updated after next home
+2019-01-24 16:33:21,481 [filter_wheel_control] WARNING - Names are identical, stored filter names not changed
+2019-01-24 16:33:21,482 [filter_wheel_control] INFO - Filter names successfully stored.
+2019-01-24 16:33:21,482 [filter_wheel_control] ERROR - Invalid wheel ID. Please select A,B,C,D,E,F,G or H
+2019-01-24 16:33:21,482 [filter_wheel_control] CRITICAL - Unexpected response message:NONE
+2019-01-24 16:39:18,520 [filter_wheel_control] INFO - No Filter change required..
+2019-01-24 16:39:18,520 [filter_wheel_control] CRITICAL - No baud rate found in config file.
+2019-01-24 16:39:18,520 [filter_wheel_control] CRITICAL - Unexpected baud rate for ifw filter wheels, 19200 is expected.
+2019-01-24 16:39:18,521 [filter_wheel_control] CRITICAL - No data bits number found in config file
+2019-01-24 16:39:18,521 [filter_wheel_control] CRITICAL - Unexpected number for data bits, 8 is expected
+2019-01-24 16:39:18,521 [filter_wheel_control] CRITICAL - No parity values found in config file
+2019-01-24 16:39:18,521 [filter_wheel_control] CRITICAL - Unexpected parity values, "N" is expected
+2019-01-24 16:39:18,521 [filter_wheel_control] CRITICAL - No stop bits number found in config file
+2019-01-24 16:39:18,521 [filter_wheel_control] CRITICAL - Unexpected number for stop bits, 1 is expected
+2019-01-24 16:39:18,522 [filter_wheel_control] INFO - Communication with filter wheel: Closed
+2019-01-24 16:39:18,522 [filter_wheel_control] WARNING - Communication port not closed
+2019-01-24 16:39:18,522 [filter_wheel_control] ERROR - £ in the name R£D is not a valid character. Please only use "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ=.#/-% or a space"
+2019-01-24 16:39:18,522 [filter_wheel_control] ERROR - Filter wheel ID not in config file.
+2019-01-24 16:39:18,523 [filter_wheel_control] ERROR - One of the names is too long or too short. Must be <8 but >0
+2019-01-24 16:39:18,523 [filter_wheel_control] INFO - Filter wheel shutting down. This will take a few seconds
+2019-01-24 16:39:18,523 [filter_wheel_control] CRITICAL - Unexpected Error: NONE
+2019-01-24 16:39:18,523 [filter_wheel_control] INFO - Communication with filter wheel: Closed
+2019-01-24 16:39:18,523 [filter_wheel_control] INFO - Filter wheel shutdown.
+2019-01-24 16:39:18,524 [filter_wheel_control] INFO - Filter ID: A set as home position, at position 1
+2019-01-24 16:39:18,524 [filter_wheel_control] INFO - Filter wheel startup complete.
+2019-01-24 16:39:18,525 [filter_wheel_control] ERROR - ER=5. Invalid filter position supplied
+2019-01-24 16:39:18,525 [filter_wheel_control] INFO - Filter change successful. Current position: 1
+2019-01-24 16:39:18,526 [filter_wheel_control] ERROR - ER=4. Wheel stuck in position, or moving slowly.
+2019-01-24 16:39:18,526 [filter_wheel_control] ERROR - ER=6. WARNING! wheel slipping and taking too many steps to next position
+2019-01-24 16:39:18,526 [filter_wheel_control] CRITICAL - Unexpected Error: TEST ERROR
+2019-01-24 16:39:18,526 [filter_wheel_control] CRITICAL - Unexpected Error: ERROR TEST
+2019-01-24 16:39:18,526 [filter_wheel_control] INFO - Filter ID: A set as home position, at position 1
+2019-01-24 16:39:18,527 [filter_wheel_control] INFO - Filter names successfully stored.
+2019-01-24 16:39:18,527 [filter_wheel_control] INFO - Stored filter names updated, display on box updated after next home
+2019-01-24 16:39:18,528 [filter_wheel_control] WARNING - Names are identical, stored filter names not changed
+2019-01-24 16:39:18,528 [filter_wheel_control] INFO - Filter names successfully stored.
+2019-01-24 16:39:18,528 [filter_wheel_control] ERROR - Invalid wheel ID. Please select A,B,C,D,E,F,G or H
+2019-01-24 16:39:18,529 [filter_wheel_control] CRITICAL - Unexpected response message:NONE
+2019-01-24 16:42:34,972 [filter_wheel_control] INFO - No Filter change required..
+2019-01-24 16:42:34,972 [filter_wheel_control] CRITICAL - No baud rate found in config file.
+2019-01-24 16:42:34,972 [filter_wheel_control] CRITICAL - Unexpected baud rate for ifw filter wheels, 19200 is expected.
+2019-01-24 16:42:34,972 [filter_wheel_control] CRITICAL - No data bits number found in config file
+2019-01-24 16:42:34,973 [filter_wheel_control] CRITICAL - Unexpected number for data bits, 8 is expected
+2019-01-24 16:42:34,973 [filter_wheel_control] CRITICAL - No parity values found in config file
+2019-01-24 16:42:34,973 [filter_wheel_control] CRITICAL - Unexpected parity values, "N" is expected
+2019-01-24 16:42:34,973 [filter_wheel_control] CRITICAL - No stop bits number found in config file
+2019-01-24 16:42:34,973 [filter_wheel_control] CRITICAL - Unexpected number for stop bits, 1 is expected
+2019-01-24 16:42:34,973 [filter_wheel_control] INFO - Communication with filter wheel: Closed
+2019-01-24 16:42:34,974 [filter_wheel_control] WARNING - Communication port not closed
+2019-01-24 16:42:34,974 [filter_wheel_control] ERROR - £ in the name R£D is not a valid character. Please only use "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ=.#/-% or a space"
+2019-01-24 16:42:34,974 [filter_wheel_control] ERROR - Filter wheel ID not in config file.
+2019-01-24 16:42:34,974 [filter_wheel_control] ERROR - One of the names is too long or too short. Must be <8 but >0
+2019-01-24 16:42:34,974 [filter_wheel_control] INFO - Filter wheel shutting down. This will take a few seconds
+2019-01-24 16:42:34,975 [filter_wheel_control] CRITICAL - Unexpected Error: NONE
+2019-01-24 16:42:34,975 [filter_wheel_control] INFO - Communication with filter wheel: Closed
+2019-01-24 16:42:34,975 [filter_wheel_control] INFO - Filter wheel shutdown.
+2019-01-24 16:42:34,975 [filter_wheel_control] INFO - Filter ID: A set as home position, at position 1
+2019-01-24 16:42:34,975 [filter_wheel_control] INFO - Filter wheel startup complete.
+2019-01-24 16:42:34,977 [filter_wheel_control] ERROR - ER=5. Invalid filter position supplied
+2019-01-24 16:42:34,977 [filter_wheel_control] INFO - Filter change successful. Current position: 1
+2019-01-24 16:42:34,977 [filter_wheel_control] ERROR - ER=4. Wheel stuck in position, or moving slowly.
+2019-01-24 16:42:34,977 [filter_wheel_control] ERROR - ER=6. WARNING! wheel slipping and taking too many steps to next position
+2019-01-24 16:42:34,977 [filter_wheel_control] CRITICAL - Unexpected Error: TEST ERROR
+2019-01-24 16:42:34,978 [filter_wheel_control] CRITICAL - Unexpected Error: ERROR TEST
+2019-01-24 16:42:34,978 [filter_wheel_control] INFO - Filter ID: A set as home position, at position 1
+2019-01-24 16:42:34,979 [filter_wheel_control] INFO - Filter names successfully stored.
+2019-01-24 16:42:34,979 [filter_wheel_control] INFO - Stored filter names updated, display on box updated after next home
+2019-01-24 16:42:34,979 [filter_wheel_control] WARNING - Names are identical, stored filter names not changed
+2019-01-24 16:42:34,980 [filter_wheel_control] INFO - Filter names successfully stored.
+2019-01-24 16:42:34,980 [filter_wheel_control] ERROR - Invalid wheel ID. Please select A,B,C,D,E,F,G or H
+2019-01-24 16:42:34,980 [filter_wheel_control] CRITICAL - Unexpected response message:NONE
