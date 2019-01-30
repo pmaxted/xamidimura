@@ -11,7 +11,9 @@ Documentation and software for the Xamidimura telescopes
  contains the observing log table 'obslog2'. Other tables could be added later, 
  and the location is not set in stone.  
 
-* **fits_file_tests** - A location to store the fits headers that are created.
+* **fits_file_tests** - A location to store the fits headers that are created. 
+ Headers will be sorted in to folders based on the date at the start of the 
+ night, and will have the format '20190129'.
  Again location can be moved later if necessary.  
 	
 * **logfiles** - Where logfiles from the different scripts are stored. (logfiles
@@ -36,13 +38,15 @@ Documentation and software for the Xamidimura telescopes
  dataframe (will be useful for manipulating). To be updated and adapted when 
  extra functions are needed.  
 
+* **expose.py** - A very basic observing script. It will start up the filter
+ wheels and focusers, load in an observing recipe and take exposures as 
+ specified by the observing script. It will not slew to a target, and details
+ of the target, e.g. name, etc need to be filled in at the top of the script.  
+
 * **filter_wheel_control.py** - contains basic serial port command functions 
  for the filter wheels. All tested.    
 
 * **focuser_control.py** - basic serial port commands for the focusers. Tested.  
-
-* **mya.py** Needs tidying up and renaming. Use this to supply a new roof state
- to plcd. Can be either 'o' to open, 'c' to close or 's' to stop the roof.
 
 * **observing.py** - Will contain the main functions to carry out the observing,
  and other functions required by this main function. Currently can create fits
@@ -76,6 +80,9 @@ Documentation and software for the Xamidimura telescopes
  definitions, timeouts, etc so you don't need to go hunting through all the code
  to find them. Plus, if they are used multiple times, only have to change them 
  once. Can try to make error codes unique.  
+ 
+* **specify_roof_state.py** - Use this to supply a new roof state
+ to plcd. Can be either 'o' to open, 'c' to close or 's' to stop the roof.
 
 * **tcs_control.py** - Contains the functions that interact with the TCS 
  machine. Uses the module subprocess.py to SSH directly to the TCS and pass the
@@ -116,8 +123,8 @@ Documentation and software for the Xamidimura telescopes
  interaction functions.  
 
 * **test_plcd.py** Not yet complete. Tests all the function that are used by the
- main functions, but doesn't yet test the main function or the open/close/stop
- functions. Has been test on the roof and currently works  
+ main functions, but doesn't yet test the main function. Has been tested on the 
+ roof and currently works  
 
 * **test_roof_control_functions.py** Provides test for the functions contained 
  in the roof_control_functions.py script.
@@ -176,7 +183,9 @@ other functions required by this main function.
 - Currently can create fits file with only header information, store an 
  observing record in the obslog2 table in the xamidimura database. The next file
  number is obtained by looking for the last used number in the directory where 
- files are saved and adding 1.  
+ files are saved and adding 1. Files are sorted into folders based on the date
+ at the start of the evening. Files stored under date of previous evening until
+ 9am UTC.  
 
 - When the observing recipe is loaded, it takes the User defined patterns 
  (N_PATT, S_PATT) and populates it with the required filters, exposure times, 
@@ -184,18 +193,30 @@ other functions required by this main function.
  of exposure times to match the obseerving pattern is required as the same time 
  will for an exposure on both the North and South telescopes.  
 
-- Image type is decided based on the first 4 letters of the target name e.g. BIAS, FLAT, DARK, THER. If it doesn't match these three then it will assume it is a object frame. This way can have multiple BIAS/FLAT/DARK/THERMAL targets in the target info database and observing recipes. Requests for DARK frames will be passed as THERMAL to the TCS. 
+- Image type is decided based on the first 4 letters of the target name e.g. 
+ BIAS, FLAT, DARK, THER. If it doesn't match these three then it will assume it 
+ is a object frame. This way can have multiple BIAS/FLAT/DARK/THERMAL targets in 
+ the target info database and observing recipes. Requests for DARK frames will 
+ be passed as THERMAL to the TCS. 
 
-- The code will pair exposure requests for the North and South telescope. Request to change the filters are done asynchronously, so one telescope does not need to wait for the other filter change to be complete. As the exposure
-	time are the same for both telescopes, the code only refers to the exposure pattern for the North telescope. The code will loop through the observing pattern. A status flag will be obtained for each exposure, both North and South. Need to workout how best to repeat the observing pattern.  
+- The code will pair exposure requests for the North and South telescope. 
+ Requests to change the filters are done asynchronously, so one telescope does 
+ not need to wait for the other filter change to be complete. As the exposure
+ time are the same for both telescopes, the code only refers to the exposure 
+ pattern for the North telescope. The code will loop through the observing 
+ pattern. A status flag will be obtained for each exposure, both North and 
+ South. Need to workout how best to repeat the observing pattern.  
 
 - **The code to change filter is not currently active**  
 
-- The code waits for a response from the TCS after initially sending the exposure command, and then waits for the require exposure time. Need to do it this way, otherwise the function would time out for long exposures.  
+- The code waits for a response from the TCS after initially sending the 
+ exposure command, and then waits for the require exposure time. Need to do it 
+ this way, otherwise the function would time out for long exposures.  
 
 - Timeout on TCS is currently 60 seconds.  
 
-- Code to request TCS exposure is in place but needs to be tested. Need the code to handle a weather interuption, etc.    
+- Code to request TCS exposure is in place but needs to be tested. Need the 
+ code to handle a weather interuption, etc.    
 
 - Valid response code from TCS are: 
 	``` 
@@ -217,9 +238,11 @@ Status codes are defined in settings_and_error_codes.py.
 
 The code for the interuptions need to be written.  
 	
-- Exposure requests that are not completed (due to weather alert, TCS timeout etc) are noted in the observing log table, by fits headers are not saved. 
+- Exposure requests that are not completed (due to weather alert, TCS timeout 
+ etc) are noted in the observing log table, by fits headers are not saved. 
 
-- Started working on the code to load target information from the database, not completed. 
+- Started working on the code to load target information from the database, 
+ not completed. 
 
-
-- Some unit tests have been created for the telescope slewing and some of the exposure functions, but not yet complete.  
+- Some unit tests have been created for the telescope slewing and some of the 
+ exposure functions, but not yet complete.  

@@ -66,7 +66,7 @@ def remove_table_if_exists(curs, table_name):
 """
 dbcurs.execute('CREATE TABLE '+set_err_codes.TARGET_INFORMATION_TABLE+' (TARGET_ID INTEGER, TARGET_NAME text, RA text, DEC text, T_0 real, Period real);')
 dbconn.commit()
-a = [TARGET_ID, TARGET_NAME, RA, DEC, T_0, Period]
+a = [TARGET_ID, TAR_NAME, RA, DEC, T_0, Period]
 aaa = ','.join(a)
 
 sql = '''INSERT INTO '''+str(obs.set_err_codes.TARGET_INFORMATION_TABLE )+'''('''+aaa+''') VALUES('''+(values_place_holder)+')'

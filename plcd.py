@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """
 plc_status_request.py
 
@@ -23,7 +24,7 @@ logger.setLevel(logging.INFO)
 #fileHand = logging.FileHandler(filename = '/home/observer/xamidimura/xamidimur'\
 #		'a/logfiles/plc_status.log', mode='w')
 fileHand = logging.FileHandler(filename = set_err_codes.LOGFILES_DIRECTORY+'pl'\
-	'c_status.log', mode='a')
+	'c_status.log', mode='w')
 fileHand.setLevel(logging.INFO)
 logging.Formatter.converter = time.gmtime
 formatter = logging.Formatter('%(asctime)s [%(name)s] %(levelname)s - '\
@@ -97,8 +98,10 @@ def get_D100_D102_status(port):
 
 	# Get the current status of the command buffer words D-100 to D-102
 	#response = "@00RD000010232802580A0022*\r"
+	
 	response = rcf.plc_command_response_port_open(
 		rcf.PLC_Command_Status_Request,port)
+	#print(response)
 
 	if rcf.plc_status_end_code(response):
 		logger.error('Error getting command status from PLC: '+ rcf.plc_status_error_message(rcf.plc_status_end_code(response)))
@@ -436,7 +439,7 @@ def close_roof_instructions(port):
 		etc, but will keep it for now
 		
 		
-	*** still needs stuff to move telescope, and check ups is alive
+	***  and check ups is alive
 	
 	RETURN
 	 
@@ -576,7 +579,7 @@ def close_roof_instructions(port):
 
 
 		# Telescope drive control
-		if tilt_status_dict['Tel_drive_control']:
+		if tilt_status_dict['Tel_drive_control'] == 'Roof Controller':
 			try:
 				request_telescope_drive_control(port)
 			except:
@@ -588,6 +591,7 @@ def close_roof_instructions(port):
 		# if the telescope is parked, under remote control, motor stop not
 		#  pressed and suitable power, the roof can be closed. If not send
 		#  critical cannot close roof message
+
 		if telescope_parked_bool == True and remote_control_bool == True and motor_stop_pressed_bool == False and suitable_power_bool == True:
 		
 			logger.info('Going to attempt to close roof....')
@@ -620,8 +624,34 @@ def close_roof_instructions(port):
 			except:
 				logger.error('Unable to request telescope drive control, teles'\
 					'cope maybe drifting')
+			else:
+				logger.info('Roof closing....')
 
-			logger.info('Roof closing....')
+				# Wait to make sure the roof has started moving, then check the
+				# status
+				time.sleep(5)
+				response = rcf.plc_command_response_port_open(
+					rcf.PLC_Request_Roof_Status)
+					
+				roof_status = rcf.plc_status_status_code(response)
+				roof_moving = rcf.int_bit_is_set(roof_status,
+					rcf.PLC_Roof_Moving)
+					
+				# Keep check status until it have stopped moving
+				while roof_moving == True:
+	
+					logger.info('Roof is still moving...')
+					time.sleep(2)
+					response = rcf.plc_command_response_port_open(rcf.PLC_Request_Roof_Status)
+					
+					roof_status = rcf.plc_status_status_code(response)
+					roof_moving = rcf.int_bit_is_set(roof_status,
+							rcf.PLC_Roof_Moving)
+
+				else:
+				
+					logger.info('ROOF CLOSED')
+
 			return set_err_codes.PLC_CODE_OK
 
 		else:
@@ -653,7 +683,6 @@ def open_roof_instructions(port):
 
 	response = rcf.plc_command_response_port_open(rcf.PLC_Request_Roof_Status,
 		port)
-	#response = "@00RD00000A232802580A0052*\r"
 		
 	if rcf.plc_status_end_code(response):
 		logger.error('Error getting roof status from PLC'\
@@ -670,11 +699,11 @@ def open_roof_instructions(port):
 	roof_status = int(roof_status_hex,16)
 	# The roof status hex will have been through a fcs check when the plc
 		#  response was split up, so can change it to an int and then use it
-		
-		
-	# Is it already closed:
-	roof_close_bool = rcf.int_bit_is_set(roof_status, rcf.PLC_Roof_Open)
-	if roof_close_bool == True:
+
+	# Is it already open:
+	roof_open_bool = rcf.int_bit_is_set(roof_status, rcf.PLC_Roof_Open)
+
+	if roof_open_bool == True:
 		logger.warning('Roof is already open')
 		return set_err_codes.PLC_CODE_OK
 	
@@ -777,13 +806,41 @@ def open_roof_instructions(port):
 					comms_timeout_hex, tilt_hex, port)
 
 				logger.info('Roof opening....')
+
+
+				# Wait to make sure the roof has started moving, then check the
+				# status
+				time.sleep(5)
+				response = rcf.plc_command_response_port_open(
+					rcf.PLC_Request_Roof_Status)
+					
+				roof_status = rcf.plc_status_status_code(response)
+				roof_moving = rcf.int_bit_is_set(roof_status,
+					rcf.PLC_Roof_Moving)
+
+				# Keep check status until it have stopped moving
+				while roof_moving == True:
+					logger.info('Roof is still moving...')
+					time.sleep(2)
+					response = rcf.plc_command_response_port_open(rcf.PLC_Request_Roof_Status)
+					
+					roof_status = rcf.plc_status_status_code(response)
+					roof_moving = rcf.int_bit_is_set(roof_status,
+						rcf.PLC_Roof_Moving)
+					
+
+				else:
+					logger.info('ROOF OPENED')
+
 				return set_err_codes.PLC_CODE_OK
 
 			else:
-				logging.error('Unable to OPEN roof.')
+				logger.error('Unable to OPEN roof.')
+
 
 def main():
 	
+	# define a list of valid characters to use
 	valid_chars =[OPEN_ROOF_CHARACHTER,CLOSE_ROOF_CHARACTER,STOP_ROOF_CHARACTER,
 		None]
 	
@@ -802,24 +859,32 @@ def main():
 		assert os.write(fd, b'\x00' * mmap.PAGESIZE) == mmap.PAGESIZE
 		buf = mmap.mmap(fd, mmap.PAGESIZE, mmap.MAP_SHARED)	
 	
-	old_char = None
 	
+	old_char = None
+	# On the first pass through, want to set the roof state to stop, before
+	#  we try to get it to do anything.
 	first_pass_through = True
 	
 	while 1:
 		
+		# Without this if the memory state is set to open(o) or close(c) the
+		#  roof can move unexpectedly when this script is restarted. Set state
+		# to stop(s) on the first time through the loop
 		if first_pass_through ==True:
 			s_type = ctypes.c_char * len('c')
 			s = s_type.from_buffer(buf)
 			s.raw = bytes('s', 'utf-8')
 			first_pass_through = False
-			
+		
+		# read in any new value in the memory map
 		new_char, = struct.unpack('1s', buf[:1])
 	
+		# check that the value is a valid charachter before a trying to do
+		#  anything with it.
 		if new_char not in valid_chars:
 			logger.warning('Invalid roof status character provided, use '\
 					'"o" "c" or "s"')
-			print('Invalid character provided, sticking with old one:',
+			print('Invalid character provided.',
 			old_char.decode('utf-8'))
 			time.sleep(2)
 			continue
@@ -827,28 +892,33 @@ def main():
 		else:
 			if new_char != old_char and old_char != None:
 		
-				print('Detected status change request:',
-					new_char.decode('utf-8'),' from',old_char.decode('utf-8'))
+				logger.info('Detected status change request: '+
+					new_char.decode('utf-8')+' from '+old_char.decode('utf-8'))
 			
 				if new_char == b's':
-					print('Do stuff to stop roof')
+					#print('Do stuff to stop roof')
 					ok_code = stop_roof_instructions(plc_port)
 					if ok_code == 0:
 						logger.info('Roof movement stopped')
+						print('ROOF STOPPED')
 					else:
 						logger.critical('Unable to stop roof')
 				
 				elif new_char == b'c':
-					print('Want to check stuff to close roof')
+					#print('Do stuff to close roof')
 					ok_code = close_roof_instructions(plc_port)
 					if ok_code != set_err_codes.PLC_CODE_OK:
 						logger.critical('Unable to CLOSE roof')
+					else:
+						print('ROOF CLOSED')
 					
 				elif new_char == b'o':
-					print('Do stuff to check roof can open')
+					#print('Do stuff to check roof can open')
 					ok_code = open_roof_instructions(plc_port)
 					if ok_code != set_err_codes.PLC_CODE_OK:
 						logger.error('Unable to OPEN roof')
+					else:
+						print('ROOF OPEN')
 					
 				else:
 					logger.error('Invalid character received')
@@ -856,14 +926,15 @@ def main():
 				old_char = new_char
 				time.sleep(2)
 			
+			
 			elif new_char != old_char and old_char == None:
-				print('update new char')
+				logger.debug('update new char')
 				old_char = new_char
 				time.sleep(2)
 			
 			else:
 				
-				print('Nothing changed')
+				logger.debug('Nothing changed')
 				time.sleep(2)
 				continue
 

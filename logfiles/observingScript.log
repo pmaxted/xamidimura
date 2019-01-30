@@ -1,54 +1,158 @@
-2019-01-11 16:36:30,201 [observing] ERROR - Unable to set roof control to remote
-2019-01-11 16:36:30,202 [observing] ERROR - Invalid dictionary supplied. Requires 'Roof_Control', 'Roof_Motor_Stop' and 'Roof_Power_Failure' keys
-2019-01-11 16:36:30,202 [observing] ERROR - Invalid dictionary supplied. Requires 'Roof_Control', 'Roof_Motor_Stop' and 'Roof_Power_Failure' keys
-2019-01-11 16:36:30,202 [observing] ERROR - Invalid dictionary supplied. Requires 'Roof_Control', 'Roof_Motor_Stop' and 'Roof_Power_Failure' keys
-2019-01-11 16:36:30,202 [observing] ERROR - Current status: Roof control - Manual, Motor stop - Pressed, Power failure - False
-2019-01-11 16:36:30,202 [observing] ERROR - Check roof control, motor stop and power failure
-2019-01-11 16:36:30,203 [observing] ERROR - Current status: Roof control - Manual, Motor stop - Not Pressed, Power failure - True
-2019-01-11 16:36:30,203 [observing] ERROR - Check roof control, motor stop and power failure
-2019-01-11 16:36:30,203 [observing] ERROR - Current status: Roof control - Manual, Motor stop - Not Pressed, Power failure - True
-2019-01-11 16:36:30,203 [observing] ERROR - Check roof control, motor stop and power failure
-2019-01-11 16:36:30,211 [observing] INFO - Exposure complete.
-2019-01-11 16:36:30,211 [observing] ERROR - Command received by TCS, but exposure not started
-2019-01-11 16:36:30,212 [observing] ERROR - Command received by TCS, but exposure not started
-2019-01-11 16:36:30,212 [observing] ERROR - Unexpected response
-2019-01-11 16:36:30,212 [observing] ERROR - Unexpected response
-2019-01-11 16:36:30,212 [observing] WARNING - North CCD Temp > -20
-2019-01-11 16:36:30,212 [observing] WARNING - South CCD Temp > -20
-2019-01-11 16:36:30,213 [observing] INFO - Exposure complete.
-2019-01-11 16:36:30,213 [observing] WARNING - North CCD Temp > -20
-2019-01-11 16:36:30,213 [observing] WARNING - South CCD Temp > -20
-2019-01-11 16:36:30,213 [observing] INFO - Exposure complete.
-2019-01-11 16:36:30,213 [observing] INFO - Starting 0.02 sec exposure
-2019-01-11 16:36:30,215 [observing] INFO - Roof is open
-2019-01-11 16:36:30,216 [observing] CRITICAL - Need to close up for now....
-2019-01-11 16:36:30,216 [observing] INFO - Telescope pointing unchanged
-2019-01-11 16:36:30,217 [observing] INFO - Same coordinates, do not need to move target
-2019-01-11 16:36:30,217 [observing] INFO - Telescope pointing unchanged
-2019-01-11 16:36:30,219 [observing] CRITICAL - Cannot open roof
-2019-01-11 16:36:30,219 [observing] INFO - Telescope pointing unchanged
-2019-01-11 16:36:30,220 [observing] INFO - Same coordinates, do not need to move target
-2019-01-11 16:36:30,220 [observing] INFO - Roof is open
-2019-01-11 16:36:30,220 [observing] INFO - Telescope pointing unchanged
-2019-01-11 16:36:30,221 [observing] INFO - Roof is open
-2019-01-11 16:36:30,221 [observing] ERROR - Request timed out. Could not pass coordinates to telescope.
-2019-01-11 16:36:30,222 [observing] INFO - Roof is open
-2019-01-11 16:36:30,222 [observing] ERROR - Request timed out. Could not pass coordinates to telescope.
-2019-01-11 16:36:30,222 [observing] ERROR - Request timed out. Could not pass coordinates to telescope.
-2019-01-11 16:36:30,222 [observing] CRITICAL - Too many attempts to pass telescope coords! Closing up
-2019-01-11 16:36:30,223 [observing] INFO - Same coordinates, do not need to move target
-2019-01-11 16:36:30,223 [observing] CRITICAL - Cannot communicate with PLC, cannot get roof status
-2019-01-11 16:36:30,224 [observing] ERROR - Target coordinates have wrong format for telescope.
-2019-01-11 16:36:30,224 [observing] INFO - Roof is open
-2019-01-11 16:36:30,224 [observing] INFO - Telescope pointing unchanged
-2019-01-11 16:36:30,225 [observing] CRITICAL - IT'S RAINING, unsafe to open
-2019-01-11 16:36:30,226 [observing] ERROR - Invalid dictionary supplied. Requires 'Roof_Moving' as a key.
-2019-01-11 16:36:30,226 [observing] INFO - Roof still moving
-2019-01-11 16:36:30,227 [observing] CRITICAL - Timeout on the roof movement - ROOF STUCK MOVING!
-2019-01-11 16:36:30,228 [observing] INFO - Roof still moving
-2019-01-11 16:36:30,228 [observing] INFO - ROOF NOW CLOSED
-2019-01-11 16:36:30,229 [observing] INFO - Roof still moving
-2019-01-11 16:36:30,229 [observing] INFO - ROOF NOW OPEN
-2019-01-11 16:36:30,229 [observing] WARNING - The roof is not moving
-2019-01-11 16:36:30,230 [observing] INFO - Roof still moving
-2019-01-11 16:36:30,230 [observing] CRITICAL - ROOF ERROR - Thinks it's open and closed!
+2019-01-29_14:28:52_UTC [observing] INFO - Starting 0.02 sec exposure
+2019-01-29_14:28:52_UTC [observing] INFO - Exposure complete.
+2019-01-29_14:28:52_UTC [observing] WARNING - Unable to get camera temperature
+2019-01-29_14:28:52_UTC [observing] WARNING - Unable to get camera temperature
+2019-01-29_14:28:52_UTC [observing] INFO - Starting 0.02 sec exposure
+2019-01-29_14:28:52_UTC [observing] INFO - Exposure complete.
+2019-01-29_14:28:52_UTC [observing] WARNING - Unable to get camera temperature
+2019-01-29_14:28:52_UTC [observing] WARNING - Unable to get camera temperature
+2019-01-29_14:28:56_UTC [observing] INFO - Starting 0.02 sec exposure
+2019-01-29_14:28:56_UTC [observing] INFO - Exposure complete.
+2019-01-29_14:28:56_UTC [observing] WARNING - Unable to get camera temperature
+2019-01-29_14:28:56_UTC [observing] WARNING - Unable to get camera temperature
+2019-01-29_14:28:56_UTC [observing] INFO - Starting 0.02 sec exposure
+2019-01-29_14:28:56_UTC [observing] INFO - Exposure complete.
+2019-01-29_14:28:56_UTC [observing] WARNING - Unable to get camera temperature
+2019-01-29_14:28:56_UTC [observing] WARNING - Unable to get camera temperature
+2019-01-30_11:08:17_UTC [observing] INFO - Starting 0.02 sec exposure
+2019-01-30_11:08:17_UTC [observing] INFO - Exposure complete.
+2019-01-30_11:08:17_UTC [observing] WARNING - Unable to get camera temperature
+2019-01-30_11:08:17_UTC [observing] WARNING - Unable to get camera temperature
+2019-01-30_11:08:17_UTC [observing] INFO - Starting 0.02 sec exposure
+2019-01-30_11:08:17_UTC [observing] INFO - Exposure complete.
+2019-01-30_11:08:17_UTC [observing] WARNING - Unable to get camera temperature
+2019-01-30_11:08:17_UTC [observing] WARNING - Unable to get camera temperature
+2019-01-29_14:28:52_UTC [observing] INFO - Starting 0.02 sec exposure
+2019-01-29_14:28:52_UTC [observing] INFO - Exposure complete.
+2019-01-29_14:28:52_UTC [observing] WARNING - Unable to get camera temperature
+2019-01-29_14:28:52_UTC [observing] WARNING - Unable to get camera temperature
+2019-01-29_14:28:52_UTC [observing] INFO - Starting 0.02 sec exposure
+2019-01-29_14:28:52_UTC [observing] INFO - Exposure complete.
+2019-01-29_14:28:52_UTC [observing] WARNING - Unable to get camera temperature
+2019-01-29_14:28:52_UTC [observing] WARNING - Unable to get camera temperature
+2019-01-29_14:28:56_UTC [observing] INFO - Starting 0.02 sec exposure
+2019-01-29_14:28:56_UTC [observing] INFO - Exposure complete.
+2019-01-29_14:28:56_UTC [observing] WARNING - Unable to get camera temperature
+2019-01-29_14:28:56_UTC [observing] WARNING - Unable to get camera temperature
+2019-01-29_14:28:56_UTC [observing] INFO - Starting 0.02 sec exposure
+2019-01-29_14:28:56_UTC [observing] INFO - Exposure complete.
+2019-01-29_14:28:56_UTC [observing] WARNING - Unable to get camera temperature
+2019-01-29_14:28:56_UTC [observing] WARNING - Unable to get camera temperature
+2019-01-30_11:08:17_UTC [observing] INFO - Starting 0.02 sec exposure
+2019-01-30_11:08:17_UTC [observing] INFO - Exposure complete.
+2019-01-30_11:08:17_UTC [observing] WARNING - Unable to get camera temperature
+2019-01-30_11:08:17_UTC [observing] WARNING - Unable to get camera temperature
+2019-01-30_11:08:17_UTC [observing] INFO - Starting 0.02 sec exposure
+2019-01-30_11:08:17_UTC [observing] INFO - Exposure complete.
+2019-01-30_11:08:17_UTC [observing] WARNING - Unable to get camera temperature
+2019-01-30_11:08:17_UTC [observing] WARNING - Unable to get camera temperature
+2019-01-30_11:08:17_UTC [observing] INFO - Starting 0.02 sec exposure
+2019-01-30_11:08:17_UTC [observing] INFO - Exposure complete.
+2019-01-30_11:08:17_UTC [observing] WARNING - Unable to get camera temperature
+2019-01-30_11:08:17_UTC [observing] WARNING - Unable to get camera temperature
+2019-01-30_11:08:17_UTC [observing] INFO - Starting 0.02 sec exposure
+2019-01-30_11:08:17_UTC [observing] INFO - Exposure complete.
+2019-01-30_11:08:17_UTC [observing] WARNING - Unable to get camera temperature
+2019-01-30_11:08:17_UTC [observing] WARNING - Unable to get camera temperature
+2019-01-30_11:08:17_UTC [observing] INFO - Starting 0.02 sec exposure
+2019-01-30_11:08:17_UTC [observing] INFO - Exposure complete.
+2019-01-30_11:08:17_UTC [observing] WARNING - Unable to get camera temperature
+2019-01-30_11:08:17_UTC [observing] WARNING - Unable to get camera temperature
+2019-01-30_11:08:17_UTC [observing] INFO - Starting 0.02 sec exposure
+2019-01-30_11:08:17_UTC [observing] INFO - Exposure complete.
+2019-01-30_11:08:17_UTC [observing] WARNING - Unable to get camera temperature
+2019-01-30_11:08:17_UTC [observing] WARNING - Unable to get camera temperature
+bserving] INFO - Starting 0.02 sec exposure
+2019-01-30_11:08:17_UTC [observing] INFO - Exposure complete.
+2019-01-30_11:08:17_UTC [observing] WARNING - Unable to get camera temperature
+2019-01-30_11:08:17_UTC [observing] WARNING - Unable to get camera temperature
+bserving] INFO - Starting 0.02 sec exposure
+2019-01-30_11:08:17_UTC [observing] INFO - Exposure complete.
+2019-01-30_11:08:17_UTC [observing] WARNING - Unable to get camera temperature
+2019-01-30_11:08:17_UTC [observing] WARNING - Unable to get camera temperature
+.
+2019-01-29_14:28:52_UTC [observing] WARNING - Unable to get camera temperature
+2019-01-29_14:28:52_UTC [observing] WARNING - Unable to get camera temperature
+2019-01-29_14:28:56_UTC [observing] INFO - Starting 0.02 sec exposure
+2019-01-29_14:28:56_UTC [observing] INFO - Exposure complete.
+2019-01-29_14:28:56_UTC [observing] WARNING - Unable to get camera temperature
+2019-01-29_14:28:56_UTC [observing] WARNING - Unable to get camera temperature
+2019-01-29_14:28:56_UTC [observing] INFO - Starting 0.02 sec exposure
+2019-01-29_14:28:56_UTC [observing] INFO - Exposure complete.
+2019-01-29_14:28:56_UTC [observing] WARNING - Unable to get camera temperature
+2019-01-29_14:28:56_UTC [observing] WARNING - Unable to get camera temperature
+2019-01-30_11:08:17_UTC [observing] INFO - Starting 0.02 sec exposure
+2019-01-30_11:08:17_UTC [observing] INFO - Exposure complete.
+2019-01-30_11:08:17_UTC [observing] WARNING - Unable to get camera temperature
+2019-01-30_11:08:17_UTC [observing] WARNING - Unable to get camera temperature
+2019-01-30_11:08:17_UTC [observing] INFO - Starting 0.02 sec exposure
+2019-01-30_11:08:17_UTC [observing] INFO - Exposure complete.
+2019-01-30_11:08:17_UTC [observing] WARNING - Unable to get camera temperature
+2019-01-30_11:08:17_UTC [observing] WARNING - Unable to get camera temperature
+.
+2019-01-29_14:28:52_UTC [observing] WARNING - Unable to get camera temperature
+2019-01-29_14:28:52_UTC [observing] WARNING - Unable to get camera temperature
+2019-01-29_14:28:56_UTC [observing] INFO - Starting 0.02 sec exposure
+2019-01-29_14:28:56_UTC [observing] INFO - Exposure complete.
+2019-01-29_14:28:56_UTC [observing] WARNING - Unable to get camera temperature
+2019-01-29_14:28:56_UTC [observing] WARNING - Unable to get camera temperature
+2019-01-29_14:28:56_UTC [observing] INFO - Starting 0.02 sec exposure
+2019-01-29_14:28:56_UTC [observing] INFO - Exposure complete.
+2019-01-29_14:28:56_UTC [observing] WARNING - Unable to get camera temperature
+2019-01-29_14:28:56_UTC [observing] WARNING - Unable to get camera temperature
+2019-01-30_11:08:17_UTC [observing] INFO - Starting 0.02 sec exposure
+2019-01-30_11:08:17_UTC [observing] INFO - Exposure complete.
+2019-01-30_11:08:17_UTC [observing] WARNING - Unable to get camera temperature
+2019-01-30_11:08:17_UTC [observing] WARNING - Unable to get camera temperature
+2019-01-30_11:08:17_UTC [observing] INFO - Starting 0.02 sec exposure
+2019-01-30_11:08:17_UTC [observing] INFO - Exposure complete.
+2019-01-30_11:08:17_UTC [observing] WARNING - Unable to get camera temperature
+2019-01-30_11:08:17_UTC [observing] WARNING - Unable to get camera temperature
+observing] WARNING - Unable to get camera temperature
+2019-01-29_14:28:56_UTC [observing] INFO - Starting 0.02 sec exposure
+2019-01-29_14:28:56_UTC [observing] INFO - Exposure complete.
+2019-01-29_14:28:56_UTC [observing] WARNING - Unable to get camera temperature
+2019-01-29_14:28:56_UTC [observing] WARNING - Unable to get camera temperature
+2019-01-30_11:08:17_UTC [observing] INFO - Starting 0.02 sec exposure
+2019-01-30_11:08:17_UTC [observing] INFO - Exposure complete.
+2019-01-30_11:08:17_UTC [observing] WARNING - Unable to get camera temperature
+2019-01-30_11:08:17_UTC [observing] WARNING - Unable to get camera temperature
+2019-01-30_11:08:17_UTC [observing] INFO - Starting 0.02 sec exposure
+2019-01-30_11:08:17_UTC [observing] INFO - Exposure complete.
+2019-01-30_11:08:17_UTC [observing] WARNING - Unable to get camera temperature
+2019-01-30_11:08:17_UTC [observing] WARNING - Unable to get camera temperature
+ to get camera temperature
+2019-01-30_11:08:17_UTC [observing] WARNING - Unable to get camera temperature
+2019-01-30_11:08:17_UTC [observing] INFO - Starting 0.02 sec exposure
+2019-01-30_11:08:17_UTC [observing] INFO - Exposure complete.
+2019-01-30_11:08:17_UTC [observing] WARNING - Unable to get camera temperature
+2019-01-30_11:08:17_UTC [observing] WARNING - Unable to get camera temperature
+bserving] INFO - Starting 0.02 sec exposure
+2019-01-30_11:08:17_UTC [observing] INFO - Exposure complete.
+2019-01-30_11:08:17_UTC [observing] WARNING - Unable to get camera temperature
+2019-01-30_11:08:17_UTC [observing] WARNING - Unable to get camera temperature
+0.02 sec exposure
+2019-01-30_11:08:17_UTC [observing] INFO - Exposure complete.
+2019-01-30_11:08:17_UTC [observing] WARNING - Unable to get camera temperature
+2019-01-30_11:08:17_UTC [observing] WARNING - Unable to get camera temperature
+2019-01-30_11:08:17_UTC [observing] INFO - Starting 0.02 sec exposure
+2019-01-30_11:08:17_UTC [observing] INFO - Exposure complete.
+2019-01-30_11:08:17_UTC [observing] WARNING - Unable to get camera temperature
+2019-01-30_11:08:17_UTC [observing] WARNING - Unable to get camera temperature
+NG - Unable to get camera temperature
+2019-01-30_11:08:17_UTC [observing] INFO - Starting 0.02 sec exposure
+2019-01-30_11:08:17_UTC [observing] INFO - Exposure complete.
+2019-01-30_11:08:17_UTC [observing] WARNING - Unable to get camera temperature
+2019-01-30_11:08:17_UTC [observing] WARNING - Unable to get camera temperature
+lete.
+2019-01-30_11:08:17_UTC [observing] WARNING - Unable to get camera temperature
+2019-01-30_11:08:17_UTC [observing] WARNING - Unable to get camera temperature
+lete.
+2019-01-30_11:08:17_UTC [observing] WARNING - Unable to get camera temperature
+2019-01-30_11:08:17_UTC [observing] WARNING - Unable to get camera temperature
+lete.
+2019-01-30_11:08:17_UTC [observing] WARNING - Unable to get camera temperature
+2019-01-30_11:08:17_UTC [observing] WARNING - Unable to get camera temperature
+lete.
+2019-01-30_11:08:17_UTC [observing] WARNING - Unable to get camera temperature
+2019-01-30_11:08:17_UTC [observing] WARNING - Unable to get camera temperature

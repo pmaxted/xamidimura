@@ -65,13 +65,16 @@ import common
 import serial
 import logging
 import numpy
+import time
+import settings_and_error_codes as set_err_codes
 
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
-fileHand = logging.FileHandler(filename = 'logfiles/filter_wheel.log',
-	mode = 'a')
+fileHand = logging.FileHandler(filename = set_err_codes.LOGFILES_DIRECTORY+\
+				'filter_wheel.log', mode = 'a')
 fileHand.setLevel(logging.INFO)
+logging.Formatter.converter = time.gmtime
 formatter = logging.Formatter('%(asctime)s [%(name)s] %(levelname)s - '\
 		'%(message)s','%Y-%m-%d_%H:%M:%S_UTC')
 fileHand.setFormatter(formatter)

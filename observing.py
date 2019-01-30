@@ -88,6 +88,8 @@ import tcs_control as tcs
 import roof_control_functions as rcf
 import PLC_interaction_functions as plc
 import settings_and_error_codes as set_err_codes
+import math
+import time
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -250,7 +252,7 @@ def get_current_weather(logfile_loc = 'logfiles/weather.log'):
 
 
 def get_fits_header_info(focuser_config,focuser_position, weather_list,
-		expose_info, target_info):
+		expose_info, target_info, telescope_pointing):
 
 	"""
 	This function would get all the info required for an entry into for the 
@@ -276,18 +278,22 @@ def get_fits_header_info(focuser_config,focuser_position, weather_list,
 		expose_info = An exposure_obj, contain infomation such as the exposure
 			time, filter, and exposure start time.
 			
-		target_info = ***NOT USED YET*** will pass the required target 
-			infomation.
+		target_info = will pass the required target infomation.
 		
 	RETURN:
 	
 		fits_info_dict = the dictionary that is formed from all the infomation.
 	
 	"""
+	try:
+		cam_temp = tcs.get_camera_status()[2]
+	except:
+		cam_temp = 'NA'
+		logger.warning('Unable to get camera temperature')
 	
 	# FOR FITS HEADER...
-	fits_info_dict =
-		{'OBSERVAT': ('SAAO', 'Observatory name'),
+	fits_info_dict = {
+		'OBSERVAT': ('SAAO', 'Observatory name'),
 		'TELESCOP': ('Xamidimura', 'Telescope name'),
 		'INSTRUME': (expose_info.CCD, 'CCD1-South/CCD2-North'),
 		'FILTRWHL': (expose_info.filter_wheel_name, 'ifw1-South/ifw2-North'),
@@ -300,8 +306,8 @@ def get_fits_header_info(focuser_config,focuser_position, weather_list,
 					
 		'OBJ-RA'  : (target_info.ra_dec[0], 'Expected Target RA'),
 		'OBJ-DEC' : (target_info.ra_dec[1], 'Expected Target DEC'),
-		'TEL-RA'  : ("Function from teles", 'Telescope RA'),
-		'TEL-DEC' : ("Function from teles", 'Telescope DEC'),
+		'TEL-RA'  : (telescope_pointing[0], 'Telescope RA'),
+		'TEL-DEC' : (telescope_pointing[1], 'Telescope DEC'),
 		'IMAG-RA' : ("Calculate", 'Nominal image position, pxl (1024,1024) J2000'),
 		'IMAG-DEC': ("Calculate", 'Nominal image position, pxl (1024,1024) J2000'),
 	
@@ -321,10 +327,10 @@ def get_fits_header_info(focuser_config,focuser_position, weather_list,
 		'LONGITUD': ('20:48:38', 'Site Longitude, degrees +E'),
 		'ALTITUDE': ('1.8E+03', 'Site elevation (meters) above sea level'),
 	
-"CHECK"	'BIASSEC' : ('[2068:2148,1:2048]', 'Bias section'), # Don't know if these are correct
-"CHECK"	'TRIMSEC' : ('[6:2053,1:2048]',	'Illuminated section'), # Taken from WASP fits file.
-		'GAIN'    : ("NOT SURE", '???'),
-		'CCD_TEMP': ("????", '????'),
+		'BIASSEC' : ('[2068:2148,1:2048]', 'Bias section'), # Don't know if these are correct
+		'TRIMSEC' : ('[6:2053,1:2048]',	'Illuminated section'), # Taken from WASP fits file.
+		#'GAIN'    : ("NOT SURE", '???'),
+		'CCD_TEMP': (cam_temp, 'Camera temperature'),
 	
 		#"From focuser config -- Run get config everytime, or run once before hand??"
 		'TEMP_COM':	(focuser_config['TComp ON'], \
@@ -369,14 +375,12 @@ def get_fits_header_info(focuser_config,focuser_position, weather_list,
 	return fits_info_dict
 
 
-def get_obslog_info(fits_info_dict, CCDno, IMAGE_ID,target_info,status,
+def get_obslog_info(fits_info_dict, CCDno, IMAGE_ID,target_info,datestr,status,
 	savefile=True):
 
 	"""
 	This function will gather all the info needed for the entry into the 
 		observation log
-	
-	***  Status info, and target type to be completed  ***
 	
 	PARAMETERS:
 	
@@ -395,7 +399,7 @@ def get_obslog_info(fits_info_dict, CCDno, IMAGE_ID,target_info,status,
 	#IMAGE_ID = '{0:>010}'.format(IMAGE_ID)
 	obslog_dict = {'IMAGE_ID': int(str(IMAGE_ID)+str(CCDno)),
 	'CCD_ID'     : str(CCDno),
-	'FILE'    : 'CCD'+str(CCDno)+'_'+'{0:>010}'.format(IMAGE_ID)+'.fits',
+	'FILE'    : 'CCD'+str(CCDno)+'_'+datestr+'_'+'{0:>08}'.format(IMAGE_ID)+'.fits',
 	'TAR_NAME': target_info.name,#"OBJECT from FITS header", Need the [0] to
 		#get value not comment
 	'TAR_TYPE': target_info.type,
@@ -420,7 +424,7 @@ def get_obslog_info(fits_info_dict, CCDno, IMAGE_ID,target_info,status,
 
 
 def sort_all_logging_info(exposure_class, target_class, focuser_info, conn,
-		curs,status):
+		curs,status, datestr, fits_folder):
 
 	"""
 	
@@ -443,11 +447,15 @@ def sort_all_logging_info(exposure_class, target_class, focuser_info, conn,
 	
 	
 	"""
+	#focus_status_dict = dict({'Temp(C)':'+21.7','Curr Pos':108085,'Targ Pos':000000,'IsMoving': 1,'IsHoming':1,'IsHomed':0,'FFDetect': 0,'TmpProbe':1, 'RemoteIO':0,'Hnd Ctlr':0})
 	focus_status_dict = fc.get_focuser_status(focuser_info[0],focuser_info[1],
 		return_dict=True)
 
-	
-	telescope_RA_DEC = '???','???' """Eventually function to get RA/DEC from telescope"""
+	try:
+		current_tel_pointing = tcs.get_tel_pointing()
+	except:
+		current_tel_pointing = ['NA','NA','NA']
+	telescope_RA_DEC = current_tel_pointing[:2]
 	
 	
 	# Get weather
@@ -455,7 +463,7 @@ def sort_all_logging_info(exposure_class, target_class, focuser_info, conn,
 	# Fetch
 	fits_dict = get_fits_header_info(focuser_info[2],
 			focus_status_dict['Curr Pos'], current_weather, exposure_class,
-			target_class)
+			target_class, telescope_RA_DEC)
 	
 	#turn the dictionary into a fits header
 	image_header = fits.Header()
@@ -471,8 +479,8 @@ def sort_all_logging_info(exposure_class, target_class, focuser_info, conn,
 
 	# Fetch Observing log info
 	obs_dict = get_obslog_info(fits_dict,exposure_class.CCD,
-		IMAGE_ID=exposure_class.file_num, savefile = savefile,status=status,
-		target_info=target_class)
+		IMAGE_ID=exposure_class.file_num, datestr=datestr, savefile = savefile,
+		status=status, target_info=target_class)
 
 	# these format the dictionary keys and value to put into the SQL request..
 	aa = ','.join(obs_dict.keys())
@@ -485,11 +493,12 @@ def sort_all_logging_info(exposure_class, target_class, focuser_info, conn,
 
 	#save fits header
 	if savefile == True:
-		primaryHDU.writeto('fits_file_tests/'+obs_dict['FILE'], overwrite=True)
+		primaryHDU.writeto(fits_folder+obs_dict['FILE'], overwrite=True)
 
 	return exposure_class.file_num + 1
 
-def get_next_file_number(CCDno, fits_file_dir = 'fits_file_tests/'):
+def get_next_file_number(CCDno, datestr,
+			fits_file_dir = set_err_codes.DATA_FILE_DIRECTORY):
 
 	"""
 	Will get a list of fits files that match the CCD number. Take the last file,
@@ -498,6 +507,8 @@ def get_next_file_number(CCDno, fits_file_dir = 'fits_file_tests/'):
 	PARAMETERS:
 	
 		CCDno = 1 or 2, to represent which CCD you want the file number for.
+		datestr = A string representing the night the observations were taken.
+		fits_file_dir = the directory where the fits files should be stored.
 	
 	RETURN
 	
@@ -511,11 +522,11 @@ def get_next_file_number(CCDno, fits_file_dir = 'fits_file_tests/'):
 	else:
 
 		file_list = os.listdir(fits_file_dir)
-		matched = fnmatch.filter(file_list, 'CCD'+str(CCDno)+'_*.fits')
+		matched = fnmatch.filter(file_list, 'CCD'+str(CCDno)+'_'+datestr+'_*.fits')
 	
 		try:
 			last_file = matched[-1]
-			next_file_no = int(last_file[5:-5]) + 1
+			next_file_no = int(last_file[14:-5]) + 1
 	
 		except:
 			print('No file in current directory. Starting from File No: 1')
@@ -523,6 +534,69 @@ def get_next_file_number(CCDno, fits_file_dir = 'fits_file_tests/'):
 
 
 		return next_file_no
+
+def get_next_fits_folder(date_str,
+		fits_file_dir = set_err_codes.DATA_FILE_DIRECTORY):
+	"""
+
+	Will search dirctory for a folder specified by 'date_str', if one doesn't 
+	 exist on will be created. This is so that all fits files create on one day
+	 will be stored in the same folder.
+	 
+	 
+	 PARAMETERS:
+	 
+		date_str = a sting representation of the date you want the fits files
+			to be stored under. An example would be '20190128'
+		
+		fits_file_dir = a path showing where the fits files should be stored.
+	 
+	"""
+
+	file_list = os.listdir(fits_file_dir)
+	if date_str not in file_list:
+		subprocess.run(['mkdir', fits_file_dir+date_str])
+
+
+	data_file_dir = fits_file_dir+date_str+'/'
+
+	return data_file_dir
+
+
+def get_date_str():
+
+	"""
+	For use when naming files and folders, based on the date, but want to 
+	 group them based on the evening date.
+	 
+	 
+	 RETURN:
+	 
+		date_str = a 8 digit str represent the date in which the observations
+		 were started. Note, it is based on the nigght starting, so for example
+		 observations started at 1am on the 28th of Jan, will be store under the
+		 27th of Jan.
+	 
+	"""
+
+	current_timedate = astro_time.Time.now()
+	current_in_jd = current_timedate.jd
+
+	noon_jd = math.floor(current_in_jd)
+
+	if current_in_jd - noon_jd < 0.875: # this works out as 9am UTC
+		noon_normal = astro_time.Time(noon_jd, scale='utc', format='jd')#.format ='iso'
+		noon_normal.format = 'iso'
+		date_str = str(noon_normal.value[:10])
+		date_str = ''.join(date_str.split('-'))
+	else:
+		current_timedate.format='iso'
+		date_str = str(current_timedate.value[:10])
+		date_str = ''.join(date_str.split('-'))
+
+
+	return date_str
+
 
 
 def get_observing_recipe(target_name, path = 'obs_recipes/'):
@@ -620,13 +694,13 @@ def get_observing_recipe(target_name, path = 'obs_recipes/'):
 		
 		if len(observing_recipe['N_FILT']) != len(observing_recipe['S_FILT']):
 			logger.warning('Length of filter patterns for both telescopes are '\
-				unequal, will use shorter length')
+				'unequal, will use shorter length')
 		
 
 		return observing_recipe
 
-def take_exposure(obs_recipe, image_type, target_info_ob,
-			timeout_time=set_err_codes.telescope_coms_timeout):
+def take_exposure(obs_recipe, image_type, target_info_ob, datestr,
+			fits_folder, timeout_time=set_err_codes.telescope_coms_timeout ):
 	
 	"""
 	Part of the functions used to execute the exposures Need to add the actual 
@@ -671,23 +745,28 @@ def take_exposure(obs_recipe, image_type, target_info_ob,
 		exp_objS = exposure_obj(obs_recipe['S_EXPO'][j],obs_recipe['S_FILT'][j],
 			image_type,1, ifw1_config['name'], next_no1)
 
-
+		"""
+		statusN = asyncio.Future()
+		statusS = asyncio.Future()
 		#Change the filters if need be, don't want to have to wait for one
 		#  filter to change before starting on the second, so the asyncio
 		#  module will allow the to be change simultaneously
 		filter_loop1 = asyncio.get_event_loop()
 		filterS = filter_loop1.create_task(change_filters(exp_objS.filter,
-			ifw1_port, ifw1_confi,statusS))
+			ifw1_port, ifw1_config,statusS))
 		filterN = filter_loop1.create_task(change_filters(exp_objN.filter,
 			ifw2_port, ifw2_config,statusN))
 		filter_loop1.run_until_complete(asyncio.gather(filterS,filterN))
+		statusN = statusN.result()
+		statusS = statusS.result()
 		
+		"""
 
 		try:
 			# First send the command to the telescope and expect an '0'
 			#  acknowledgement if it was received and started.
-			statusN, statusS = exposure_TCS_response(exp_objN,exp_objS,
-				timeout=timeout_time)
+			statusN, statusS = exposure_TCS_response(exp_objN,exp_objS)#,
+#				timeout=timeout_time)
 			# This function waits for a time equal to the exposure time, in
 			#  case a weather alert is received during the exposure. Need to
 			#  have the two stages otherwise there would be a timeout error for
@@ -695,16 +774,16 @@ def take_exposure(obs_recipe, image_type, target_info_ob,
 			statusN, statusS = exposureTCSerrorcode(statusN,statusS,
 				exp_objN.exptime)
 		
-		except TimeoutExpired:
+		except subprocess.TimeoutExpired:
 			logger.error('TIMEOUT: No response from TCS. Exposure abandoned.')
 			statusS = set_err_codes.STATUS_CODE_NO_RESPONSE
 			statusN = set_err_codes.STATUS_CODE_NO_RESPONSE
 
 		#Do observing log and fits header
 		next_no1 = sort_all_logging_info(exp_objS,target_info_ob,focuser1_info,
-			dbconn,dbcurs,statusS)
+			dbconn,dbcurs,statusS,datestr, fits_folder)
 		next_no2 = sort_all_logging_info(exp_objN,target_info_ob,focuser2_info,
-			dbconn,dbcurs,statusN)
+			dbconn,dbcurs,statusN, datestr, fits_folder)
 
 async def change_filters(filter_name, ifw_port, ifw_config,status):
 		"""
@@ -832,197 +911,6 @@ def exposureTCSerrorcode(statN,statS, exptime):
 	return statN, statS
 
 
-def wait_for_roof_to_stop_moving(roof_dict,
-		roof_timeout = set_err_codes.roof_moving_timeout):
-
-	"""
-	This function is used to find out if the roof is open or closed when it 
-	 finishes moving. An error is logged if the movement times out. Should add 
-	 in an alert later.
-	 
-	PARAMETERS:
-	
-		roof_dict = dictionary containing the current status of the roof
-		
-	RETURN:
-	
-		roof_open_bool = True if the roof is open.
-	
-	"""
-
-	if 'Roof_Moving' not in roof_dict.keys():
-		logger.error("Invalid dictionary supplied. Requires 'Roof_Moving' as "\
-			"a key.")
-		raise KeyError("Invalid dictionary supplied. Requires 'Roof_Moving' "\
-			" as a key.")
-	
-	elif roof_dict['Roof_Moving'] == False:
-		logger.warning('The roof is not moving')
-
-	else:
-		# While it's still move keep checking the roof status and when it has
-		# stopped moving
-		roof_moving_timeout_count = 0
-		roof_open_bool=roof_dict['Roof_Open']
-		while roof_dict['Roof_Moving'] == True and \
-			roof_moving_timeout_count < roof_timeout:
-			
-			logger.info('Roof still moving')
-			roof_moving_timeout_count += 1
-			time.sleep(1)
-			roof_dict = plc.plc_get_roof_status(log_messages = False)
-
-		if roof_moving_timeout_count >= roof_timeout:
-			# Probably have some alert here...
-			print("ROOF STUCK MOVING ALERT IN HERE")
-			logger.critical('Timeout on the roof movement - ROOF STUCK '\
-				'MOVING!')
-			raise TimeoutError('Timeout on the roof movement - ROOF STUCK '\
-				'MOVING!')
-
-
-		if roof_dict['Roof_Closed'] == True and roof_dict['Roof_Open'] == False:
-			logger.info('ROOF NOW CLOSED')
-			roof_open_bool = False
-			
-		elif roof_dict['Roof_Open'] == True and \
-				roof_dict['Roof_Closed'] == False:
-			logger.info('ROOF NOW OPEN')
-			roof_open_bool = True
-		
-		else:
-			logger.critical("ROOF ERROR - Thinks it's open and closed!")
-			raise RuntimeError("ROOF ERROR - Thinks it's open and closed!")
-
-
-		return roof_open_bool, roof_dict
-
-
-def check_control_motor_stop_and_power_safety(roof_dict):
-	"""
-	This function will check whether the Roof_control, motor stop and Power 
-	 failure settings are set correctly to allow the roof to open. If the roof 
-	 control is set to manual it will try to request it to be set to remote.
-	
-	
-	PARAMETERS:
-		
-		roof_dict = A dictionary containing the status of the roof.
-		
-	RETURN:
-	
-		safe_to_open = Is True if all the checks are passed, and False 
-			otherwise.
-			
-		roof_dict = The most uptodate version of the roof status
-
-	"""
-
-	if 'Roof_Control' not in roof_dict.keys() or 'Roof_Motor_Stop' not in \
-		roof_dict.keys() or 'Roof_Power_Failure' not in roof_dict.keys():
-		logger.error("Invalid dictionary supplied. Requires 'Roof_Control', "\
-			"'Roof_Motor_Stop' and 'Roof_Power_Failure' keys")
-		raise KeyError("Invalid dictionary supplied. Requires 'Roof_Control', "\
-			"'Roof_Motor_Stop' and 'Roof_Power_Failure' keys")
-
-	if roof_dict['Roof_Control'] == 'Remote' and roof_dict['Roof_Motor_Stop'] \
-			== 'Not Pressed' and roof_dict['Roof_Power_Failure'] == False:
-		# The conditions above need to be true before the roof will open
-		safe_to_open = True
-
-	elif roof_dict['Roof_Control'] == 'Manual' and roof_dict['Roof_Motor_Stop']\
-			== 'Not Pressed' and roof_dict['Roof_Power_Failure'] == False:
-		# If the roof control is set to manual, could try requesting it to go
-		#  to remote, if the other two conditions aren't an issue.
-		try:
-			ok_response = plc.plc_request_roof_control()
-			roof_dict = plc.plc_get_roof_status(log_messages = False)
-				
-		except:
-			logger.error('Unable to set roof control to remote')
-			safe_to_open = False
-				
-		else:
-			safe_to_open = True
-	else:
-		logger.error('Current status: Roof control - '+ str(
-			roof_dict['Roof_Control'])+', Motor stop - '+str(
-			roof_dict['Roof_Motor_Stop'])+', Power failure - '+str(
-			roof_dict['Roof_Power_Failure']))
-			
-		logger.error('Check roof control, motor stop and power failure')
-					
-		#pack up and go to bed, although might be able to do something about
-		#  the remote thing?
-		"""**** CLOSE UP****"""
-		print("ADD INSTRUCTIONS TO SHUTDOWN EVERYTHING ELSE")
-		safe_to_open = False
-
-	return safe_to_open, roof_dict
-
-def its_raining_instructions():
-	"""
-	This function should be executed if there is rain detected, i.e close up 
-	 and shutdown...
-	
-	CURRENTLY INCOMPLETE!!!
-	"""
-	
-	logger.critical("IT'S RAINING, unsafe to open")
-	"""
-	Either add instructions to give up for the night or to monitor for 
-	 improvement
-	"""
-
-def check_safe_to_open_roof(roof_dict):
-	"""
-	This function carries out the check needed to insure the roof would be safe 
-	 to open i.e. make sure it's not raining, the roof isn't between 
-	 open/closed, there isn't an issue with the power failure, motor stop or if 
-	 the roof control is set to manual.
-		
-	If the roof is moving, the function will wait to see if ends up being 
-	 open/closed, before deciding what to next.
-	 
-	If the roof control is set to 'Manual' it will try to set it to Remote.
-	
-	PARAMETERS:
-	
-		roof_dict = a dictionary containing the current state of the roof.
-		
-	RETURN:
-	
-		roof_open_bool = True is the roof is open.
-		
-		safe_to_open = True if there is no reason the roof can't be opened
-		
-		roof_dict = the most up to date roof status in dictionary format
-	
-	"""
-	
-	# Check if it's raining, no point trying to open
-	if roof_dict['Roof_Raining'] == True:
-		its_raining_instructions()
-	
-			
-	else:
-		
-		roof_open_bool = False
-		safe_to_open = False # Assume it is not safe
-		# It might not be open, but it might be opening or closing..
-		if roof_dict['Roof_Moving'] == True:
-			
-			roof_open_bool, roof_dict = wait_for_roof_to_stop_moving(roof_dict)
-		
-		
-		# If the roof is closed (or now closed), can it be safely opened
-		if roof_open_bool == False:
-			safe_to_open, roof_dict = check_control_motor_stop_and_power_safety(
-					roof_dict)
-
-		return roof_open_bool, safe_to_open, roof_dict
-
-
 def go_to_target(coordsArr):
 	"""
 	Will carry out the necessary steps require to get the telescope to move to 
@@ -1072,33 +960,17 @@ def go_to_target(coordsArr):
 	else:
 		roof_open_bool = roof_dict['Roof_Open']
 		if roof_open_bool == False:
-			# check for rain, movement, remote control, motor stop and power
-			#  failure
-			roof_bool_open, safe_to_open, roof_dict = check_safe_to_open_roof(
-				roof_dict)
-
-			if safe_to_open == True and roof_bool_open == False:
-				# Try to open the roof
-				try:
-					response_code = plc.plc_open_roof()
-				
-				except:
-					logger.critical('Cannot open roof')
-				else:
-					# Keep an eye on the roof status to check when it has
-					#  stopped moving
-					roof_open_bool, roof_dict = wait_for_roof_to_stop_moving(
-						roof_dict)
 		
-			elif safe_to_open == True and roof_bool_open == True:
+			logger.warning('Roof is not open. Will try to open if safe to do so')
+			try:
+			# run subprocess to open th roof. It will do all the required check.
+			# get to the process to do something so you know it's complete
+				subprocess.run('open_roof')
+			except:
+				logger.error('COULD NOT open roof')
 			
-				logging.info('Roof is open')
-		
 			else:
-				"""**** CLOSE UP****"""
-				#if not safe, put telescope to bed...
-				print("Need to close up for now....")
-				logger.critical("Need to close up for now....")
+				roof_open_bool = True
 
 		else:
 			logger.info('Roof is open')
@@ -1154,6 +1026,9 @@ def connect_to_instruments():
 	focuser_no1, focuser1_port = fc.startup('focuser1-south.cfg') #proper
 	focuser_no2, focuser2_port = fc.startup('focuser2-north.cfg') #proper
 	
+	#focuser_no1, focuser1_port = 1, 'port1' #Just temporary
+	#focuser_no2, focuser2_port = 2, 'port2' #Just temporary
+	
 	# Want to load the current focuser configuration settings so don't have to
 	#  check it everytime we need to write a fits header or output to observing
 	#  log. Might need to update this if the config setting get updated during
@@ -1163,36 +1038,22 @@ def connect_to_instruments():
 			return_dict = False)
 	focuser2_config_dict = fc.get_focuser_stored_config(port, x=focuser_no2,
 			return_dict = False)
+			
+	#focuser1_config_dict = {'Nickname': 'FocusLynx FocSOUTH', 'Max Pos': '125440', 'DevTyp': 'OE', 'TComp ON': '0', 'TempCo A': '+0086', 'TempCo B': '+0086', 'TempCo C': '+0086', 'TempCo D': '+0000', 'TempCo E': '+0000', 'TCMode': 'A', 'BLC En': '0', 'BLC Stps': '+40', 'LED Brt': '075', 'TC@Start': '0'} #Just temporary
+	#focuser2_config_dict = {'Nickname': 'FocusLynx FocNORTH', 'Max Pos': '125440', 'DevTyp': 'OE', 'TComp ON': '0', 'TempCo A': '+0086', 'TempCo B': '+0086', 'TempCo C': '+0086', 'TempCo D': '+0000', 'TempCo E': '+0000', 'TCMode': 'A', 'BLC En': '0', 'BLC Stps': '+40', 'LED Brt': '075', 'TC@Start': '0'} #Just temporary
 	
-	global focuser1_info
+	
 	focuser1_info = [focuser_no1,focuser1_port,focuser1_config_dict]
-	global focuser2_info
 	focuser2_info = [focuser_no2,focuser2_port,focuser2_config_dict]
-
-
-	global ifw1_config, ifw1_port
-	global ifw2_config, ifw2_port
-	# Run startup for filterwheels
 
 	ifw1_port, ifw1_config = fwc.filter_wheel_startup('ifw1-south.cfg') #proper
 	ifw2_port, ifw2_config = fwc.filter_wheel_startup('ifw2-north.cfg')
-
-def connect_to_tcs():
-	"""
-	#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	# Connect to the TCS machine - for exposures and telescope
-	#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	"""
-	global tcs_conn
-	tcs_conn_tries=0
-	while tcs_conn_tries < tcs_conn_tries_total:
-		try:
-			tcs_conn = tcs.open_TCS_ssh_connection()
-			open_to_TCS = True
-		except:
-			logger.critical('Attempt to connect to TCS '+str(tcs_conn_tries+1)+'/'+str(tcs_conn_tries_total)+' has failed')
-			open_to_TCS = False
-			tcs_conn_tries += 1
+	
+	#ifw1_port, ifw1_config = 'port_ifw1', common.load_config('ifw1-south.cfg', path='configs/') #Just temporary
+	#ifw2_port, ifw2_config = 'port_ifw2', common.load_config('ifw2-north.cfg', path='configs/')
+	
+	return focuser1_info, focuser2_info, ifw1_config, ifw1_port,\
+		ifw2_config, ifw2_port
 
 def get_image_type(next_target_name):
 
@@ -1221,6 +1082,66 @@ def get_image_type(next_target_name):
 
 	return image_type
 
+
+def setup_file_logs_storage():
+
+	#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	#Connect to table in the database, so that an observing log can be stored
+	#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+	global dbconn,dbcurs
+	dbconn, dbcurs = connect_database.connect_to()
+	#Not permenant, just here while testing so dont end up with a huge database
+	#  with pointless rows
+	connect_database.remove_table_if_exists(dbcurs,
+		set_err_codes.OBSERVING_LOG_DATABASE_TABLE )
+	dbcurs.execute('CREATE TABLE '+set_err_codes.OBSERVING_LOG_DATABASE_TABLE +\
+		' (IMAGE_ID text, CCD_ID INTERGER, FILE text, TAR_NAME text, '\
+		'TAR_TYPE text, DATE_OBS text, MJD_OBS real, IMAGETYP text, FILT_NAM '\
+		'text, EXPTIME real, OBJ_RA text, OBJ_DEC text, TEL_RA text, TEL_DEC '\
+		'text, IMAG_RA text, IMAG_DEC text, INSTRUME text, FOCUSER text, '\
+		'STATUS INTEGER, SAVED int2);')
+	dbconn.commit()
+
+	datestr = get_date_str()
+	file_dir = get_next_fits_folder(datestr)
+	
+	global next_no1
+	next_no1 = get_next_file_number(1, datestr, fits_file_dir=file_dir)
+	global next_no2
+	next_no2 = get_next_file_number(2, datestr, fits_file_dir=file_dir)
+
+
+	return dbconn, dbcurs, datestr, file_dir, next_no1, next_no2
+
+
+def basic_exposure(target_name, target_coords, target_type):
+
+	#connect to instruments
+	global focuser1_info
+	global focuser2_info
+	global ifw1_config, ifw1_port
+	global ifw2_config, ifw2_port
+	
+	focuser1_info, focuser2_info, ifw1_config, ifw1_port, ifw2_config,\
+			ifw2_port = connect_to_instruments()
+
+
+	#connect to database and sort out file names
+	global dbconn, dbcurs
+	global next_no1, next_no2
+	dbconn, dbcurs, datestr, file_dir, next_no1, next_no2 = setup_file_logs_storage()
+
+	obs_recipe = get_observing_recipe(target_name)
+	image_type = get_image_type(target_name)
+
+	#create target object
+	target = target_obj(target_name,target_coords,target_type)
+
+	take_exposure(obs_recipe,image_type,target,datestr=datestr,
+		fits_folder = file_dir)
+
+
 def main():
 
 	"""
@@ -1236,46 +1157,18 @@ def main():
 	global focuser2_info
 	global ifw1_config, ifw1_port
 	global ifw2_config, ifw2_port
-	connect_to_instruments()
-
-	#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	# Connect to the TCS machine - for exposures and telescope
-	#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	global tcs_conn
-	connect_to_tcs()
-
-	#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	# Start running telescope processes on TCS
-	#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	
-	"""
-	Maybe add appropriate code here to check telescope commands are running on 
-	TCS, take steps if not
-	"""
+	focuser1_info, focuser2_info, ifw1_config, ifw1_port, ifw2_config,\
+			ifw2_port = connect_to_instruments()
 
 	#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	#Connect to table in the database, so that an observing log can be stored
+	#  and sort out the next file name and folder
 	#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	global dbconn,dbcurs
-	dbconn, dbcurs = connect_database.connect_to()
-	#Not permenant, just here while testing so dont end up with a huge database
-	#  with pointless rows
-	connect_database.remove_table_if_exists(dbcurs,
-		set_err_codes.OBSERVING_LOG_DATABASE_TABLE )
-	dbcurs.execute('CREATE TABLE '+set_err_codes.OBSERVING_LOG_DATABASE_TABLE +\
-		' (IMAGE_ID INTEGER, CCD_ID INTERGER, FILE text, TAR_NAME text, '\
-		'TAR_TYPE text, DATE_OBS text, MJD_OBS real, IMAGETYP text, FILT_NAM '\
-		'text, EXPTIME real, OBJ_RA text, OBJ_DEC text, TEL_RA text, TEL_DEC '\
-		'text, IMAG_RA text, IMAG_DEC text, INSTRUME text, FOCUSER text, '\
-		'STATUS INTEGER, SAVED int2);')
-	dbconn.commit()
-	#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	#Get next file number for each ccd
-	#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	global next_no1
-	next_no1 = get_next_file_number(1)
-	global next_no2
-	next_no2 = get_next_file_number(2)
+	global dbconn, dbcurs
+	global next_no1, next_no2
+	dbconn, dbcurs, datestr, file_dir, next_no1, next_no2 = \
+					setup_file_logs_storage()
+
 
 
 	"""
@@ -1287,6 +1180,7 @@ def main():
 			Name
 	"""
 	next_target_name = 'test_target_single_Texp'
+	"""
 	target_db_rows = connect_database.match_target_name(next_target_name,
 		set_err_codes.TARGET_INFORMATION_TABLE, dbcurs)
 	
@@ -1296,12 +1190,18 @@ def main():
 	elif len(target_db_rows < 1):
 		logger.warning('No target name found')
 	else:
-		loaded_target_info = 'target_class' #into object?/organise the info
+		#loaded_target_info = 'target_class' #into object?/organise the info
+	"""
+	loaded_target_info = dict({'TARGET_ID':'1', 'TAR_NAME':next_target_name,#'WASP0426-38',
+			'RA':'04:26:03.78', 'DEC':'-38:32:13.9', 'T_0':6144.4344,
+			'Period':13.243062})
+	
+	next_target = target_obj(loaded_target_info['TAR_NAME'], [loaded_target_info['RA'],loaded_target_info['DEC']])
 
 	#what to do if no observing recipe for target??
-	obs_recipe = get_observing_recipe(next_target_name)
+	obs_recipe = get_observing_recipe(next_target.name)
 	
-	image_type = get_image_type(next_target_name)
+	image_type = get_image_type(next_target.name)
 
 
 	
@@ -1318,7 +1218,8 @@ def main():
 	#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	#i =0
 	#while i <3:
-	take_exposure(obs_recipe,image_type,loaded_target_info)
+	take_exposure(obs_recipe,image_type,next_target, datestr=datestr,
+		fits_folder = file_dir)
 	#i+=1
 	#test1()
 
@@ -1328,16 +1229,7 @@ def main():
 		set_err_codes.OBSERVING_LOG_DATABASE_TABLE ,dbcurs)
 	connect_database.close_connection(dbconn,dbcurs)
 	#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	# Close connection to TCS
-#	tcs_close_tries = 0
-#	while tcs_close_tries <tcs_conn_tries_total and open_to_TCS == True:
-		
-#		try:
-#			tcs.close_TCS_connection(tcs_conn)
-#		except:
-#			logger.error('Unable to close connection to TCS')
-#			tcs_close_tries +=1
-	#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 """
 def main()
 if __name__ == '__main__':
