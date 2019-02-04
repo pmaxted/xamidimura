@@ -6,6 +6,9 @@ Contains a list of all the various error codes from the various scripts,
 
 """
 
+WEATHER_LOG_FILE = 'cloud2_oneline2.dat'
+WEATHER_LOG_LOC = 'home/observer/cloud2/weather/'
+
 #LOGFILES_DIRECTORY = '/Users/Jessica/PostDoc/ScriptsNStuff/current_branch/xamidimura/logfiles/'
 LOGFILES_DIRECTORY = 'logfiles/'
 DATA_FILE_DIRECTORY = 'fits_file_tests/'
@@ -34,6 +37,7 @@ tcs_coms_timeout = 60
 #Other parameters
 pass_coord_attempts = 2
 tcs_conn_tries_total = 3
+run_camera_cooling = True
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #              DATABASE

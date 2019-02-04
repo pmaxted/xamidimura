@@ -41,7 +41,8 @@ Documentation and software for the Xamidimura telescopes
 * **expose.py** - A very basic observing script. It will start up the filter
  wheels and focusers, load in an observing recipe and take exposures as 
  specified by the observing script. It will not slew to a target, and details
- of the target, e.g. name, etc need to be filled in at the top of the script.  
+ of the target, e.g. name, etc need to be filled in at the top of the script.
+ Instructions on how to use are at the start of the script.  
 
 * **filter_wheel_control.py** - contains basic serial port command functions 
  for the filter wheels. All tested.    
@@ -236,7 +237,10 @@ other functions required by this main function.
 	```  
 Status codes are defined in settings_and_error_codes.py.
 
-The code for the interuptions need to be written.  
+The cooling on the cameras is started and stopped at the beginning/end of the 
+ main function, if run_camera_cooling is set to True in settings_and_error_codes.py
+
+The code for the interuptions needs to be written.  
 	
 - Exposure requests that are not completed (due to weather alert, TCS timeout 
  etc) are noted in the observing log table, by fits headers are not saved. 
