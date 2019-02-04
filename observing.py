@@ -166,62 +166,30 @@ class target_obj(object):
 		self.ra_dec = coords
 		self.type = type
 
-def get_current_weather(logfile_loc = 'logfiles/weather.log'):
+def get_current_weather(logfile_loc = set_err_codes.WEATHER_LOG_LOC, 
+		logfile_name=set_err_codes.WEATHER_LOG_FILE):
 
-	"""
-	If the weather goes to a weather.log file on tcs, will want this script just
-	 to read the last line of the weather log file. Will have to come up with 
-	 something incase the the weather info cannot be retrieved
-	- although not getting weather info would be a safety issue
-		
-	Uses python's subproccess to run a tail command to find the last line 
-	 (of 107 bytes) in the log file. The input is reversed by the -r flag, so 
-	 it actually takes the first 107 bytes
-		
+	""" 
+	Want to read the lastest weather information form a log file. It will
+	 be taken from the file specified by 'logfile_loc'
+	 
+	Assumes the weather is retrieved as a string in the following format:
 	
-	Will assume the weather info is retrive as a string in the following 
-		format...
+	  2019-02-01 16:13:02.07 -998.0 19.7 -2.0 66 13.1 0-0-2-4-2 WET NONE
 	
-	2454144.18988  12 187  23.8  23  826.0   2 DRY  -44.5 DRY ------------ 
-		14.70 -99.99 -99.99  41 -99 -99 1.61
+	And shows the following information
 	
-	and shows the following information:
-	
-	Col   Description
-	1 = Julian day
-	2 = Wind strength (km/s)
-	3 = Wind direction (degrees East of North)
-	4 = Internal temperature (˚C) [Vaisala]
-	5 = Internal relative humidity (%) [Vaisala]
-	6 = Pressure (mb)
-	7 = Heater setting [Vaisala]
-	8 = Vaisala rain detector [DRY/RAIN]
-	9 = Relative sky tempurature (˚C) [Boltwood]
-	10 = Boltwood rain detector [DRY/WET]
-	11 = Weather daemon alert flags (see below)
-	12 = External temperature (˚C)
-	13 = unused auxillary temperature
-	14 = unused auxillary temperature
-	15 = External relative humidity (%)
-	16 = unused auxillary temperature
-	17 = unused auxillary temperature
-	18 = Dew point (˚C)
-	
-	Weather daemon flags
-	1 - T = Internal temperature max
-	2 - C = Internal tempeerature min
-	3 - H = Internal humidity
-	4 - W = Wind
-	5 - R = Boltwood rain detector
-	6 - D = Dew point
-	7 - T = External temperature max
-	8 - C = External temperature min
-	9 - H = External humidity
-	10 - S = Storm
-	11 - K = Cloud
-	12 - N = Sun above horizon
-	
-	
+		Date
+		Time
+		Sky Temp
+		Ambient temp
+		Wind Speed (km/h)
+		Relative humidity (%)
+		Dew point
+		Condition codes [Cloud - wind - rain - sky - day]
+		Wet/Dry flag
+		Rain/None flag
+
 	PARAMETERS
 	
 		logfile_loc = directory to where the weather log file is. Will need to 
@@ -232,19 +200,16 @@ def get_current_weather(logfile_loc = 'logfiles/weather.log'):
 		retreived_line =  list of weather values, with each value stored as a 
 			string
 	
-	
+		
 	"""
 
-	# use tail to find the last 107 bytes of the weather log file. The -c means
-	#  it searches bytes, and -r means the input is reversed -hopefully this
-	#  will make it quicker for larger files, but not tested
-	sub1 = subprocess.Popen(['tail','-r','-c','107',logfile_loc],
-		stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+	sub1 = subprocess.Popen(['tail','-1',logfile_name],
+		stdout=subprocess.PIPE, stderr=subprocess.PIPE,cwd=logfile_loc)
 	outp = sub1.communicate()
 	if len(outp[0]) > 2:
 		retrieved_line = outp[0].decode('utf-8')
 	else:
-		print('INFO: Error reading weather log file')
+		logger.error('Error reading weather log file')
 	
 	retrieved_line = retrieved_line.split()
 
@@ -290,6 +255,9 @@ def get_fits_header_info(focuser_config,focuser_position, weather_list,
 	except:
 		cam_temp = 'NA'
 		logger.warning('Unable to get camera temperature')
+	
+	weather_time = astro_time.Time(' '.join([weather_list[0],weather_list[1]]))
+	weather_time.format = 'isot'
 	
 	# FOR FITS HEADER...
 	fits_info_dict = {
@@ -353,17 +321,14 @@ def get_fits_header_info(focuser_config,focuser_position, weather_list,
 									'Backlash compensation (ON =1/OFF=0)'),
 		'BCK_STEP':	(focuser_config['BLC Stps'], \
 									'Steps used for backlash compensation'),
-		'COMMENT' : ('Weather log from: '+weather_list[0]+', '\
-					+astro_time.Time(float(weather_list[0]), format='jd').isot),
-
-		'WXTEMP'  : (weather_list[4], 'Inside ambient air temp, C'),
-		'WXPRES'  : (weather_list[5], 'Atm pressure, mB'),
-		'WXWNDSPD': (weather_list[1], 'Wind speed, kph'),
-		'WXWNDDIR': (weather_list[2], 'Wind dir, degs E of N'),
-		'WXHUMID' : (weather_list[3], 'Inside humidity, percent'),
-		'WXDEW'   : (weather_list[17], 'Inside dew point, C'),
-		'WXOTEMP' : (weather_list[12], 'Outside ambient air temp, C'),
-		'WXOHUMID': (weather_list[15], 'Outside humidity, percent')}
+		'COMMENT' : ('Weather log from: '+weather_time+' UTC, '+format(b.jd,'.6f')),
+			
+		'WXCON_CO': (weather_list[7], 'Cloud/wind/rain/sky/day codes'),
+		'WXWNDSPD': (weather_list[4], 'Wind speed, kph'),
+		'WXDEW'   : (weather_list[6], 'Dew point, C'),
+		'WXOTEMP' : (weather_list[3], 'Outside ambient air temp, C'),
+		'WXSKYT'  : (weather_list[2], 'Sky temperature'),
+		'WXOHUMID': (weather_list[5], 'Outside humidity, percent')}
 	"""
 	ZENDIST =               30.756 / Zenith Distance, degrees
 	AIRMASS =                1.163 / Airmass calculation
@@ -588,11 +553,12 @@ def get_date_str():
 		noon_normal = astro_time.Time(noon_jd, scale='utc', format='jd')#.format ='iso'
 		noon_normal.format = 'iso'
 		date_str = str(noon_normal.value[:10])
-		date_str = ''.join(date_str.split('-'))
+		#date_str = ''.join(date_str.split('-'))
 	else:
 		current_timedate.format='iso'
 		date_str = str(current_timedate.value[:10])
-		date_str = ''.join(date_str.split('-'))
+
+	date_str = ''.join(date_str.split('-'))
 
 
 	return date_str
@@ -745,7 +711,7 @@ def take_exposure(obs_recipe, image_type, target_info_ob, datestr,
 		exp_objS = exposure_obj(obs_recipe['S_EXPO'][j],obs_recipe['S_FILT'][j],
 			image_type,1, ifw1_config['name'], next_no1)
 
-		"""
+
 		statusN = asyncio.Future()
 		statusS = asyncio.Future()
 		#Change the filters if need be, don't want to have to wait for one
@@ -760,7 +726,7 @@ def take_exposure(obs_recipe, image_type, target_info_ob, datestr,
 		statusN = statusN.result()
 		statusS = statusS.result()
 		
-		"""
+		
 
 		try:
 			# First send the command to the telescope and expect an '0'
@@ -835,6 +801,11 @@ def exposure_TCS_response(expObN, expObS):
 			requesting
 		num - the error code. Is a asyncio future so is declared in a previous 
 			function and is initially set here.
+			
+	RETURN
+	
+		statN,statS = The status code for the North and south exposure,
+			respectively.
 	"""
 	
 	logger.info('Starting ' + str(expObN.exptime) + ' sec exposure')
@@ -844,7 +815,7 @@ def exposure_TCS_response(expObN, expObS):
 	
 	#SEND EXPOSURE COMMAND TO TCS - get status depending on response
 	#print('Pretending to take exposure: Exposure time -',expObN.exptime)
-	#repsonse_stat = 0
+	#response_stat = 0
 	response_stat = tcs.tcs_exposure_request(expObN.image_type,
 			duration=expObN.exptime)
 	
@@ -878,6 +849,11 @@ def exposureTCSerrorcode(statN,statS, exptime):
 		exptime - exposure time in seconds
 		telescope - either North/South depending on the telescope doing the 
 			requesting
+			
+	RETURN
+	
+		statN,statS = The status code for the North and south exposure,
+			respectively.
 	"""
 	#return num
 	OK_to_Exp_North = statN == set_err_codes.STATUS_CODE_OK or \
@@ -940,7 +916,9 @@ def go_to_target(coordsArr):
 
 
 	# Get current telescope pointing, do we need to change position?
+
 	current_ra_dec = tcs.get_tel_target()[0:2]
+
 	if current_ra_dec == coordsArr:
 		logger.info('Same coordinates, do not need to move target')
 		need_to_change = False
@@ -1016,15 +994,23 @@ def send_coords(coords,equinox='J2000'):
 
 def connect_to_instruments():
 	"""
-	#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	# Set up all the instruments, i.e. focuser and filter wheel
-	#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	Runs the start up proceedures for both focusers and filterwheels. Note that
+	the focusers will go to the home position, aswill the filterwheels but the
+	movement for the filterwheels is slower and can take upto 20 secs.
+	
+	** 04/02/19 Much of code here is tempary while things are being tested, but the
+	actual code is present, just commented out.
 	"""
+	global focuser1_info
+	global focuser2_info
+	global ifw1_config, ifw1_port
+	global ifw2_config, ifw2_port
+	
 	#Load focuserNo and open port communication to the focusers - the homing can
 	#  take up 20s to complete
 
-	focuser_no1, focuser1_port = fc.startup('focuser1-south.cfg') #proper
-	focuser_no2, focuser2_port = fc.startup('focuser2-north.cfg') #proper
+	focuser_no1, focuser1_port = fc.startup_focuser('focuser1-south.cfg') #proper
+	focuser_no2, focuser2_port = fc.startup_focuser('focuser2-north.cfg') #proper
 	
 	#focuser_no1, focuser1_port = 1, 'port1' #Just temporary
 	#focuser_no2, focuser2_port = 2, 'port2' #Just temporary
@@ -1055,8 +1041,37 @@ def connect_to_instruments():
 	return focuser1_info, focuser2_info, ifw1_config, ifw1_port,\
 		ifw2_config, ifw2_port
 
+def shutdown_instruments():
+
+	"""
+	Carry out the shutdown proceedures for the focusers and filterwheels. Note
+	 the filterwheels are homed and it can take up to 20 sec for each. Uses the
+	 global variables
+	"""
+
+	fc.shutdown_focuser(focuser1_info[1])
+	fc.shutdown_focuser(focuser2_info[1])
+
+	fwc.filter_wheel_shutdown(ifw1_port)
+	fwc.filter_wheel_shutdown(ifw2_port)
+
 def get_image_type(next_target_name):
 
+	"""
+	This will identify the type of exposure to take based on the target name.
+	 It looks at the first 4 characters of the name. It will recognise
+	 BIAS, FLAT, DARK and THERMAL, and anything else is assumed to be an
+	 OBJECT image.
+	 
+	 PARAMETERS:
+	 
+		next_target_name = name of the target being observed. First 4 characters
+			are use to identify the image type
+			
+	 RETURN:
+	 
+		image_type = BIAS/FLAT/DARK/THERMAL/OBJECT as appropriate.
+	"""
 	
 	if next_target_name[:4] == 'BIAS' or next_target_name[:4] == 'Bias' or \
 		next_target_name[:4] == 'bias':
@@ -1096,7 +1111,7 @@ def setup_file_logs_storage():
 	connect_database.remove_table_if_exists(dbcurs,
 		set_err_codes.OBSERVING_LOG_DATABASE_TABLE )
 	dbcurs.execute('CREATE TABLE '+set_err_codes.OBSERVING_LOG_DATABASE_TABLE +\
-		' (IMAGE_ID text, CCD_ID INTERGER, FILE text, TAR_NAME text, '\
+		' (IMAGE_ID INTERGER, CCD_ID INTERGER, FILE text, TAR_NAME text, '\
 		'TAR_TYPE text, DATE_OBS text, MJD_OBS real, IMAGETYP text, FILT_NAM '\
 		'text, EXPTIME real, OBJ_RA text, OBJ_DEC text, TEL_RA text, TEL_DEC '\
 		'text, IMAG_RA text, IMAG_DEC text, INSTRUME text, FOCUSER text, '\
@@ -1112,25 +1127,106 @@ def setup_file_logs_storage():
 	next_no2 = get_next_file_number(2, datestr, fits_file_dir=file_dir)
 
 
-	return dbconn, dbcurs, datestr, file_dir, next_no1, next_no2
+	return datestr, file_dir
 
+def disconnect_database(show_rows = False):
+	
+	"""
+	This will close an open connection to the xamidimura database, which is 
+	 access with the global variables.
+	 
+	PARMAETERS:
+	
+		show_rows = True/False, set to True to show all the rows currently
+		 contained in the obslog2 table.
+	
+	"""
+
+	if show_rows == True:
+	#This is testing stuff to show all the rows in the obslog2 table
+		connect_database.show_all_rows_in_table(
+			set_err_codes.OBSERVING_LOG_DATABASE_TABLE ,dbcurs)
+	
+	connect_database.close_connection(dbconn,dbcurs)
+
+def get_next_target_info(next_target_name, database_cursor):
+
+	"""
+	Will take a name of a target as specified by 'next_target_name' and will
+	 look for a matching name in the database that is linked via 
+	 'database_cursor'. The cursor is need to pass SQL queries to the sqlite
+	 database. 
+	 
+	Note if multiple targets are found with the same name, it will select the
+	 first one.
+	
+	PARAMETERS:
+		
+		next_target_name = The name of the target that will be searched for.
+		
+		database_cursor = a cursor object that links to the database you want 
+		 search.
+		 
+	RETURN:
+		
+		next_target = A target object (target_obj) that is created from the 
+			information found in the database.
+	
+	"""
+
+	target_db_rows = connect_database.match_target_name(next_target_name,
+		set_err_codes.TARGET_INFORMATION_TABLE, database_cursor)
+	
+	if len(target_db_rows)>1:
+		logger.warning('Multiple targets found, selecting first one: '\
+			+ rows[0][3])
+	elif len(target_db_rows) < 1:
+		logger.warning('No target name found')
+	else:
+	
+		if ':' in target_db_rows[0][1]:
+			ra = ' '.join(target_db_rows[0][1].split(':'))
+		else:
+			ra = target_db_rows[0][1]
+
+		if ':' in target_db_rows[0][2]:
+			dec = ' '.join(target_db_rows[0][2].split(':'))
+		else:
+			dec = target_db_rows[0][2]
+
+		next_target = target_obj(target_db_rows[0][0], [ra,dec],
+			type = target_db_rows[0][3])
+
+	return next_target
 
 def basic_exposure(target_name, target_coords, target_type):
-
-	#connect to instruments
-	global focuser1_info
-	global focuser2_info
-	global ifw1_config, ifw1_port
-	global ifw2_config, ifw2_port
 	
-	focuser1_info, focuser2_info, ifw1_config, ifw1_port, ifw2_config,\
-			ifw2_port = connect_to_instruments()
+	"""
+	This function will carry out the most basic functions needed to take an 
+	 exposure, and is used in the expose.py script. Need to have already set
+	 up the focusers and filterwheel to use this function.
+	 It assumes global variable have been set
+	 
+	 
+	PARAMETER:
+	
+		target_name = name of target to observe. Is also used to load an
+						observing recipe with the name format:
+						<target_name>.obs from the observing recipe
+						directory
+						
+		target_coords = Is only used when creating the fits file header, 
+			no slewing is carried out.
+			
+		target_type = Again only ued in the fit header info, and is a string to
+			identify the type of target e.g. 'EB' or 'Planet'
+	
+	
 
+	"""
 
-	#connect to database and sort out file names
-	global dbconn, dbcurs
-	global next_no1, next_no2
-	dbconn, dbcurs, datestr, file_dir, next_no1, next_no2 = setup_file_logs_storage()
+	datestr, file_dir = setup_file_logs_storage()
+
 
 	obs_recipe = get_observing_recipe(target_name)
 	image_type = get_image_type(target_name)
@@ -1140,6 +1236,9 @@ def basic_exposure(target_name, target_coords, target_type):
 
 	take_exposure(obs_recipe,image_type,target,datestr=datestr,
 		fits_folder = file_dir)
+
+	print('Exposures complete')
+	logger.info('Exposures Complete')
 
 
 def main():
@@ -1153,50 +1252,29 @@ def main():
 	#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	# Set up all the instruments, i.e. focuser and filter wheel
 	#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	global focuser1_info
-	global focuser2_info
-	global ifw1_config, ifw1_port
-	global ifw2_config, ifw2_port
+
 	focuser1_info, focuser2_info, ifw1_config, ifw1_port, ifw2_config,\
 			ifw2_port = connect_to_instruments()
-
+	
+	#Start the cameras, if setting in settings_and_error_codes is True
+	if set_err_codes.run_camera_cooling == True:
+		tcs.camstart()
+		#print('WOULD start cameras')
 	#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	#Connect to table in the database, so that an observing log can be stored
 	#  and sort out the next file name and folder
 	#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	global dbconn, dbcurs
-	global next_no1, next_no2
-	dbconn, dbcurs, datestr, file_dir, next_no1, next_no2 = \
-					setup_file_logs_storage()
+
+	datestr, file_dir = setup_file_logs_storage()
 
 
 
 	"""
 	Run Scheduler to find target - return target Name
-	Look up target name in the database to find require info
-	
-		- Target info should provide:
-			RA/DEC of target
-			Name
+
 	"""
 	next_target_name = 'test_target_single_Texp'
-	"""
-	target_db_rows = connect_database.match_target_name(next_target_name,
-		set_err_codes.TARGET_INFORMATION_TABLE, dbcurs)
-	
-	if len(target_db_rows)>1:
-		logger.warning('Multiple targets found, selecting first one: '\
-			+ rows[0][3])
-	elif len(target_db_rows < 1):
-		logger.warning('No target name found')
-	else:
-		#loaded_target_info = 'target_class' #into object?/organise the info
-	"""
-	loaded_target_info = dict({'TARGET_ID':'1', 'TAR_NAME':next_target_name,#'WASP0426-38',
-			'RA':'04:26:03.78', 'DEC':'-38:32:13.9', 'T_0':6144.4344,
-			'Period':13.243062})
-	
-	next_target = target_obj(loaded_target_info['TAR_NAME'], [loaded_target_info['RA'],loaded_target_info['DEC']])
+	next_target = get_next_target_info(next_target_name,database_cursor=dbcurs)
 
 	#what to do if no observing recipe for target??
 	obs_recipe = get_observing_recipe(next_target.name)
@@ -1208,27 +1286,31 @@ def main():
 	"""
 	Move telescope to the target
 	"""
-	
-	test_coords = ['10:46:04', '-46:08:06']
-	go_to_target(test_coords)#target_class.coords)
+
+	go_to_target(next_target.ra_dec)
 	
 	
 	#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	#THen this will be part of the loop that runs when taking exposures
 	#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	#i =0
-	#while i <3:
+
+	# while conditions ok for observing this target are true
+
 	take_exposure(obs_recipe,image_type,next_target, datestr=datestr,
 		fits_folder = file_dir)
-	#i+=1
-	#test1()
+	
 
 	#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	#This is testing stuff to show all the rows in the obslog2 table
-	connect_database.show_all_rows_in_table(
-		set_err_codes.OBSERVING_LOG_DATABASE_TABLE ,dbcurs)
-	connect_database.close_connection(dbconn,dbcurs)
+
 	#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	# Shutdown the instruments, database, cameras..
+	#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+	disconnect_database()
+	shutdown_instruments()
+	if set_err_codes.run_camera_cooling == True:
+		#print('WOULD stop cameras')
+		tcs.stopwasp()
 
 """
 def main()

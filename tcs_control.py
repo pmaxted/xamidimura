@@ -60,7 +60,7 @@ def send_command(command, timeout_time = set_err_codes.tcs_coms_timeout):
 		#Send the command to the TCS	
 		output = subprocess.run(['ssh','wasp@tcs', command],
 				capture_output=True, timeout=timeout_time)
-	except TimeoutExpired:
+	except subprocess.TimeoutExpired:
 		logger.critical('Failed to contact TCS')
 	else:
 		response = output.stdout
@@ -591,9 +591,43 @@ def tcs_exposure_request(type, duration = 0, number = 1):
 
 	return respond
 
-	
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Functions for the cameras
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-def stopcam():
+def camstart():
+
+	"""
+	Send the 'camstart' command to the TCS machine. This will start up the
+	 cameras and cooling.
+	"""
+
+	respond = send_command('camstart')
+
+def waspstat():
+
+	"""
+	Send the waspstat command to the TCS. This will return the status of cameras
+	
+	RETURN
+	
+		respond =  a message with the camera status
+	"""
+
+	respond = send_command('waspstat')
+
+	return respond
+
+def stopwasp():
+
+	"""
+	Send the stopwasp command to the TCS. This will stop the cameras cooling
+	 and shutdown the cameras
+	"""
+
+	respond = send_command('stopwasp')
+
+def stopcam_expose():
 
 	""" 
 	Send the 'stopcam' command to the TCS machine. This will abort any exposure 

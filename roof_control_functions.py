@@ -155,6 +155,7 @@ def plc_command_response_port_open(command, open_port):
 		response = open_port.read_until('*r').decode('utf-8')
       
 		return response
+
     
 def plc_close_port(open_port):
     
