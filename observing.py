@@ -321,7 +321,8 @@ def get_fits_header_info(focuser_config,focuser_position, weather_list,
 									'Backlash compensation (ON =1/OFF=0)'),
 		'BCK_STEP':	(focuser_config['BLC Stps'], \
 									'Steps used for backlash compensation'),
-		'COMMENT' : ('Weather log from: '+weather_time+' UTC, '+format(b.jd,'.6f')),
+		'COMMENT' : ('Weather log from: '+weather_time.value+' UTC, '+format(
+			weather_time.jd,'.6f')),
 			
 		'WXCON_CO': (weather_list[7], 'Cloud/wind/rain/sky/day codes'),
 		'WXWNDSPD': (weather_list[4], 'Wind speed, kph'),
