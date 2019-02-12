@@ -321,7 +321,8 @@ def get_fits_header_info(focuser_config,focuser_position, weather_list,
 									'Backlash compensation (ON =1/OFF=0)'),
 		'BCK_STEP':	(focuser_config['BLC Stps'], \
 									'Steps used for backlash compensation'),
-		'COMMENT' : ('Weather log from: '+weather_time+' UTC, '+format(b.jd,'.6f')),
+		'COMMENT' : ('Weather log from: '+weather_time.value+' UTC, '+format(
+				weather_time.jd,'.6f')),
 			
 		'WXCON_CO': (weather_list[7], 'Cloud/wind/rain/sky/day codes'),
 		'WXWNDSPD': (weather_list[4], 'Wind speed, kph'),
@@ -711,7 +712,7 @@ def take_exposure(obs_recipe, image_type, target_info_ob, datestr,
 		exp_objS = exposure_obj(obs_recipe['S_EXPO'][j],obs_recipe['S_FILT'][j],
 			image_type,1, ifw1_config['name'], next_no1)
 
-
+		"""
 		statusN = asyncio.Future()
 		statusS = asyncio.Future()
 		#Change the filters if need be, don't want to have to wait for one
@@ -726,7 +727,7 @@ def take_exposure(obs_recipe, image_type, target_info_ob, datestr,
 		statusN = statusN.result()
 		statusS = statusS.result()
 		
-		
+		"""
 
 		try:
 			# First send the command to the telescope and expect an '0'
@@ -1108,15 +1109,15 @@ def setup_file_logs_storage():
 	dbconn, dbcurs = connect_database.connect_to()
 	#Not permenant, just here while testing so dont end up with a huge database
 	#  with pointless rows
-	connect_database.remove_table_if_exists(dbcurs,
-		set_err_codes.OBSERVING_LOG_DATABASE_TABLE )
-	dbcurs.execute('CREATE TABLE '+set_err_codes.OBSERVING_LOG_DATABASE_TABLE +\
+	#connect_database.remove_table_if_exists(dbcurs,
+	#	set_err_codes.OBSERVING_LOG_DATABASE_TABLE )
+	#dbcurs.execute('CREATE TABLE '+set_err_codes.OBSERVING_LOG_DATABASE_TABLE +\
 		' (IMAGE_ID INTERGER, CCD_ID INTERGER, FILE text, TAR_NAME text, '\
 		'TAR_TYPE text, DATE_OBS text, MJD_OBS real, IMAGETYP text, FILT_NAM '\
 		'text, EXPTIME real, OBJ_RA text, OBJ_DEC text, TEL_RA text, TEL_DEC '\
 		'text, IMAG_RA text, IMAG_DEC text, INSTRUME text, FOCUSER text, '\
 		'STATUS INTEGER, SAVED int2);')
-	dbconn.commit()
+	#dbconn.commit()
 
 	datestr = get_date_str()
 	file_dir = get_next_fits_folder(datestr)
@@ -1149,7 +1150,7 @@ def disconnect_database(show_rows = False):
 	
 	connect_database.close_connection(dbconn,dbcurs)
 
-def get_next_target_info(next_target_name, database_cursor):
+def get_next_target_info(next_target_id, database_cursor):
 
 	"""
 	Will take a name of a target as specified by 'next_target_name' and will
@@ -1162,7 +1163,7 @@ def get_next_target_info(next_target_name, database_cursor):
 	
 	PARAMETERS:
 		
-		next_target_name = The name of the target that will be searched for.
+		next_target_id = The ID of the target that will be searched for.
 		
 		database_cursor = a cursor object that links to the database you want 
 		 search.
@@ -1174,7 +1175,7 @@ def get_next_target_info(next_target_name, database_cursor):
 	
 	"""
 
-	target_db_rows = connect_database.match_target_name(next_target_name,
+	target_db_rows = connect_database.match_target_id(next_target_id,
 		set_err_codes.TARGET_INFORMATION_TABLE, database_cursor)
 	
 	if len(target_db_rows)>1:
@@ -1184,18 +1185,18 @@ def get_next_target_info(next_target_name, database_cursor):
 		logger.warning('No target name found')
 	else:
 	
-		if ':' in target_db_rows[0][1]:
-			ra = ' '.join(target_db_rows[0][1].split(':'))
-		else:
-			ra = target_db_rows[0][1]
-
 		if ':' in target_db_rows[0][2]:
-			dec = ' '.join(target_db_rows[0][2].split(':'))
+			ra = ' '.join(target_db_rows[0][2].split(':'))
 		else:
-			dec = target_db_rows[0][2]
+			ra = target_db_rows[0][2]
 
-		next_target = target_obj(target_db_rows[0][0], [ra,dec],
-			type = target_db_rows[0][3])
+		if ':' in target_db_rows[0][3]:
+			dec = ' '.join(target_db_rows[0][3].split(':'))
+		else:
+			dec = target_db_rows[0][3]
+
+		next_target = target_obj(target_db_rows[0][1], [ra,dec],
+			type = target_db_rows[0][4])
 
 	return next_target
 
@@ -1273,6 +1274,7 @@ def main():
 	Run Scheduler to find target - return target Name
 
 	"""
+	target_ID = 'test_target_single_Texp.ID' #returned from scheduler
 	next_target_name = 'test_target_single_Texp'
 	next_target = get_next_target_info(next_target_name,database_cursor=dbcurs)
 
@@ -1306,11 +1308,12 @@ def main():
 	# Shutdown the instruments, database, cameras..
 	#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-	disconnect_database()
+
 	shutdown_instruments()
 	if set_err_codes.run_camera_cooling == True:
 		#print('WOULD stop cameras')
 		tcs.stopwasp()
+	disconnect_database()
 
 """
 def main()

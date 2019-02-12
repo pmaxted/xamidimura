@@ -198,7 +198,7 @@ class test_halt_focuser(unittest.TestCase):
 		self.dummy_port.close()
 
 
-
+@patch("PLC_interaction_functions.plc_get_telescope_tilt_status")
 class test_home_focuser(unittest.TestCase):
 
 	def setUp(self):
@@ -210,12 +210,17 @@ class test_home_focuser(unittest.TestCase):
 		# Setup up the expected responses
 		dummy_serial.RESPONSES = {'<F1HOME>': '!\nH','<F2HOME>': '!\nH'}
 
-	def test_wrong_focuser_no_home(self):
+	def test_wrong_focuser_no_home(self,mock_tilt):
 
+		mock_tilt.return_value = dict({'Tilt_angle':"6h East <= x < RA East limit"})
 		with self.assertRaises(ValueError):
 			fc.home_focuser(6,self.dummy_port)
+
+		mock_tilt.assert_called_once()
 	
-	def test_good_number_home(self):
+	def test_good_number_home(self,mock_tilt):
+	
+		mock_tilt.return_value = dict({'Tilt_angle':"6h East <= x < RA East limit"})
 		with self.assertLogs(level='INFO') as cm:
 			fc.logging.getLogger().info(fc.home_focuser(self.dummy_port))
 			logging_response = cm.output[0].split(':')[0]
@@ -226,6 +231,16 @@ class test_home_focuser(unittest.TestCase):
 			fc.logging.getLogger().info(fc.home_focuser(self.dummy_port,x=2))
 			logging_response = cm.output[0].split(':')[0]
 		self.assertEqual(logging_response, 'INFO')
+		
+		self.assertEqual(mock_tilt.call_count,2)
+		
+	def test_telescope_not_stowed(self, mock_tilt):
+	
+		mock_tilt.return_value = dict({'Tilt_angle':"1h East < x < 1h West"})
+		with self.assertLogs(level='ERROR') as cm:
+			fc.logging.getLogger().error(fc.home_focuser(self.dummy_port,x=2))
+			logging_response = cm.output[0].split(':')[0]
+		self.assertEqual(logging_response, 'ERROR')
 
 	def tearDown(self):
 		self.dummy_port.close()
