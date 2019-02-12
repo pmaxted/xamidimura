@@ -8,7 +8,10 @@ Documentation and software for the Xamidimura telescopes
  now contains the correct port for each device.  
 
 * **database** - Contains the sqlite database 'xamidimura.db' which [so far] 
- contains the observing log table 'obslog2'. Other tables could be added later, 
+ contains the observing log table 'obslog2' (stores infomation about the types
+ of images taken), 'target_info' (a table containing all the information on 
+ the targets we could observe), and 'priority_table' contains all the info 
+ related to the priority of each target. Other tables could be added later, 
  and the location is not set in stone.  
 
 * **fits_file_tests** - A location to store the fits headers that are created. 
@@ -37,6 +40,9 @@ Documentation and software for the Xamidimura telescopes
  useful thing like see what rows are in the database, convert it to a pandas 
  dataframe (will be useful for manipulating). To be updated and adapted when 
  extra functions are needed.  
+ 
+* **das_fits_file_handler.py** - Used to copy files from both das machines to 
+ observer machine. Is desgined to running continuously in the background.  
 
 * **expose.py** - A very basic observing script. It will start up the filter
  wheels and focusers, load in an observing recipe and take exposures as 
@@ -112,6 +118,9 @@ Documentation and software for the Xamidimura telescopes
 	> python -m unittest tests.test_roof_control_functions.test_set_hex_bit.test_set_bit_5
 	```
 
+* **test_fits_file_handler.py** Contains the test for the script that copies
+ files from the das machines. Currently not all functions are tested, but all
+ the base functions are.  
 	
 * **test_focuser_control.py** - Unit tests for the focuser_control functions.  
 

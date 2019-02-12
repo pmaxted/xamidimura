@@ -78,6 +78,7 @@ import common
 import serial
 import logging
 import time
+import PLC_interaction_functions as plc
 import settings_and_error_codes as set_err_codes
 
 focus_logger = logging.getLogger(__name__)
@@ -234,7 +235,7 @@ def home_focuser(port,x=1):
 	Ask focuser 'x' to begin homing routine. Controller will respond with 'H' to
 	 indicate it has started the homing proceedure.
 	
-	*** Should probably get something to check that it's stopped moving *****
+	Need to first check that the telescope is stowed before homing...
 
 	PARAMETERS:
 	
@@ -242,14 +243,25 @@ def home_focuser(port,x=1):
 		port = the open port for communicating with the focuser
 	
 	"""
-	command = get_start_end_char('F'+str(check_focuser_no(x))+'HOME')
+	
+	#Need to check to make sure the telescope it stowed before homing the
+	#  focusers. Focusers don't like trying to lift all the camera weight.
+	
+	tilt_stat = plc.plc_get_telescope_tilt_status()
+	if tilt_stat['Tilt_angle'] == "6h East <= x < RA East limit" or \
+		tilt_stat['Tilt_angle'] == "6h West <= x < RA West limit":
+	
+		command = get_start_end_char('F'+str(check_focuser_no(x))+'HOME')
 
-	message = common.send_command_two_response(command, port)
+		message = common.send_command_two_response(command, port)
 
-	if message == 'H':
-		focus_logger.info('Focuser '+str(x)+ ' moving to home')
+		if message == 'H':
+			focus_logger.info('Focuser '+str(x)+ ' moving to home')
+		else:
+			focus_logger.error('Response:'+message)
 	else:
-		focus_logger.error('Response:'+message)
+		focus_logger.error('Cannot home focuser, telescope is not parked')
+		print('Cannot home focuser, telescope is not parked')
 
 def center_focuser(port, x=1):
 
@@ -1034,8 +1046,8 @@ def startup_focuser(config_file_name, config_file_loc = 'configs/'):
 	"""
 	
 	This function will perform any startup operations, to make it so the
-	 focuser is ready to work. This includes homing the focuser and return the
-	 open port ready for sending further instructions.
+	 focuser is ready to work. Return the open port ready for sending further 
+	 instructions.
 	 
 	PARAMETERS:
 	  
@@ -1054,7 +1066,7 @@ def startup_focuser(config_file_name, config_file_loc = 'configs/'):
 	open_p = common.open_port_from_config_param(config_dict)
 	focuser_no = config_dict['focuser_no']
 
-	home_focuser(open_p, x = focuser_no)
+	#home_focuser(open_p, x = focuser_no)
 	
 	
 	current_config=get_focuser_stored_config(open_p, x = focuser_no,
@@ -1080,8 +1092,7 @@ def shutdown_focuser(open_p, x=1):
 	"""
 	
 	This function will perform any shutdown operations at the end of the night 
-		or during shutdown. It will center the focuser and then close the 
-		serial port connection
+		or during shutdown. Then close the serial port connection
 
 	PARAMETERS:
 		
@@ -1090,7 +1101,7 @@ def shutdown_focuser(open_p, x=1):
 	
 	"""
 
-	center_focuser(open_p)
+	#center_focuser(open_p)
 	open_p.close()
 
 	focus_logger.info('Serial port connection to focuser has been closed')
