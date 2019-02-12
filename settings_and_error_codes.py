@@ -7,11 +7,14 @@ Contains a list of all the various error codes from the various scripts,
 """
 
 WEATHER_LOG_FILE = 'cloud2_oneline2.dat'
-WEATHER_LOG_LOC = 'home/observer/cloud2/weather/'
+#WEATHER_LOG_LOC = '/Users/Jessica/PostDoc/ScriptsNStuff/current_branch/xamidimura/logfiles/'
+WEATHER_LOG_LOC = '/home/observer/cloud2/weather/'
 
 #LOGFILES_DIRECTORY = '/Users/Jessica/PostDoc/ScriptsNStuff/current_branch/xamidimura/logfiles/'
 LOGFILES_DIRECTORY = 'logfiles/'
 DATA_FILE_DIRECTORY = 'fits_file_tests/'
+FINAL_DATA_DIRECTORY = '/data/'
+#FINAL_DATA_DIRECTORY = '/home/observer/data/'
 
 # Status code for taking exposure
 STATUS_CODE_OK = 0
@@ -48,6 +51,7 @@ DATABASE_PATH = 'database/'
 
 TARGET_INFORMATION_TABLE = 'target_info'
 OBSERVING_LOG_DATABASE_TABLE = 'obslog2'
+PRIORITY_TABLE = 'priority_table'
 
 
 
@@ -57,7 +61,8 @@ OBSERVING_LOG_DATABASE_TABLE = 'obslog2'
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 PLC_MEMORY_MAP_FILE_LOC = 'mem_map/maptest.txt'
-PLC_STATUS_CHANGE_FILE = 'mya.py'
+PLC_STATUS_CHANGE_FILE = 'specify_roof_state
+.py'
 
 
 PLC_CODE_OK = 0
