@@ -3,10 +3,11 @@ test_roof_control_functions.py
 Jessica A. Evans
 03/01/2019
 
-Contains unit tests for the roof_control_function script. All the command/response strings here
-	are what I believe are accurate strings that could come from the PLC based on my
-	understanding of the manual, but I have not checked explicitly. The exceptions are those that are
-	designed to test failures.
+Contains unit tests for the roof_control_function script. All the 
+ command/response strings here are what I believe are accurate strings that 
+ could come from the PLC based on my understanding of the manual, but I have 
+ not checked explicitly. The exceptions are those that are designed to test 
+ failures.
 	
 	Currently tests:
 		- plc_string_is_valid
@@ -33,8 +34,46 @@ Contains unit tests for the roof_control_function script. All the command/respon
 import unittest
 import roof_control_functions
 import settings_and_error_codes as set_err_codes
+from unittest.mock import patch
+import serial
 
+try:
+	import dummyserial as dummy_serial
+except ModuleNotFoundError:
+	import dummy_serial
+"""
+class test_command_response_port_open(unittest.TestCase):
 
+	def setUp(self):
+		
+		#self.port = serial.Serial(baudrate = roof_control_functions.PLC_BAUD_RATE, parity=roof_control_functions.PLC_PARITY, stopbits = roof_control_functions.PLC_STOP_BITS,
+		#	bytesize = roof_control_functions.PLC_CHARACTER_LENGTH,
+		#	timeout = roof_control_functions.PLC_PORT_TIMEOUT)
+	
+	
+	
+		#Pretend a serial port has already been opened has been initialised
+		# using dummy_serial
+		self.dummy_port = dummy_serial.Serial(port='test_port', timeout=0.0001)
+		# Setup up the expected responses
+		#dummy_serial.RESPONSES = {'@00RD0150000456*\r':"@00RD008005000100010A002A*\r"}
+
+	@patch("roof_control_functions.plc_command_response_port_open.open_port.read_until")
+	@patch("roof_control_functions.check_port_open_try_reopen")
+	def test_valid_string(self, mock_open_port, mock_read):
+	
+		mock_open_port.return_value = self.dummy_port
+		#mock_open_port.configure_mock(read_until = self.dummy_port.read(40))
+		#
+		mock_read.return_value ="@00WD0053*\r"
+		expected = "@00WD0053*\r"
+
+		#with self.assertRaises(ValueError):
+		actual = roof_control_functions.plc_command_response_port_open('@00RD0150000456*\r',
+				self.dummy_port)
+
+		self.assertEqual(expected,actual)
+"""
 class test_command_response(unittest.TestCase):
 
 	def test_not_valid_string(self):

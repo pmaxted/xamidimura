@@ -6,15 +6,32 @@ Contains a list of all the various error codes from the various scripts,
 
 """
 
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#        OBSERVATORY SETTINGS
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+LATITUDE = '32.3808333 S'#'-32:22:51' #'Site Latitude, degrees +N'
+LONGITUDE = '20.8105555 E'#'20:48:38' #'Site Longitude, degrees +E'
+ALTITUDE = '1.8E+03' #'Site elevation (meters) above sea level'
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#        FILE DIRECTORIES
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 WEATHER_LOG_FILE = 'cloud2_oneline2.dat'
 #WEATHER_LOG_LOC = '/Users/Jessica/PostDoc/ScriptsNStuff/current_branch/xamidimura/logfiles/'
-WEATHER_LOG_LOC = '/home/observer/cloud2/weather/'
+WEATHER_LOG_LOC = '/home/wasp/cloud2/weather/'
 
 #LOGFILES_DIRECTORY = '/Users/Jessica/PostDoc/ScriptsNStuff/current_branch/xamidimura/logfiles/'
 LOGFILES_DIRECTORY = 'logfiles/'
 DATA_FILE_DIRECTORY = 'fits_file_tests/'
+#LOGFILES_DIRECTORY = '/home/wasp/logs/'
+#DATA_FILE_DIRECTORY = '/data/fits_file_headers/'
 FINAL_DATA_DIRECTORY = '/data/'
-#FINAL_DATA_DIRECTORY = '/home/observer/data/'
+
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#          EXPOSURE CODES
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # Status code for taking exposure
 STATUS_CODE_OK = 0
@@ -26,6 +43,9 @@ STATUS_CODE_UNEXPECTED_RESPONSE = -4
 STATUS_CODE_NO_RESPONSE = -5
 STATUS_CODE_FILTER_WHEEL_TIMEOUT = -6
 
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#              TIMEOUTS
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # Timeouts in seconds
 plc_serial_port_timeout =30
@@ -61,8 +81,7 @@ PRIORITY_TABLE = 'priority_table'
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 PLC_MEMORY_MAP_FILE_LOC = 'mem_map/maptest.txt'
-PLC_STATUS_CHANGE_FILE = 'specify_roof_state
-.py'
+PLC_STATUS_CHANGE_FILE = 'specify_roof_state.py'
 
 
 PLC_CODE_OK = 0
