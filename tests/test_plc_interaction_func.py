@@ -16,7 +16,10 @@ import unittest
 from unittest.mock import patch
 import PLC_interaction_functions as plc
 import settings_and_error_codes as set_err_codes
-import dummy_serial
+try:
+	import dummyserial as dummy_serial
+except ModuleNotFoundError:
+	import dummy_serial
 
 class test_PLC_ERROR_class(unittest.TestCase):
 
@@ -249,7 +252,8 @@ class test_plc_get_roof_status(unittest.TestCase):
 		returned_commands = ["@00RD00FFF900010001000029*\r"]
 		mock_plc_response.side_effect = returned_commands
 
-		expected_dict = dict({'Roof_Closed':True,
+		expected_dict = dict({'Response Code':"@00RD00FFF900010001000029*\r",
+							'Roof_Closed':True,
 							'Roof_Open':False,
 							'Roof_Moving': False,
 							'Roof_Control': 'Remote',
@@ -278,7 +282,8 @@ class test_plc_get_roof_status(unittest.TestCase):
 		returned_commands = ["@00RD00000600010001000050*\r"]
 		mock_plc_response.side_effect = returned_commands
 
-		expected_dict = dict({'Roof_Closed':False,
+		expected_dict = dict({'Response Code':"@00RD00000600010001000050*\r",
+							'Roof_Closed':False,
 							'Roof_Open':True,
 							'Roof_Moving': True,
 							'Roof_Control': 'Manual',
