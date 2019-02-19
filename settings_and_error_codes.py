@@ -17,6 +17,8 @@ ALTITUDE = '1.8E+03' #'Site elevation (meters) above sea level'
 #        FILE DIRECTORIES
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+SOFTWARE_FOLDER_PATH = '/home/wasp/xamidimuraSoftware' #no '/' required
+
 WEATHER_LOG_FILE = 'cloud2_oneline2.dat'
 #WEATHER_LOG_LOC = '/Users/Jessica/PostDoc/ScriptsNStuff/current_branch/xamidimura/logfiles/'
 WEATHER_LOG_LOC = '/home/wasp/cloud2/weather/'
@@ -28,6 +30,14 @@ DATA_FILE_DIRECTORY = 'fits_file_tests/'
 #DATA_FILE_DIRECTORY = '/data/fits_file_headers/'
 FINAL_DATA_DIRECTORY = '/data/'
 
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#      TELESCOPE POINTING OFFSET
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+USE_POINTING_OFFSETS = True
+POINT_OFF_MEM_MAP_FILE_LOC = '/tmp/map_offset.txt'
+POINT_OFF_UPDATE_OFF_FILE = 'update_point_off.py'
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #          EXPOSURE CODES
@@ -56,6 +66,8 @@ roof_moving_timeout = 600
 telescope_coms_timeout = 30
 tcs_coms_timeout = 60
 
+time_limit_since_last_pointing_update = 240
+
 
 #Other parameters
 pass_coord_attempts = 2
@@ -80,7 +92,7 @@ PRIORITY_TABLE = 'priority_table'
 # -As taken from the original manual
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-PLC_MEMORY_MAP_FILE_LOC = 'mem_map/maptest.txt'
+PLC_MEMORY_MAP_FILE_LOC = '/tmp/maptest.txt'
 PLC_STATUS_CHANGE_FILE = 'specify_roof_state.py'
 
 
