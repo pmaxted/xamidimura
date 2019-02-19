@@ -183,7 +183,7 @@ way as exposure times)
 
 	the observing pattern will be ```RX,RX,RX,GX,GX,GX,BX,BX,BX```. The focus 
 	position will also do something similar.  For the exposure times a list such
-	as ```1,1,1,2,2,2,3,3,3''' should be stated for the above observing 
+	as ```1,1,1,2,2,2,3,3,3``` should be stated for the above observing 
 	pattern, but this will be the same pattern used for the South telescope.
 	
 * **S_PATT** - Same as N_PATT but for south telescope.
