@@ -98,9 +98,9 @@ Documentation and software for the Xamidimura telescopes
 
 * **update_point_off.py** - Contains functions for handling moving the pointing 
  offsets between the reduction processes and the observing processes using a 
- memory mapped file. The ```read_offset_values function''' allow the currently 
+ memory mapped file. The ```read_offset_values function``` allow the currently 
  stored offsets to be read (returning zero if they cannot be read) and the 
- ```update_offset_values''' allows the values to be stored in the memory map.  
+ ```update_offset_values``` allows the values to be stored in the memory map.  
 
 
 #### Unit test scripts
