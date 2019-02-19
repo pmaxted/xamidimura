@@ -88,6 +88,7 @@ import tcs_control as tcs
 import roof_control_functions as rcf
 import PLC_interaction_functions as plc
 import settings_and_error_codes as set_err_codes
+import update_point_off
 import math
 import time
 
@@ -291,9 +292,9 @@ def get_fits_header_info(focuser_config,focuser_position, weather_list,
 		'FILT_NAM': (expose_info.filter, 'Rx/Gx/Bx/Wx/Ix'),
 		'FOCU_POS': (focuser_position, 'Position of focuser at exp. start'),
 	
-		'LATITUDE': ('-32:22:51', 'Site Latitude, degrees +N'),
-		'LONGITUD': ('20:48:38', 'Site Longitude, degrees +E'),
-		'ALTITUDE': ('1.8E+03', 'Site elevation (meters) above sea level'),
+		'LATITUDE': (set_err_codes.LATITUDE, 'Site Latitude, degrees +N'),
+		'LONGITUD': (set_err_codes.LONGITUDE, 'Site Longitude, degrees +E'),
+		'ALTITUDE': (set_err_codes.ALTITUDE, 'Site elevation (meters) above sea level'),
 	
 		'BIASSEC' : ('[2068:2148,1:2048]', 'Bias section'), # Don't know if these are correct
 		'TRIMSEC' : ('[6:2053,1:2048]',	'Illuminated section'), # Taken from WASP fits file.
@@ -666,6 +667,28 @@ def get_observing_recipe(target_name, path = 'obs_recipes/'):
 
 		return observing_recipe
 
+def check_point_offset_need(unit ='deg'):
+	"""
+
+	The read_offset_values is assumed to return degrees
+	
+	PARAMETERS:
+	
+		unit = Specifies the units in which the offset is going to be 
+		 supplied to the telescope. Choices are 'deg', 'arcmin' or 'arcsec'
+	"""
+
+	if set_err_codes.USE_POINTING_OFFSETS == True:
+		#get ra/dec offset in decimal degrees?
+		ra_off, dec_off = update_point_off.read_offset_values()
+
+		if ra_off != 0 or dec_off != 0:
+			#apply the offset if at least one isn't zero
+			tcs.apply_offset_to_tele(ra_off,dec_off, units = unit)
+
+	else:
+		logger.info('No pointing offsets being used')
+
 def take_exposure(obs_recipe, image_type, target_info_ob, datestr,
 			fits_folder, timeout_time=set_err_codes.telescope_coms_timeout ):
 	
@@ -728,6 +751,9 @@ def take_exposure(obs_recipe, image_type, target_info_ob, datestr,
 		statusS = statusS.result()
 		
 		"""
+
+		#Check for the need to apply a pointing offset:
+		check_point_offset_need()
 
 		try:
 			# First send the command to the telescope and expect an '0'
@@ -1112,11 +1138,11 @@ def setup_file_logs_storage():
 	#connect_database.remove_table_if_exists(dbcurs,
 	#	set_err_codes.OBSERVING_LOG_DATABASE_TABLE )
 	#dbcurs.execute('CREATE TABLE '+set_err_codes.OBSERVING_LOG_DATABASE_TABLE +\
-		' (IMAGE_ID INTERGER, CCD_ID INTERGER, FILE text, TAR_NAME text, '\
-		'TAR_TYPE text, DATE_OBS text, MJD_OBS real, IMAGETYP text, FILT_NAM '\
-		'text, EXPTIME real, OBJ_RA text, OBJ_DEC text, TEL_RA text, TEL_DEC '\
-		'text, IMAG_RA text, IMAG_DEC text, INSTRUME text, FOCUSER text, '\
-		'STATUS INTEGER, SAVED int2);')
+	#	' (IMAGE_ID INTERGER, CCD_ID INTERGER, FILE text, TAR_NAME text, '\
+	#	'TAR_TYPE text, DATE_OBS text, MJD_OBS real, IMAGETYP text, FILT_NAM '\
+	#	'text, EXPTIME real, OBJ_RA text, OBJ_DEC text, TEL_RA text, TEL_DEC '\
+	#	'text, IMAG_RA text, IMAG_DEC text, INSTRUME text, FOCUSER text, '\
+	#	'STATUS INTEGER, SAVED int2);')
 	#dbconn.commit()
 
 	datestr = get_date_str()
@@ -1274,9 +1300,9 @@ def main():
 	Run Scheduler to find target - return target Name
 
 	"""
-	target_ID = 'test_target_single_Texp.ID' #returned from scheduler
-	next_target_name = 'test_target_single_Texp'
-	next_target = get_next_target_info(next_target_name,database_cursor=dbcurs)
+	next_target_ID = 'XAMI104604.00-460806.0' #returned from scheduler
+	#next_target_name = 'test_target_single_Texp' # test Id 'XAMI104604.00-460806.0'
+	next_target = get_next_target_info(next_target_ID,database_cursor=dbcurs)
 
 	#what to do if no observing recipe for target??
 	obs_recipe = get_observing_recipe(next_target.name)
@@ -1302,7 +1328,6 @@ def main():
 		fits_folder = file_dir)
 	
 
-	#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	# Shutdown the instruments, database, cameras..

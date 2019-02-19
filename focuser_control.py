@@ -279,14 +279,22 @@ def center_focuser(port, x=1):
 		port = the open port for communicating with the focuser
 		
 	"""
-	command = get_start_end_char('F'+str(check_focuser_no(x))+'CENTER')
+	tilt_stat = plc.plc_get_telescope_tilt_status()
+	if tilt_stat['Tilt_angle'] == "6h East <= x < RA East limit" or \
+		tilt_stat['Tilt_angle'] == "6h West <= x < RA West limit":
+	
+		command = get_start_end_char('F'+str(check_focuser_no(x))+'CENTER')
 
-	message = common.send_command_two_response(command, port)
+		message = common.send_command_two_response(command, port)
 
-	if message == 'M':
-		focus_logger.info('Focuser '+str(x)+ ' moving to center')
+		if message == 'M':
+			focus_logger.info('Focuser '+str(x)+ ' moving to center')
+		else:
+			focus_logger.error('Response:'+message)
+
 	else:
-		focus_logger.error('Response:'+message)
+		focus_logger.error('Cannot center focuser, telescope is not parked')
+		print('Cannot center focuser, telescope is not parked')
 
 def move_to_position(pos, port, x=1):
 

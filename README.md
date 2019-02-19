@@ -96,6 +96,12 @@ Documentation and software for the Xamidimura telescopes
  required commands.  
 
 
+* **update_point_off.py** - Contains functions for handling moving the pointing 
+ offsets between the reduction processes and the observing processes using a 
+ memory mapped file. The ```read_offset_values function``` allow the currently 
+ stored offsets to be read (returning zero if they cannot be read) and the 
+ ```update_offset_values``` allows the values to be stored in the memory map.  
+
 
 #### Unit test scripts
 
@@ -177,7 +183,7 @@ way as exposure times)
 
 	the observing pattern will be ```RX,RX,RX,GX,GX,GX,BX,BX,BX```. The focus 
 	position will also do something similar.  For the exposure times a list such
-	as ```1,1,1,2,2,2,3,3,3''' should be stated for the above observing 
+	as ```1,1,1,2,2,2,3,3,3``` should be stated for the above observing 
 	pattern, but this will be the same pattern used for the South telescope.
 	
 * **S_PATT** - Same as N_PATT but for south telescope.
