@@ -9,9 +9,9 @@ Contains a list of all the various error codes from the various scripts,
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #        OBSERVATORY SETTINGS
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-LATITUDE = '32.3808333 S'#'-32:22:51' #'Site Latitude, degrees +N'
-LONGITUDE = '20.8105555 E'#'20:48:38' #'Site Longitude, degrees +E'
-ALTITUDE = '1.8E+03' #'Site elevation (meters) above sea level'
+LATITUDE = '-32:22:51'#'-32.3808333'# #'Site Latitude, degrees +N'
+LONGITUDE = '20:48:38'#'20.8105555' #'Site Longitude, degrees +E'
+ALTITUDE = 1800 #'Site elevation (meters) above sea level'
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #        FILE DIRECTORIES
@@ -29,6 +29,8 @@ DATA_FILE_DIRECTORY = 'fits_file_tests/'
 #LOGFILES_DIRECTORY = '/home/wasp/logs/'
 #DATA_FILE_DIRECTORY = '/data/fits_file_headers/'
 FINAL_DATA_DIRECTORY = '/data/'
+
+BLANK_SKY_REGION_CSV = '/Users/Jessica/PostDoc/OtherInfo/Blank_sky_regions.csv'
 
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
