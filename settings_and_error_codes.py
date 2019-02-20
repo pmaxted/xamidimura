@@ -30,7 +30,7 @@ DATA_FILE_DIRECTORY = 'fits_file_tests/'
 #DATA_FILE_DIRECTORY = '/data/fits_file_headers/'
 FINAL_DATA_DIRECTORY = '/data/'
 
-BLANK_SKY_REGION_CSV = '/Users/Jessica/PostDoc/OtherInfo/Blank_sky_regions.csv'
+BLANK_SKY_REGION_CSV = 'database/Blank_sky_regions.csv'
 
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

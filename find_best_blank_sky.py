@@ -229,11 +229,7 @@ def main():
 	print('Best blank sky field: RA = '+small_zen_dist_field['RA(hms)']+\
 		', DEC = '+small_zen_dist_field['DEC(dms)']+', with limit ='+\
 		' '+str(small_zen_dist_field['Limit']))
-	
-	#return tab[min_dist_ele]
 
-
-	#return tab
 
 
 if __name__ == '__main__':
