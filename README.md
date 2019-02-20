@@ -50,6 +50,14 @@ Documentation and software for the Xamidimura telescopes
  of the target, e.g. name, etc need to be filled in at the top of the script.
  Instructions on how to use are at the start of the script.  
 
+* **find_best_blank_sky.py** - Can be used to find the blank field that is
+ closest to zenith. It reads in a csv file from the location specified by 
+ BLANK_SKY_REGION_CSV in settings_and_error_codes. Can be run from the terminal
+ and the main() function will print the corrdinate of the field closest to 
+ zenith. The scipt can also be imported, and then the find_best_field function
+ will find the field that is closest to the zenith. The info is logged and 
+ returned but is not printed to screen.  
+
 * **filter_wheel_control.py** - contains basic serial port command functions 
  for the filter wheels. All tested.    
 

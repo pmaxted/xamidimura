@@ -9,7 +9,7 @@ from astropy import time as astro_time
 import time
 import logging
 
-logger1 = logging.getLogger('observing')
+logger1 = logging.getLogger('pointing_offset')
 logger1.setLevel(logging.INFO)
 fileHand = logging.FileHandler(filename = \
 	set_err_codes.LOGFILES_DIRECTORY+'observingScript.log', mode = 'a')
@@ -20,10 +20,10 @@ formatter = logging.Formatter('%(asctime)s [%(name)s] %(levelname)s - '\
 fileHand.setFormatter(formatter)
 logger1.addHandler(fileHand)
 
-def set_a_time(x):
+#def set_a_time(x):
 
-	global a_time
-	a_time = x
+#	global a_time
+#	a_time = x
 
 
 def old_pointing_off_check(
@@ -41,31 +41,37 @@ def old_pointing_off_check(
 	
 	"""
 
-	# The last mosified time is in unix time
-	t_last_modified = os.path.getctime(set_err_codes.POINT_OFF_MEM_MAP_FILE_LOC)
-	#t_last_modified = os.stat(set_err_codes.POINT_OFF_MEM_MAP_FILE_LOC).st_atime_ns/(10**9)
-	#t_last_modified = time.Time(t_last_modified, format='unix')
-	t_now = astro_time.Time.now()
-	t_now.format = 'unix'
-
-	#print('Now:',t_now)
-	#print('last:',t_last_modified)
-
-	t_delta = t_now.value - t_last_modified # in seconds
-	#print(t_delta)
-
-	if t_delta > time_lim:
-
-		set_a_time(t_last_modified)
-		logger1.warning('Last pointing update is too old (>'\
-			+str(time_lim)+'s)')
-		logger1.warning('Time since last pointing update: '+str(t_delta)+'s')
-
-		return True
-
-	else:
-		set_a_time(0)
+	try:
+		# The last mosified time is in unix time
+		t_last_modified = os.path.getctime(set_err_codes.POINT_OFF_MEM_MAP_FILE_LOC)
+	except:
 		return False
+	
+	else:
+
+		t_now = astro_time.Time.now()
+		t_now.format = 'unix'
+
+		#print('Now:',t_now)
+		#print('last:',t_last_modified)
+
+		t_delta = t_now.value - t_last_modified # in seconds
+		#print(t_delta)
+		
+
+
+		if t_delta > time_lim:
+
+			#set_a_time(t_last_modified)
+			logger1.warning('Last pointing update is too old (>'\
+				+str(time_lim)+'s)')
+			logger1.warning('Time since last pointing update: '+str(t_delta)+'s')
+
+			return True
+
+		else:
+			#set_a_time(0)
+			return False
 
 
 
@@ -105,7 +111,6 @@ def read_offset_values():
 
 		except:
 			logger1.error('Error retrieving new offsets, returning (0.0, 0.0) instead')
-			os.close(fd)
 			return ra_val,dec_val
 		else:
 			os.close(fd)
