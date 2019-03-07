@@ -33,6 +33,13 @@ Documentation and software for the Xamidimura telescopes
 * **tests** - All the scripts for the different collections of unit tests.  
 
 ## Files
+* **autoflat.py** - Script that contains functions for take morning and evening
+ flats automatically. It calls the exposure function from observing.py so
+ all the logging infomation is done consistently, but any observing recipies 
+ are generated within the script. Settings regarding maximum exposure length
+ max number of exposure, or the order in which the filters are used, etc. are 
+ all defined at the top of the script. 
+
 * **common.py** - contains function that are useful to both focuser and filter 
 	wheel control. Most of it has been shown to work but not unit tests.  
 
@@ -62,6 +69,11 @@ Documentation and software for the Xamidimura telescopes
  for the filter wheels. All tested.    
 
 * **focuser_control.py** - basic serial port commands for the focusers. Tested.  
+
+* **getAlmanac.py** - Script that will get the times of sunset/sunrise etc for
+ saao. Mostly used by importing the functions into other scripts, but can also 
+ be run from a terminal to print the time of the next sunset, sunrise, twilight
+ etc.  
 
 * **observing.py** - Will contain the main functions to carry out the observing,
  and other functions required by this main function. Currently can create fits
@@ -132,16 +144,21 @@ Documentation and software for the Xamidimura telescopes
 	> python -m unittest tests.test_roof_control_functions.test_set_hex_bit.test_set_bit_5
 	```
 
-* **test_fits_file_handler.py** Contains the test for the script that copies
+* **test_autoflat.py** - Test for the automatic flat taking script.  
+
+* **test_fits_file_handler.py** - Contains the test for the script that copies
  files from the das machines. Currently not all functions are tested, but all
  the base functions are.  
 	
 * **test_focuser_control.py** - Unit tests for the focuser_control functions.  
 
-* **test_ifw_control.py** Contains unitest for filter wheel control functions.  
+* **test_ifw_control.py** - Contains unitest for filter wheel control functions.  
 
-* **test_observing.py** Only partly written... Will contain the test for the 
- main observing script.
+* **test_getAlmanac.py** - tests to check the almanac generation is done properly.  
+
+* **test_observing.py** - Contains the test for the main observing script. Not
+ every function is unit tested. Some just combine many other functions which get
+ tested elsewhere.
 
 * **test_plc_interaction_func.py** Contains the unit tests for the plc 
  interaction functions.  
@@ -231,13 +248,19 @@ other functions required by this main function.
  pattern. A status flag will be obtained for each exposure, both North and 
  South. Need to workout how best to repeat the observing pattern.  
 
-- **The code to change filter is not currently active**  
+- Before each exposure the code will look to see if a pointing offset need to
+  be applied, by using the functions in the 'update_point_off.py' script and
+  reading in a value from a memory mapped file. Note, if the last pointing
+  offset update is older that the 'time_limit_since_last_pointing_update' 
+  parameter (as set in settings_and_error_code.py) the offset will not be used.
+  This is to avoid using offsets from previous targets or observing sessions.  
 
 - The code waits for a response from the TCS after initially sending the 
  exposure command, and then waits for the require exposure time. Need to do it 
  this way, otherwise the function would time out for long exposures.  
 
-- Timeout on TCS is currently 60 seconds.  
+- Timeout on TCS is currently 60 seconds, but can be changed in the settings
+  script.  
 
 - Code to request TCS exposure is in place but needs to be tested. Need the 
  code to handle a weather interuption, etc.    
@@ -256,20 +279,82 @@ other functions required by this main function.
 	-1 = Exposure interupted from weather alert
 	-2 = Exposure interupted non weather reason
 	-4 = Unexpected response from TCS
-	-6 = Problem with filter wheel (code not active)
+	-6 = Problem with filter wheel
 	```  
 Status codes are defined in settings_and_error_codes.py.
 
-The cooling on the cameras is started and stopped at the beginning/end of the 
- main function, if run_camera_cooling is set to True in settings_and_error_codes.py
+- The cooling on the cameras is started and stopped at the beginning/end of the 
+ main function, if run_camera_cooling is set to True in 
+ settings_and_error_codes.py. Currently this is done by calls to the required
+ tcs_control functions from functions named evening startup and evening
+ shutdown. In practice, it be quite easy to add in setup proceedure to these
+ functions, or end of night processing etc.
+ 
+- The main() function is what is running most of the time. When the script is 
+ started from the command line this is the function that runs. It is responsible
+ for determining what time of day it is (using functions from getAlmanac) and 
+ the executing code accordingly, and also setting up file save directories etc.
 
-The code for the interuptions needs to be written.  
+#### Time of day instructions:  
+
+NOTE: NONE OF THESE CHECK THE WEATHER CONDITIONS BEFORE OPENING!!!
+
+**DAYTIME** - If it is daytime when the code is started, the code will use a 
+ while loop to occasionally check if it is still daytime (currently check every 
+ 60 secs).  
+ 
+ **afterSunset** - After sunset but before evening civil twilight. The code will
+  take some bias frames and then, if safe to do so, will open up and locate
+  the blank sky field closest the zenith in preparation for taking sky flats. 
+  A check is done every 15 sec to see if it's after civil twilight. Observing
+  pattern for the bias frames is set by the 'BIAS_standard' observing recipe.  
+  
+**afterCivil** - between the start of evening civil twilight and the start of
+ evening astronomical twilight. The roof is opened if it isn't already opened.
+ It will then start taking flats as long as there is more than 5 minutes of 
+ twilight left. (I didn't think you'd get on sky and get flats in this time as
+ it will probably be too dark - Could be changed if need be). It will pick
+ the best blank field if it wasn't done before civil twilight started. Flats
+ are taken with the do_flats_evening function in autoflat.py.  
+ 
+ **night** - Covers time period between start of evening astronomical twilight 
+ and the end of the morning astronomical twilight. Will open the roof is 
+ required, and prepare to take science images. Get a target from the scheduler 
+ [**NOTE THIS CODE IS NOT PRESENT**], look up the ID in the database, load the 
+ obs_recipe and get the image type from the target name. The telescope will move
+ to the target and then loop through the observing recipe taking exposures. 
+ Currently (7/3/19), the code will only do the recipe once before re-running the
+ scheduler. If we want the same recipe repeated, the take exposure code will
+ need to be put in a while loop with a suitable condition to break it. If the
+ roof isn't open the time is checked every 60 seconds.  
+ 
+ **beforeCivil** - after morning astronomical twilight to before morning civil 
+  twilight. Opens roof if required and carries out morning flat fields. As
+  with evening flats, no flat will be done if there is only 5 minutes left of 
+  twilight.
+  
+ **beforeSunset** - after morning sunset before sunrise. Will carry out morning
+  shutdown proceedures. Then wait until the time returns to daytime.
+ 
+ 
+### Things to do.
+
+- The code for the interuptions needs to be written.  
 	
 - Exposure requests that are not completed (due to weather alert, TCS timeout 
- etc) are noted in the observing log table, by fits headers are not saved. 
+ etc) are noted in the observing log table, by fits headers are not saved.  
 
-- Started working on the code to load target information from the database, 
- not completed. 
+- Probably want to make the autoflat script much more efficient to get more
+ flats taken.  
+ 
+- Put in the code to interact with the scheduler.  
 
-- Some unit tests have been created for the telescope slewing and some of the 
- exposure functions, but not yet complete.  
+- Currently observing.py doesn't send any commands to the focusers (other than
+ startup and shutdown) Need to decide how best to integrate them. Just go to
+ a focus position from the observing recipe, or have the whole focusing separate?  
+ 
+- Put weather checks into the observing.main() function, so it check for weather
+ alerts before opening the roof.
+ 
+- Decide how to take automatic thermal images (was thinking something similar to
+ the bias images)
