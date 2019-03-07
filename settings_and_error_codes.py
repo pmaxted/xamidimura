@@ -9,8 +9,8 @@ Contains a list of all the various error codes from the various scripts,
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #        OBSERVATORY SETTINGS
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-LATITUDE = '-32:22:51'#'-32.3808333'# #'Site Latitude, degrees +N'
-LONGITUDE = '20:48:38'#'20.8105555' #'Site Longitude, degrees +E'
+LATITUDE = '-32:22:51'#'-32.3808333'# #'Site Latitude, degrees'
+LONGITUDE = '20:48:38'#'20.8105555' #'Site Longitude, degrees'
 ALTITUDE = 1800 #'Site elevation (meters) above sea level'
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -20,8 +20,8 @@ ALTITUDE = 1800 #'Site elevation (meters) above sea level'
 SOFTWARE_FOLDER_PATH = '/home/wasp/xamidimuraSoftware' #no '/' required
 
 WEATHER_LOG_FILE = 'cloud2_oneline2.dat'
-#WEATHER_LOG_LOC = '/Users/Jessica/PostDoc/ScriptsNStuff/current_branch/xamidimura/logfiles/'
-WEATHER_LOG_LOC = '/home/wasp/cloud2/weather/'
+WEATHER_LOG_LOC = '/Users/Jessica/PostDoc/ScriptsNStuff/current_branch/xamidimura/logfiles/'
+#WEATHER_LOG_LOC = '/home/wasp/cloud2/weather/'
 
 #LOGFILES_DIRECTORY = '/Users/Jessica/PostDoc/ScriptsNStuff/current_branch/xamidimura/logfiles/'
 LOGFILES_DIRECTORY = 'logfiles/'
@@ -67,6 +67,8 @@ plc_power_timeout = 60
 roof_moving_timeout = 600
 telescope_coms_timeout = 30
 tcs_coms_timeout = 60
+
+daytime_sleep_time = 60
 
 time_limit_since_last_pointing_update = 240
 

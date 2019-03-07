@@ -553,40 +553,47 @@ def tcs_exposure_request(type, duration = 0, number = 1):
 		 this is want will be requested by the main observing script
 	"""
 
-	valid_types = ['thermal','dark', 'bias', 'flat','object']
+	valid_types = ['THERMAL','DARK', 'BIAS', 'FLAT','OBJECT']
 	valid = type in valid_types
-	if type == 'dark':
-		type = 'thermal'
 
-	if number <= 1:
-		logger.error('Invalid number of exposures requested')
-		respond = set_err_codes.STATUS_CODE_EXPOSURE_NOT_STARTED
-		return respond
+	if valid:
+		type = type.lower()
+		if type == 'dark':
+			type = 'thermal'
 
-	if duration <=0:
-		logger.error('Invalid exposure time requested')
-		respond = set_err_codes.STATUS_CODE_EXPOSURE_NOT_STARTED
-		return respond
+		if number <= 1:
+			logger.error('Invalid number of exposures requested')
+			respond = set_err_codes.STATUS_CODE_EXPOSURE_NOT_STARTED
+			return respond
 
-	command_str = 'expose ' + type
-	if number != 1:
-		command_str += ' '+str(number)
-	if type != 'bias':
-		command_str += ' ' + str(duration)
+		if duration <0:
+			logger.error('Invalid exposure time requested')
+			respond = set_err_codes.STATUS_CODE_EXPOSURE_NOT_STARTED
+			return respond
+
+		command_str = 'expose ' + type
+		if number != 1:
+			command_str += ' '+str(number)
+		if type != 'bias':
+			command_str += ' ' + str(duration)
 		
 		
-	respond = send_command(command_str)
-	good_response = respond == 0
+		respond = send_command(command_str)
+		good_response = respond == 0
 
-	if good_response:
-		respond = set_err_codes.STATUS_CODE_OK
+		if good_response:
+			respond = set_err_codes.STATUS_CODE_OK
 
-	cam_temp = get_camera_status[2]
-	if good_repsonse and cam_temp>-20:
-		respond = set_err_codes.STATUS_CODE_CCD_WARM
+		cam_temp = get_camera_status[2]
+		if good_repsonse and cam_temp>-20:
+			respond = set_err_codes.STATUS_CODE_CCD_WARM
+	
+		else:
+			respond = set_err_codes.STATUS_CODE_EXPOSURE_NOT_STARTED
 
 	else:
-		respond = set_err_codes.STATUS_CODE_EXPOSURE_NOT_STARTED
+		logger.error('Invalid image type provided to exposure request'+str(type))
+		print('Invalid image type provided to exposure request'+str(type))
 
 
 	return respond
@@ -656,3 +663,45 @@ def wait_till_read_out():
 	"""
 
 	respond = send_command('waitreadout')
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Functions for flat fielding
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+def scratchmode(state = 'off'):
+
+	"""
+	Send the scratchmode on/off command to the tcs. Sending 'on' will enable 
+	 scratchmode meaning the allocation of image is disabled and each DAS 
+	 writed the image to a file in SCRATCH/DASn_scratch.fts, where n is the 
+	 DAS number. When 'off' is sent scratchmode is disabled, and images are 
+	 stored in the normal places on the das machines. 
+	 
+	Use scratchmode to take test images that are not saved.
+	"""
+
+	validState = ['on','off']
+	if scratchmode not in validState:
+		raise ValueError('Invalid state enter for sctratchmode. Use "on" or "off"')
+
+	else:
+		respond = send_command('scratchmode ' + state)
+
+def lastsky():
+	"""
+	Sends the 'lastsky' command to the tcs. This command will get the sky level 
+	and noise level of the last image taken. It will produce a response with
+	<sky level> <noise> for each das camera e.g.
+	
+	<das1 sky> <das1 noise> <das2sky> <das2noise> ...
+	
+	The sky level is calculated using a 3-sigma clipped median/MAD algorithm.
+	
+	RETURN:
+		respond = This will be a list containing the returned values.
+	
+	"""
+
+	respond = send_command('lastsky')
+	return respond
+

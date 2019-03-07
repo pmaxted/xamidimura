@@ -71,10 +71,7 @@ observing.py
 """
 import time
 import sqlite3
-import connect_database
-import focuser_control as fc
-import filter_wheel_control as fwc
-import common
+import math
 from astropy.io import fits
 from astropy import time as astro_time
 import subprocess
@@ -84,13 +81,19 @@ import logging
 import numpy as np
 import asyncio
 import timeout_decorator
+
+import connect_database
+import focuser_control as fc
+import filter_wheel_control as fwc
+import common
 import tcs_control as tcs
 import roof_control_functions as rcf
 import PLC_interaction_functions as plc
 import settings_and_error_codes as set_err_codes
 import update_point_off
-import math
-import time
+import getAlmanac
+import find_best_blank_sky
+import autoflat
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
@@ -209,12 +212,13 @@ def get_current_weather(logfile_loc = set_err_codes.WEATHER_LOG_LOC,
 	outp = sub1.communicate()
 	if len(outp[0]) > 2:
 		retrieved_line = outp[0].decode('utf-8')
+		retrieved_line = retrieved_line.split()
+
+		return retrieved_line
 	else:
 		logger.error('Error reading weather log file')
 	
-	retrieved_line = retrieved_line.split()
 
-	return retrieved_line
 
 
 def get_fits_header_info(focuser_config,focuser_position, weather_list,
@@ -604,6 +608,7 @@ def get_observing_recipe(target_name, path = 'obs_recipes/'):
 	#Create filename and load info as dictionary
 	filename = target_name+'.obs'
 	observing_recipe = common.load_config(filename, path=path)
+
 	
 	try:
 		observing_recipe['EXPTIME'] = np.array(observing_recipe['EXPTIME'],
@@ -667,7 +672,7 @@ def get_observing_recipe(target_name, path = 'obs_recipes/'):
 
 		return observing_recipe
 
-def check_point_offset_need(unit ='deg'):
+def check_point_offset_need(unit ='deg', use_offs = set_err_codes.USE_POINTING_OFFSETS):
 	"""
 
 	The read_offset_values is assumed to return degrees
@@ -678,9 +683,10 @@ def check_point_offset_need(unit ='deg'):
 		 supplied to the telescope. Choices are 'deg', 'arcmin' or 'arcsec'
 	"""
 
-	if set_err_codes.USE_POINTING_OFFSETS == True:
+	if use_offs == True:
 		#get ra/dec offset in decimal degrees?
 		ra_off, dec_off = update_point_off.read_offset_values()
+
 
 		if ra_off != 0 or dec_off != 0:
 			#apply the offset if at least one isn't zero
@@ -688,6 +694,36 @@ def check_point_offset_need(unit ='deg'):
 
 	else:
 		logger.info('No pointing offsets being used')
+
+def change_filter_loop(filter1, filter2):
+
+	try:
+		#Change the filters if need be, don't want to have to wait for one
+		#  filter to change before starting on the second, so the asyncio
+		#  module will allow the to be change simultaneously
+		filter_loop1 = asyncio.get_event_loop()
+		filterS = filter_loop1.create_task(fwc.change_filter(
+				filter1, ifw1_port, ifw1_config))
+		filterN = filter_loop1.create_task(fwc.change_filter(
+			filter2, ifw2_port, ifw2_config))
+	
+		filter_loop1.run_until_complete(asyncio.gather(filterS,filterN))
+	
+	except:
+		statusN = set_err_codes.STATUS_CODE_FILTER_WHEEL_TIMEOUT
+		statusS = set_err_codes.STATUS_CODE_FILTER_WHEEL_TIMEOUT
+
+	else:
+
+		statusN = set_err_codes.STATUS_CODE_OK
+		statusS = set_err_codes.STATUS_CODE_OK
+
+	if statusN != 0:
+		logger.error('Problem changing filter on North telescope')
+	if statusS != 0:
+		logger.error('Problem changing filter on South telescope')
+
+	return statusN, statusS
 
 def take_exposure(obs_recipe, image_type, target_info_ob, datestr,
 			fits_folder, timeout_time=set_err_codes.telescope_coms_timeout ):
@@ -735,50 +771,51 @@ def take_exposure(obs_recipe, image_type, target_info_ob, datestr,
 		exp_objS = exposure_obj(obs_recipe['S_EXPO'][j],obs_recipe['S_FILT'][j],
 			image_type,1, ifw1_config['name'], next_no1)
 
-		"""
-		statusN = asyncio.Future()
-		statusS = asyncio.Future()
-		#Change the filters if need be, don't want to have to wait for one
-		#  filter to change before starting on the second, so the asyncio
-		#  module will allow the to be change simultaneously
-		filter_loop1 = asyncio.get_event_loop()
-		filterS = filter_loop1.create_task(change_filters(exp_objS.filter,
-			ifw1_port, ifw1_config,statusS))
-		filterN = filter_loop1.create_task(change_filters(exp_objN.filter,
-			ifw2_port, ifw2_config,statusN))
-		filter_loop1.run_until_complete(asyncio.gather(filterS,filterN))
-		statusN = statusN.result()
-		statusS = statusS.result()
+		# Try take image bool is used to keep trake of whether or not the
+		#  filter change was successful If it wasn't successful there's no point
+		#  taking an image
+		try_take_image = True
+		if image_type == 'FLAT' or image_type=='OBJECT':
+			
+			statusN,statusS = change_filter_loop(exp_objS.filter,
+					exp_objN.filter)
+			
+			if statusN == -6 or statusS == -6:
+				try_take_image = False
+	
+			if image_type == 'OBJECT':
+				#Check for the need to apply a pointing offset, don't
+				#  need this for flat fields:
+				check_point_offset_need()
+
+
+		if try_take_image == True:
+			
+
+			try:
+				# First send the command to the telescope and expect an '0'
+				#  acknowledgement if it was received and started.
+				statusN, statusS = exposure_TCS_response(exp_objN,exp_objS)#,
+#					timeout=timeout_time)
+				# This function waits for a time equal to the exposure time, in
+				#  case a weather alert is received during the exposure. Need to
+				#  have the two stages otherwise there would be a timeout error for
+				#  long exposure (i.e. > that set timeout)
+				statusN, statusS = exposureTCSerrorcode(statusN,statusS,
+					exp_objN.exptime)
 		
-		"""
+			except subprocess.TimeoutExpired:
+				logger.error('TIMEOUT: No response from TCS. Exposure abandoned.')
+				statusS = set_err_codes.STATUS_CODE_NO_RESPONSE
+				statusN = set_err_codes.STATUS_CODE_NO_RESPONSE
 
-		#Check for the need to apply a pointing offset:
-		check_point_offset_need()
+			#Do observing log and fits header
+			next_no1 = sort_all_logging_info(exp_objS,target_info_ob,focuser1_info,
+				dbconn,dbcurs,statusS,datestr, fits_folder)
+			next_no2 = sort_all_logging_info(exp_objN,target_info_ob,focuser2_info,
+				dbconn,dbcurs,statusN, datestr, fits_folder)
 
-		try:
-			# First send the command to the telescope and expect an '0'
-			#  acknowledgement if it was received and started.
-			statusN, statusS = exposure_TCS_response(exp_objN,exp_objS)#,
-#				timeout=timeout_time)
-			# This function waits for a time equal to the exposure time, in
-			#  case a weather alert is received during the exposure. Need to
-			#  have the two stages otherwise there would be a timeout error for
-			#  long exposure (i.e. > that set timeout)
-			statusN, statusS = exposureTCSerrorcode(statusN,statusS,
-				exp_objN.exptime)
-		
-		except subprocess.TimeoutExpired:
-			logger.error('TIMEOUT: No response from TCS. Exposure abandoned.')
-			statusS = set_err_codes.STATUS_CODE_NO_RESPONSE
-			statusN = set_err_codes.STATUS_CODE_NO_RESPONSE
-
-		#Do observing log and fits header
-		next_no1 = sort_all_logging_info(exp_objS,target_info_ob,focuser1_info,
-			dbconn,dbcurs,statusS,datestr, fits_folder)
-		next_no2 = sort_all_logging_info(exp_objN,target_info_ob,focuser2_info,
-			dbconn,dbcurs,statusN, datestr, fits_folder)
-
-async def change_filters(filter_name, ifw_port, ifw_config,status):
+async def change_filters(filter_name, ifw_port, ifw_config):
 		"""
 		Allows both filterwheels to change the filter with having to wait for 
 			the other filterwheel.
@@ -841,10 +878,10 @@ def exposure_TCS_response(expObN, expObS):
 	expObS.set_start_time()
 	
 	#SEND EXPOSURE COMMAND TO TCS - get status depending on response
-	#print('Pretending to take exposure: Exposure time -',expObN.exptime)
-	#response_stat = 0
-	response_stat = tcs.tcs_exposure_request(expObN.image_type,
-			duration=expObN.exptime)
+	print('Pretending to take exposure: Exposure time -',expObN.exptime)
+	response_stat = 0
+	#response_stat = tcs.tcs_exposure_request(expObN.image_type,
+	#		duration=expObN.exptime)
 	
 	statN = response_stat
 	statS = response_stat
@@ -913,6 +950,39 @@ def exposureTCSerrorcode(statN,statS, exptime):
 
 	return statN, statS
 
+def roof_open_check():
+
+	"""
+	Will check whether or not the rood is open, and will try to open it if
+	 it is close
+	"""
+	try:
+		roof_dict = plc.plc_get_roof_status(log_messages = False)
+
+	except:
+		"""**** CLOSE UP****"""
+		print("ADD INSTRUCTIONS TO SHUTDOWN EVERYTHING ELSE")
+		logger.critical('Cannot communicate with PLC, cannot get roof status')
+
+	else:
+		roof_open_bool = roof_dict['Roof_Open']
+		if roof_open_bool == False:
+		
+			logger.warning('Roof is not open. Will try to open if safe to do so')
+			try:
+			# run subprocess to open th roof. It will do all the required check.
+			# get to the process to do something so you know it's complete
+				subprocess.run('open_roof')
+			except:
+				logger.error('COULD NOT open roof')
+			
+			else:
+				roof_open_bool = True
+
+		else:
+			logger.info('Roof is open')
+
+		return roof_open_bool
 
 def go_to_target(coordsArr):
 	"""
@@ -954,56 +1024,32 @@ def go_to_target(coordsArr):
 
 	
 	# Check that the roof is open, first get status
-	try:
-		roof_dict = plc.plc_get_roof_status(log_messages = False)
+	roof_open_bool = roof_open_check()
 
-	except:
-		"""**** CLOSE UP****"""
-		print("ADD INSTRUCTIONS TO SHUTDOWN EVERYTHING ELSE")
-		logger.critical('Cannot communicate with PLC, cannot get roof status')
-
-	else:
-		roof_open_bool = roof_dict['Roof_Open']
-		if roof_open_bool == False:
-		
-			logger.warning('Roof is not open. Will try to open if safe to do so')
-			try:
-			# run subprocess to open th roof. It will do all the required check.
-			# get to the process to do something so you know it's complete
-				subprocess.run('open_roof')
-			except:
-				logger.error('COULD NOT open roof')
-			
-			else:
-				roof_open_bool = True
-
-		else:
-			logger.info('Roof is open')
-
-		# Should now be ok to tell the telescope to move
-		if valid_coord == True and roof_open_bool == True and \
-				need_to_change == True:
+	# Should now be ok to tell the telescope to move
+	if valid_coord == True and roof_open_bool == True and \
+			need_to_change == True:
 	
-			pass_coord_attempts_count = 0
-			while pass_coord_attempts_count < set_err_codes.pass_coord_attempts:
-				try:
-					send_coords(coordsArr)
-				except timeout_decorator.TimeoutError:
-					pass_coord_attempts_count += 1
-					logger.error('Request timed out. Could not pass '\
-						'coordinates to telescope.')
-				else:
-					logging.info('Coordinates pass successfully.')
-					break
-			if pass_coord_attempts_count >= set_err_codes.pass_coord_attempts:
-				logger.critical('Too many attempts to pass telescope coords! '\
-					'Closing up')
-				#Add in code to close
-				"""**** CLOSE UP****"""
-				print("ADD INSTRUCTIONS TO SHUTDOWN EVERYTHING ELSE")
+		pass_coord_attempts_count = 0
+		while pass_coord_attempts_count < set_err_codes.pass_coord_attempts:
+			try:
+				send_coords(coordsArr)
+			except timeout_decorator.TimeoutError:
+				pass_coord_attempts_count += 1
+				logger.error('Request timed out. Could not pass '\
+					'coordinates to telescope.')
+			else:
+				logging.info('Coordinates pass successfully.')
+				break
+		if pass_coord_attempts_count >= set_err_codes.pass_coord_attempts:
+			logger.critical('Too many attempts to pass telescope coords! '\
+				'Closing up')
+			#Add in code to close
+			"""**** CLOSE UP****"""
+			print("ADD INSTRUCTIONS TO SHUTDOWN EVERYTHING ELSE")
 			
-		else:
-			logger.info('Telescope pointing unchanged')
+	else:
+		logger.info('Telescope pointing unchanged')
 
 @timeout_decorator.timeout(set_err_codes.telescope_coms_timeout,
 		use_signals=False)
@@ -1015,7 +1061,7 @@ def send_coords(coords,equinox='J2000'):
 	 
 	Assumes the coords are sent as RA/DEC with equinox=J2000
 	"""
-	tcs.slew_or_track_target(coords, tcs_conn, equinox = equinox)
+	tcs.slew_or_track_target(coords, equinox = equinox)
 	#print('ASSUMED TO BE SLEWING!!!')
 
 
@@ -1038,33 +1084,32 @@ def connect_to_instruments():
 
 	focuser_no1, focuser1_port = fc.startup_focuser('focuser1-south.cfg') #proper
 	focuser_no2, focuser2_port = fc.startup_focuser('focuser2-north.cfg') #proper
-	
-	#focuser_no1, focuser1_port = 1, 'port1' #Just temporary
-	#focuser_no2, focuser2_port = 2, 'port2' #Just temporary
-	
+	"""
+	focuser_no1, focuser1_port = 1, 'port1' #Just temporary
+	focuser_no2, focuser2_port = 2, 'port2' #Just temporary
+	"""
 	# Want to load the current focuser configuration settings so don't have to
 	#  check it everytime we need to write a fits header or output to observing
 	#  log. Might need to update this if the config setting get updated during
 	#  the night but this probably unlikely
 
-	focuser1_config_dict = fc.get_focuser_stored_config(port, x=focuser_no1,
-			return_dict = False)
-	focuser2_config_dict = fc.get_focuser_stored_config(port, x=focuser_no2,
-			return_dict = False)
-			
-	#focuser1_config_dict = {'Nickname': 'FocusLynx FocSOUTH', 'Max Pos': '125440', 'DevTyp': 'OE', 'TComp ON': '0', 'TempCo A': '+0086', 'TempCo B': '+0086', 'TempCo C': '+0086', 'TempCo D': '+0000', 'TempCo E': '+0000', 'TCMode': 'A', 'BLC En': '0', 'BLC Stps': '+40', 'LED Brt': '075', 'TC@Start': '0'} #Just temporary
-	#focuser2_config_dict = {'Nickname': 'FocusLynx FocNORTH', 'Max Pos': '125440', 'DevTyp': 'OE', 'TComp ON': '0', 'TempCo A': '+0086', 'TempCo B': '+0086', 'TempCo C': '+0086', 'TempCo D': '+0000', 'TempCo E': '+0000', 'TCMode': 'A', 'BLC En': '0', 'BLC Stps': '+40', 'LED Brt': '075', 'TC@Start': '0'} #Just temporary
-	
+	focuser1_config_dict = fc.get_focuser_stored_config(focuser1_port, x=focuser_no1, return_dict = False)
+	focuser2_config_dict = fc.get_focuser_stored_config(focuser2_port,
+		x=focuser_no2, return_dict = False)
+	"""
+	focuser1_config_dict = {'Nickname': 'FocusLynx FocSOUTH', 'Max Pos': '125440', 'DevTyp': 'OE', 'TComp ON': '0', 'TempCo A': '+0086', 'TempCo B': '+0086', 'TempCo C': '+0086', 'TempCo D': '+0000', 'TempCo E': '+0000', 'TCMode': 'A', 'BLC En': '0', 'BLC Stps': '+40', 'LED Brt': '075', 'TC@Start': '0'} #Just temporary
+	focuser2_config_dict = {'Nickname': 'FocusLynx FocNORTH', 'Max Pos': '125440', 'DevTyp': 'OE', 'TComp ON': '0', 'TempCo A': '+0086', 'TempCo B': '+0086', 'TempCo C': '+0086', 'TempCo D': '+0000', 'TempCo E': '+0000', 'TCMode': 'A', 'BLC En': '0', 'BLC Stps': '+40', 'LED Brt': '075', 'TC@Start': '0'} #Just temporary
+	"""
 	
 	focuser1_info = [focuser_no1,focuser1_port,focuser1_config_dict]
 	focuser2_info = [focuser_no2,focuser2_port,focuser2_config_dict]
 
 	ifw1_port, ifw1_config = fwc.filter_wheel_startup('ifw1-south.cfg') #proper
 	ifw2_port, ifw2_config = fwc.filter_wheel_startup('ifw2-north.cfg')
-	
-	#ifw1_port, ifw1_config = 'port_ifw1', common.load_config('ifw1-south.cfg', path='configs/') #Just temporary
-	#ifw2_port, ifw2_config = 'port_ifw2', common.load_config('ifw2-north.cfg', path='configs/')
-	
+	"""
+	ifw1_port, ifw1_config = 'port_ifw1', common.load_config('ifw1-south.cfg', path='configs/') #Just temporary
+	ifw2_port, ifw2_config = 'port_ifw2', common.load_config('ifw2-north.cfg', path='configs/')
+	"""
 	return focuser1_info, focuser2_info, ifw1_config, ifw1_port,\
 		ifw2_config, ifw2_port
 
@@ -1204,13 +1249,15 @@ def get_next_target_info(next_target_id, database_cursor):
 	target_db_rows = connect_database.match_target_id(next_target_id,
 		set_err_codes.TARGET_INFORMATION_TABLE, database_cursor)
 	
-	if len(target_db_rows)>1:
-		logger.warning('Multiple targets found, selecting first one: '\
-			+ rows[0][3])
-	elif len(target_db_rows) < 1:
+
+	if len(target_db_rows) < 1:
 		logger.warning('No target name found')
 	else:
-	
+		
+		if len(target_db_rows)>1:
+			logger.warning('Multiple targets found, selecting first one: '\
+				+ target_db_rows[0][3])
+			
 		if ':' in target_db_rows[0][2]:
 			ra = ' '.join(target_db_rows[0][2].split(':'))
 		else:
@@ -1224,7 +1271,7 @@ def get_next_target_info(next_target_id, database_cursor):
 		next_target = target_obj(target_db_rows[0][1], [ra,dec],
 			type = target_db_rows[0][4])
 
-	return next_target
+		return next_target
 
 def basic_exposure(target_name, target_coords, target_type):
 	
@@ -1267,12 +1314,52 @@ def basic_exposure(target_name, target_coords, target_type):
 	print('Exposures complete')
 	logger.info('Exposures Complete')
 
+def evening_startup(run_cool_bool = set_err_codes.run_camera_cooling):
+
+	#Start the cameras, if setting in settings_and_error_codes is True
+	if run_cool_bool == True:
+		tcs.camstart()
+		#print('WOULD start cameras')
+
+def morning_shutdown(run_cool_bool = set_err_codes.run_camera_cooling):
+
+	if  run_cool_bool == True:
+		#print('WOULD stop cameras')
+		tcs.stopwasp()
+
+def wait_function(wait_time):
+	"""
+	A function that will wait for a time specified by 'wait_time', then run
+	 the almanaac time checker to see if the situation has changed
+	"""
+
+	time.sleep(wait_time)
+	#Find out what time it is, and what we should be doing
+	time_mess, t_remain, k_time = getAlmanac.decide_observing_time()
+
+	return time_mess, t_remain, k_time
+
+
+def take_bias_frames(datestr, file_dir):
+
+	next_target_ID = 'BIAS'
+	next_target_name = 'BIAS_standard'
+	
+	next_target = target_obj(next_target_name, ['BIAS','BIAS'],
+			type = 'BIAS')
+	obs_recipe = get_observing_recipe(next_target.name)
+	image_type = get_image_type(next_target.name)
+	take_exposure(obs_recipe,image_type,next_target, datestr=datestr,
+			fits_folder = file_dir)
 
 def main():
 
 	"""
 	main function to run all the observing stuff, but is very much work in 
 		progress.
+		
+	I imaginine this runnning in the background all the time during the day,
+	 will start things up if needed when it gets restarted.
 	"""
 
 	
@@ -1283,61 +1370,216 @@ def main():
 	focuser1_info, focuser2_info, ifw1_config, ifw1_port, ifw2_config,\
 			ifw2_port = connect_to_instruments()
 	
-	#Start the cameras, if setting in settings_and_error_codes is True
-	if set_err_codes.run_camera_cooling == True:
-		tcs.camstart()
-		#print('WOULD start cameras')
+
 	#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	#Connect to table in the database, so that an observing log can be stored
 	#  and sort out the next file name and folder
 	#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 	datestr, file_dir = setup_file_logs_storage()
+	evening_startup()
+	saaoObserver = getAlmanac.set_up_observer()
+	#Find out what time it is, and what we should be doing
+	time_mess, t_remain, k_time  = getAlmanac.decide_observing_time()
+	best_field_found = False
+
+#	while 1:
+	while time_mess == 'daytime':
+		"""
+		Wait function...
+		"""
+		time_mess, t_remain, k_time  = wait_function(60)
 
 
+	if time_mess == 'afterSunset':
+		# If the sun has just set take some bias frames and then open roof to
+		#  take some flats
+		"""
+		TAKE BIAS FUNCTION
+		Open roof -if there's no weather alert
+		prepare to take flats by going to a blank field
+		wait for twilight
+		"""
+		take_bias_frames()
+		
+		#roof_dict = plc_get_roof_status()
+		"""
+		ADD CHECK FOR WEATHER ALERT!!!!!!
+		"""
+		print('CODE NOT CHECKING WEATHER BUT IT SHOULD before opening roof '\
+			'for flats!!!!!!')
+		roof_open_bool = roof_open_check()
 
-	"""
-	Run Scheduler to find target - return target Name
+		if roof_open_bool == True:
+			best_field = find_best_blank_sky.find_best_field()
+			#print(best_field)
+			best_ra = best_field['RA(hms)']
+			best_dec = best_field['DEC(dms)']
+		
+			go_to_target([best_ra,best_dec])
+		
+			best_field_found = True
+		
+		else:
+			best_field_found = False
 
-	"""
-	next_target_ID = 'XAMI104604.00-460806.0' #returned from scheduler
-	#next_target_name = 'test_target_single_Texp' # test Id 'XAMI104604.00-460806.0'
-	next_target = get_next_target_info(next_target_ID,database_cursor=dbcurs)
+		while time_mess == 'afterSunset':
+			time_mess, t_remain, k_time  = wait_function(15)
 
-	#what to do if no observing recipe for target??
-	obs_recipe = get_observing_recipe(next_target.name)
+	if time_mess == 'afterCivil':
+		"""
+		if the roof isn't open and no weather alert
+			open roof
+		
+		TAKE FLATS FUNCTIONS
+		Once it's too dark
+		"""
+		
+		#roof_dict = plc_get_roof_status()
+		"""
+		ADD CHECK FOR WEATHER ALERT!!!!!!
+		"""
+		print('CODE NOT CHECKING WEATHER BUT IT SHOULD before opening roof '\
+			'for flats!!!!!!')
+		roof_open_bool = roof_open_check()
+
+
+		# Maybe don't bother setting up for flats if there's only 5 mins left.
+		# Probably won't get on target and take a decent number of exposures
+		# before it's too dark.
+		five_mins = 5/(60*24) # in days
+		if roof_open_bool == True and t_remain> five_mins:
+			
+			if best_field_found == False:
+				best_field = find_best_blank_sky.find_best_field()
+				#print(best_field)
+				best_ra = best_field['RA(hms)']
+				best_dec = best_field['DEC(dms)']
+				#print(best_ra,best_dec)
+		
+				go_to_target([best_ra,best_dec])
+		
+			logger.info('Requesting evening flats to be taken')
+			autoflat.do_flats_evening(k_time, best_field, datestr, file_dir)
 	
-	image_type = get_image_type(next_target.name)
+		elif roof_open_bool == True and t_remain < five_mins:
+			logger.info('Less than 5 minutes of twilight remaining, not going '\
+				'to start taking flats')
+		else: #assume roof stil close roof_open_bool == False:
+			logger.warning('Roof not open, unable to move to take flats')
+		
+
+		while time_mess == 'afterCivil':
+			time_mess, t_remain, k_time  = wait_function(10)
+
+	while time_mess == 'night':
+		"""
+		If the roof isn't open and there's no weather alert
+			open_roof
+		
+		Do night observations
+		"""
+		#roof_dict = plc_get_roof_status()
+		roof_open_bool = roof_open_check()
+
+		if roof_open_bool == True: #and weather check ok
+
+			#Need to decide whether not to have this in a while loop, so it
+			# contiunes with same target until some condition, OR keep it
+			#how it is and run scheduler at the end of each observing recipe.
+			# Second option seems inefficient
+
+			"""
+			Run Scheduler to find target - return target Name
+		
+			"""
+			next_target_ID = 'XAMI104604.00-460806.0' #returned from scheduler
+			#next_target_name = 'test_target_single_Texp' # test Id 'XAMI104604.00-460806.0'
+			next_target = get_next_target_info(next_target_ID,database_cursor=dbcurs)
+
+			#what to do if no observing recipe for target??
+			obs_recipe = get_observing_recipe(next_target.name)
+	
+			image_type = get_image_type(next_target.name)
 
 
 	
-	"""
-	Move telescope to the target
-	"""
+			"""
+			Move telescope to the target
+			"""
 
-	go_to_target(next_target.ra_dec)
+			go_to_target(next_target.ra_dec)
 	
 	
+			#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+			#THen this will be part of the loop that runs when taking exposures
+			#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+			# while conditions ok for observing this target are true
+
+			take_exposure(obs_recipe,image_type,next_target, datestr=datestr,
+				fits_folder = file_dir)
+
+
+			time_mess, t_remain , k_time = wait_function(0)
+
+		else:
+			time_mess, t_remain, k_time  = wait_function(60)
+
+	if time_mess == 'beforeCivil':
+		
+		"""
+		TAKE FLATS FUNCTIONS
+		Once it's too light, stop
+		"""
+		#roof_dict = plc_get_roof_status()
+		"""
+		ADD CHECK FOR WEATHER ALERT!!!!!!
+		"""
+		print('CODE NOT CHECKING WEATHER BUT IT SHOULD before opening roof '\
+			'for flats!!!!!!')
+		roof_open_bool = roof_open_check()
+
+		# Maybe don't bother setting up for flats if there's only 5 mins left.
+		# Probably won't get on target and take a decent number of exposures
+		# before it's too dark.
+		five_mins = 5/(60*24) # in days
+		if roof_open_bool == True and t_remain> five_mins:
+			best_field = find_best_blank_sky.find_best_field()
+			best_ra = best_field['RA(hms)']
+			best_dec = best_field['DEC(dms)']
+		
+			go_to_target([best_ra,best_dec])
+		
+			autoflat.do_flats_morning(k_time, best_field, datestr, file_dir)
+		elif t_remain < five_mins:
+			logger.info('Less than 5 minutes of twilight remaining, not going '\
+				'to start taking flats')
+		else: #assume roof stil close roof_open_bool == False:
+			logger.warning('Roof not open, unable to move to take flats')
+
+
+		
+
+		while time_mess == 'beforeCivil':
+			time_mess, t_remain, k_time = wait_function(10)
+
+	if time_mess == 'beforeSunrise':
+
+		"""
+		Things that need to be done at the end of the night.
+		
+		Could probably include any backing up/logging sorting in here
+		"""
+		morning_shutdown()
+		time_mess, t_remain,k_time = getAlmanac.decide_observing_time()
+
 	#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	#THen this will be part of the loop that runs when taking exposures
-	#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-	# while conditions ok for observing this target are true
-
-	take_exposure(obs_recipe,image_type,next_target, datestr=datestr,
-		fits_folder = file_dir)
-	
-
-
-	#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-	# Shutdown the instruments, database, cameras..
+	# Shutdown the instruments, database
 	#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
 	shutdown_instruments()
-	if set_err_codes.run_camera_cooling == True:
-		#print('WOULD stop cameras')
-		tcs.stopwasp()
 	disconnect_database()
 
 """
