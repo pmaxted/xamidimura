@@ -879,9 +879,9 @@ def exposure_TCS_response(expObN, expObS):
 	
 	#SEND EXPOSURE COMMAND TO TCS - get status depending on response
 	print('Pretending to take exposure: Exposure time -',expObN.exptime)
-	response_stat = 0
-	#response_stat = tcs.tcs_exposure_request(expObN.image_type,
-	#		duration=expObN.exptime)
+	#response_stat = 0
+	response_stat = tcs.tcs_exposure_request(expObN.image_type,
+			duration=expObN.exptime)
 	
 	statN = response_stat
 	statS = response_stat
@@ -1502,20 +1502,13 @@ def main():
 	
 			image_type = get_image_type(next_target.name)
 
-
-	
 			"""
 			Move telescope to the target
 			"""
-
 			go_to_target(next_target.ra_dec)
 	
-	
-			#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-			#THen this will be part of the loop that runs when taking exposures
-			#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-			# while conditions ok for observing this target are true
+			# while conditions ok for observing this target are true?
 
 			take_exposure(obs_recipe,image_type,next_target, datestr=datestr,
 				fits_folder = file_dir)
@@ -1572,7 +1565,10 @@ def main():
 		Could probably include any backing up/logging sorting in here
 		"""
 		morning_shutdown()
-		time_mess, t_remain,k_time = getAlmanac.decide_observing_time()
+		#time_mess, t_remain,k_time = getAlmanac.decide_observing_time()
+
+		while time_mess == 'beforeSunrise':
+			time_mess, t_remain, k_time = wait_function(60)
 
 	#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 	# Shutdown the instruments, database
@@ -1582,9 +1578,7 @@ def main():
 	shutdown_instruments()
 	disconnect_database()
 
-"""
-def main()
+
 if __name__ == '__main__':
 	main()
 
-"""
