@@ -6,7 +6,8 @@ Equivalent to the PHP executables, but now written in python. This is a new exec
 """
 
 import sys
-sys.path.append('/home/observer/xamidimura/xamidimura')
+import pathToSettings as set_err_codes
+sys.path.append(set_err_codes.SOFTWARE_FOLDER_PATH)
 import PLC_interaction_functions as plc
 
 status_dict = plc.plc_get_telescope_tilt_status()

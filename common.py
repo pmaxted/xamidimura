@@ -18,7 +18,7 @@ except ModuleNotFoundError:
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
-fileHand = logging.FileHandler(filename = set_err_codes.LOGFILES_DIRECTORY+'common.log', mode = 'w')
+fileHand = logging.FileHandler(filename = set_err_codes.LOGFILES_DIRECTORY+'common.log', mode = 'a')
 fileHand.setLevel(logging.INFO)
 logging.Formatter.converter = time.gmtime
 formatter = logging.Formatter('%(asctime)s [%(name)s] %(levelname)s - '\
@@ -183,7 +183,7 @@ def send_command_get_response(command, port_name, response_wait_time=0,
 	except:
 		open_bool = True
 		dummy_port_bool = True
-	
+			
 	if open_bool == False:
 		raise Exception('The specified port is not open')
 	else:
@@ -217,10 +217,11 @@ def send_command_get_response(command, port_name, response_wait_time=0,
 				#print('Device message: ' + message)
 				return message
 		else:
+		#	print('!'+command+'!')
 			port_name.write((command).encode('utf-8'))
 			message = port_name.read(72).decode('utf-8').strip('\n')
 				#message = port_name.read(64).decode('utf-8')#
-				#print(message+'!')
+		#	print(message+'!')
 				#message = message#.strip('\n')
 
 			return message
@@ -263,13 +264,20 @@ def send_command_two_response(command, port_name, expected_end='\n',
 	else:
 		if dummy_port_bool == False:
 			port_name.write(command.encode('utf-8'))
-			while port_name.in_waiting == 0:
+			time_waited =0
+			while port_name.in_waiting == 0 and time_waited<2:
 				time.sleep(sleep_time) #in seconds
-		
+				time_waited += sleep_time
+			
+			if time_waited >= 2:
+				logger.error('No response from focuser after 2 secs')
+				print('No response from focuser after 2 secs')
+					
 			message_bytes1 = port_name.in_waiting
 			message_bytes2 = port_name.in_waiting
 			
 			while message_bytes1 <message_bytes2:
+				time.sleep(0.05)
 				message_bytes1 = port_name.in_waiting
 				message_bytes2 = port_name.in_waiting
 
@@ -293,6 +301,8 @@ def send_command_two_response(command, port_name, expected_end='\n',
 					logger.info(command + ' successfully passed')
 					#print('device message:'+message)
 
+				return message
+
 		else:
 			port_name.write((command).encode('utf-8'))
 			message = port_name.read(2).decode('utf-8').strip()
@@ -308,7 +318,7 @@ def send_command_two_response(command, port_name, expected_end='\n',
 				message = message.decode('utf-8').strip()
 				#logger.info(command + ' successfully passed')
 		
-		return message
+			return message
 
 
 

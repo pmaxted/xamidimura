@@ -299,7 +299,7 @@ def pass_filter_names(str_of_72chars, initialised_port, wheel_ID = 'A'):
 		expected_return = '!'
 		
 		message = common.send_command_get_response(issue_command, initialised_port, response_wait_time=wait_before_response)
-		print(message)
+		print('FILTER MESSAGE\n\n',message)
 		
 		if message == expected_return:
 			logger.info('Filter names successfully stored.')

@@ -71,7 +71,7 @@ import time
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 fileHand = logging.FileHandler(filename = \
-	set_err_codes.LOGFILES_DIRECTORY+'plc_status.log', mode = 'w')
+	set_err_codes.LOGFILES_DIRECTORY+'plc_status.log', mode = 'a')
 fileHand.setLevel(logging.INFO)
 logging.Formatter.converter = time.gmtime
 formatter = logging.Formatter('%(asctime)s [%(name)s] %(levelname)s - '\

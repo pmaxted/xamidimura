@@ -8,7 +8,8 @@ input argument: An integer time between 0 and 9999
 """
 
 import sys
-sys.path.append('/home/observer/xamidimura/xamidimura')
+import pathToSettings as set_err_codes
+sys.path.append(set_err_codes.SOFTWARE_FOLDER_PATH)
 import PLC_interaction_functions as plc
 
 try:

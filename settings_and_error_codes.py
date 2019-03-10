@@ -5,16 +5,14 @@ Contains a list of all the various error codes from the various scripts,
  and also the various settings such as timeouts and connection attempts.
 
 """
+SOFTWARE_FOLDER_PATH = '/home/wasp/xamidimuraSoftware' #no '/' required
 
 WEATHER_LOG_FILE = 'cloud2_oneline2.dat'
-#WEATHER_LOG_LOC = '/Users/Jessica/PostDoc/ScriptsNStuff/current_branch/xamidimura/logfiles/'
-WEATHER_LOG_LOC = '/home/observer/cloud2/weather/'
+WEATHER_LOG_LOC = '/home/wasp/cloud2/weather/'
 
-#LOGFILES_DIRECTORY = '/Users/Jessica/PostDoc/ScriptsNStuff/current_branch/xamidimura/logfiles/'
-LOGFILES_DIRECTORY = 'logfiles/'
-DATA_FILE_DIRECTORY = 'fits_file_tests/'
+LOGFILES_DIRECTORY = '/home/wasp/logs/'
+DATA_FILE_DIRECTORY = '/data/fits_file_header/'
 FINAL_DATA_DIRECTORY = '/data/'
-#FINAL_DATA_DIRECTORY = '/home/observer/data/'
 
 # Status code for taking exposure
 STATUS_CODE_OK = 0
@@ -60,9 +58,8 @@ PRIORITY_TABLE = 'priority_table'
 # -As taken from the original manual
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-PLC_MEMORY_MAP_FILE_LOC = 'mem_map/maptest.txt'
-PLC_STATUS_CHANGE_FILE = 'specify_roof_state
-.py'
+PLC_MEMORY_MAP_FILE_LOC = '/tmp/maptest'
+PLC_STATUS_CHANGE_FILE = 'specify_roof_state.py'
 
 
 PLC_CODE_OK = 0

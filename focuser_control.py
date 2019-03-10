@@ -17,45 +17,45 @@ Jessica A. Evans
 	
 	- check_focuser_no(x)
 	
-	- get_focuser_name(x, port)
+	- get_focuser_name(port, x=1)
 	
-	- halt_focuser(x, port)
+	- halt_focuser(port, x=1)
 	
-	- home_focuser(x, port)
+	- home_focuser(port, x=1)
 	
-	- center_focuser(x, port)
+	- center_focuser(port, x=1)
 	
-	- move_to_position(pos, x, port)
+	- move_to_position(pos, port, x=1)
 	
-	- move_focuser_in(x, port, move_speed=1)
+	- move_focuser_in(port, x=1, move_speed=1)
 	
-	- move_focuser_out(x, port, move_speed=1)
+	- move_focuser_out(port, x=1, move_speed=1)
 	
-	- end_relative_move(x, port)
+	- end_relative_move(port, x=1)
 
 	----------------------------------------------------------------------
 	Focuser Configuration/Status Functions
 	----------------------------------------------------------------------
 
-	- get_focuser_status(x, port)
+	- get_focuser_status(port, x=1)
 	
-	- get_focuser_stored_config(x, port)
+	- get_focuser_stored_config(port, x=1)
 	
-	- set_device_name(x, port, device_name)
+	- set_device_name(port, device_name, x=1)
 	
-	- set_device_type(x, port, device_type = 'OB')
+	- set_device_type(port, x=1, device_type = 'OB')
 	
-	- set_temp_comp(x, port, temp_comp=False)
+	- set_temp_comp(port,x=1, temp_comp=False)
 	
-	- set_temp_comp_mode(x, port, mode='A')
+	- set_temp_comp_mode(port,x=1 mode='A')
 	
-	- set_temp_comp_coeff(x, port, mode, temp_coeff_val)
+	- set_temp_comp_coeff(port, x=1, mode, temp_coeff_val)
 	
-	- set_temp_comp_start_state(x, port, temp_comp_start = False)
+	- set_temp_comp_start_state(port, x=1, temp_comp_start = False)
 	
-	- set_backlash_comp(x, port, backlash_comp = False)
+	- set_backlash_comp(port, x=1, backlash_comp = False)
 	
-	- set_backlash_steps(x, port, backlash_steps = 10)
+	- set_backlash_steps(port, x=1,backlash_steps = 10)
 	
 	- set_LED_brightness(brightness, port)
 	
@@ -279,14 +279,22 @@ def center_focuser(port, x=1):
 		port = the open port for communicating with the focuser
 		
 	"""
-	command = get_start_end_char('F'+str(check_focuser_no(x))+'CENTER')
+	tilt_stat = plc.plc_get_telescope_tilt_status()
+	if tilt_stat['Tilt_angle'] == "6h East <= x < RA East limit" or \
+		tilt_stat['Tilt_angle'] == "6h West <= x < RA West limit":
+	
+		command = get_start_end_char('F'+str(check_focuser_no(x))+'CENTER')
 
-	message = common.send_command_two_response(command, port)
+		message = common.send_command_two_response(command, port)
 
-	if message == 'M':
-		focus_logger.info('Focuser '+str(x)+ ' moving to center')
+		if message == 'M':
+			focus_logger.info('Focuser '+str(x)+ ' moving to center')
+		else:
+			focus_logger.error('Response:'+message)
+
 	else:
-		focus_logger.error('Response:'+message)
+		focus_logger.error('Cannot center focuser, telescope is not parked')
+		print('Cannot center focuser, telescope is not parked')
 
 def move_to_position(pos, port, x=1):
 
@@ -1034,6 +1042,7 @@ def focuser_initial_configuration(config_file_name,
 	#Set backlash settings:
 	set_backlash_comp(open_p, backlash_comp = config_dict['backlash_compen'],
 		x= focuser_no)
+	check_config_port_values_for_focuser(config_dict)
 	set_backlash_steps(open_p, backlash_steps = config_dict['backlash_steps'],
 		x= focuser_no )
 	
