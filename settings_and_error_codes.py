@@ -5,7 +5,6 @@ Contains a list of all the various error codes from the various scripts,
  and also the various settings such as timeouts and connection attempts.
 
 """
-
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #        OBSERVATORY SETTINGS
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -20,18 +19,13 @@ ALTITUDE = 1800 #'Site elevation (meters) above sea level'
 SOFTWARE_FOLDER_PATH = '/home/wasp/xamidimuraSoftware' #no '/' required
 
 WEATHER_LOG_FILE = 'cloud2_oneline2.dat'
-WEATHER_LOG_LOC = '/Users/Jessica/PostDoc/ScriptsNStuff/current_branch/xamidimura/logfiles/'
-#WEATHER_LOG_LOC = '/home/wasp/cloud2/weather/'
+WEATHER_LOG_LOC = '/home/wasp/cloud2/weather/'
 
-#LOGFILES_DIRECTORY = '/Users/Jessica/PostDoc/ScriptsNStuff/current_branch/xamidimura/logfiles/'
-LOGFILES_DIRECTORY = 'logfiles/'
-DATA_FILE_DIRECTORY = 'fits_file_tests/'
-#LOGFILES_DIRECTORY = '/home/wasp/logs/'
-#DATA_FILE_DIRECTORY = '/data/fits_file_headers/'
+LOGFILES_DIRECTORY = '/home/wasp/logs/'
+DATA_FILE_DIRECTORY = '/data/fits_file_header/'
 FINAL_DATA_DIRECTORY = '/data/'
 
 BLANK_SKY_REGION_CSV = 'database/Blank_sky_regions.csv'
-
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 #      TELESCOPE POINTING OFFSET

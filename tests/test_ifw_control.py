@@ -245,7 +245,6 @@ class test_pass_filternames(unittest.TestCase):
 			fwc.logging.getLogger().error(fwc.pass_filter_names(
 				self.name_string, self.dummy_port, wheel_ID=self.good_ID))
 			logging_actual_response = cm.output[0].split(':')[0]
-
 		self.assertEqual(logging_actual_response, 'INFO')
 
 	def test_unexpected_response(self):

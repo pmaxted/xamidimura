@@ -24,7 +24,7 @@ logger.setLevel(logging.INFO)
 #fileHand = logging.FileHandler(filename = '/home/observer/xamidimura/xamidimur'\
 #		'a/logfiles/plc_status.log', mode='w')
 fileHand = logging.FileHandler(filename = set_err_codes.LOGFILES_DIRECTORY+'pl'\
-	'c_status.log', mode='w')
+	'c_status.log', mode='a')
 fileHand.setLevel(logging.INFO)
 logging.Formatter.converter = time.gmtime
 formatter = logging.Formatter('%(asctime)s [%(name)s] %(levelname)s - '\
@@ -848,7 +848,7 @@ def main():
 	plc_port = rcf.open_plc_port()
 	
 	# Open the file for reading
-	fd = os.open('/tmp/mmaptest', os.O_CREAT | os.O_RDWR)
+	fd = os.open(set_err_codes.PLC_MEMORY_MAP_FILE_LOC, os.O_CREAT | os.O_RDWR)
 	
 	# Memory map the file, it matter which way round these parameters are!
 	#buf = mmap.mmap(fd, mmap.PAGESIZE, mmap.MAP_SHARED)#, mmap.PROT_READ)

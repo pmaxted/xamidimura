@@ -5,8 +5,9 @@ Equivalent to the PHP executables, but now written in python
 """
 
 import sys
+import pathToSettings as set_err_codes
 #print(sys.path)
-sys.path.append('/home/observer/xamidimura/xamidimura')
+sys.path.append(set_err_codes.SOFTWARE_FOLDER_PATH)
 #print(sys.path)
 import PLC_interaction_functions as plc
 

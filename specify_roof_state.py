@@ -4,13 +4,14 @@ import mmap
 import os
 import struct
 import sys
+import settings_error_codes as set_err_codes
 
 new_char = str(sys.argv[1])
 
 def main():
 	# Create new empty file to back memory map on disk
 	#
-	fd = os.open('/tmp/mmaptest', os.O_CREAT | os.O_RDWR)
+	fd = os.open(set_err_code.PLC_MEMORY_MAP_FILE_LOC, os.O_CREAT | os.O_RDWR)
 
 
 	try:
@@ -37,7 +38,7 @@ def main():
 
 	s.raw = bytes(new_char, 'utf-8')#input('Enter a value for s:'), 'utf-8')
 
-
+	os.close()
 
 
 if __name__ == '__main__':
