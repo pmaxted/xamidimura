@@ -5,6 +5,17 @@ Contains a list of all the various error codes from the various scripts,
  and also the various settings such as timeouts and connection attempts.
 
 """
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#        OBSERVATORY SETTINGS
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+LATITUDE = '-32:22:51'#'-32.3808333'# #'Site Latitude, degrees'
+LONGITUDE = '20:48:38'#'20.8105555' #'Site Longitude, degrees'
+ALTITUDE = 1800 #'Site elevation (meters) above sea level'
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#        FILE DIRECTORIES
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 SOFTWARE_FOLDER_PATH = '/home/wasp/xamidimuraSoftware' #no '/' required
 
 WEATHER_LOG_FILE = 'cloud2_oneline2.dat'
@@ -13,6 +24,20 @@ WEATHER_LOG_LOC = '/home/wasp/cloud2/weather/'
 LOGFILES_DIRECTORY = '/home/wasp/logs/'
 DATA_FILE_DIRECTORY = '/data/fits_file_header/'
 FINAL_DATA_DIRECTORY = '/data/'
+
+BLANK_SKY_REGION_CSV = 'database/Blank_sky_regions.csv'
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#      TELESCOPE POINTING OFFSET
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+USE_POINTING_OFFSETS = True
+POINT_OFF_MEM_MAP_FILE_LOC = '/tmp/map_offset.txt'
+POINT_OFF_UPDATE_OFF_FILE = 'update_point_off.py'
+
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#          EXPOSURE CODES
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # Status code for taking exposure
 STATUS_CODE_OK = 0
@@ -24,6 +49,9 @@ STATUS_CODE_UNEXPECTED_RESPONSE = -4
 STATUS_CODE_NO_RESPONSE = -5
 STATUS_CODE_FILTER_WHEEL_TIMEOUT = -6
 
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+#              TIMEOUTS
+#~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 # Timeouts in seconds
 plc_serial_port_timeout =30
@@ -33,6 +61,10 @@ plc_power_timeout = 60
 roof_moving_timeout = 600
 telescope_coms_timeout = 30
 tcs_coms_timeout = 60
+
+daytime_sleep_time = 60
+
+time_limit_since_last_pointing_update = 240
 
 
 #Other parameters
@@ -58,7 +90,7 @@ PRIORITY_TABLE = 'priority_table'
 # -As taken from the original manual
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-PLC_MEMORY_MAP_FILE_LOC = '/tmp/maptest'
+PLC_MEMORY_MAP_FILE_LOC = '/tmp/maptest.txt'
 PLC_STATUS_CHANGE_FILE = 'specify_roof_state.py'
 
 
