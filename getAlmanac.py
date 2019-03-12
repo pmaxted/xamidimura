@@ -13,9 +13,11 @@ import settings_and_error_codes as set_err_codes
 #from astroplan import OldEarthOrientationDataWarning
 import astropy.units as u
 from astropy.time import Time
+from astropy.coordinates import EarthLocation
 from math import pi
 import numpy
 import warnings
+import math
 
 # After 14 days the timings used for the Observer object becomes out of date and
 # raises a OldEarthOrientationDataWarning. In which case a new IRES bulletin
@@ -34,6 +36,21 @@ with warnings.catch_warnings(record=True) as w:
 			from astroplan import download_IERS_A
 			download_IERS_A()
 
+def deg2str(degs):
+	"""
+	Takes a decimal value and converts it back to the string format
+	
+		Note the transfer of the '-' sign has not been checked.
+	
+	"""
+
+	hh = math.floor(degs)
+	mm = (degs % 1)*60
+	ss = (mm % 1)*60
+
+	str_ans = format(hh, '02n')+':'+format(math.floor(mm),'02n')+':'+format(ss, '03.3f')
+
+	return str_ans
 
 def str2deg(val, to_split_on = ':'):
 
@@ -334,6 +351,25 @@ def decide_observing_time():
 
 	return t_mess, t_left, k_time
 
+def create_earth_loc(LONG = set_err_codes.LONGITUDE,
+		LAT = set_err_codes.LATITUDE, ALT = set_err_codes.ALTITUDE):
+
+	"""
+	Take the longitude, latitude and altitude values and creates a EarthLocation
+	 object.
+	"""
+
+	long_split = LONG.split(':')
+	long_str = long_split[0]+'d'+long_split[1]+'m'+long_split[2]+'s'
+
+	lat_split = LAT.split(':')
+	lat_str = lat_split[0]+'d'+lat_split[1]+'m'+lat_split[2]+'s'
+
+	earth_loc = EarthLocation(lat = lat_str, lon = long_str,
+		height = ALT*u.m)
+
+	return earth_loc
+
 def main():
 
 	"""
@@ -346,8 +382,9 @@ def main():
 	current_time.format = 'iso'
 	
 	times = get_timingsISO(saao, current_time)
+	
+	#times_dict['Current(SAST)'] = sa_local_time
 
-	print('Current (UTC):\t\t',current_time)
 	print('~~~~~~~~~~~~~~~~~~~~~~~~~')
 	print('Times are UTC')
 	print('~~~~~~~~~~~~~~~~~~~~~~~~~')
@@ -363,6 +400,16 @@ def main():
 	print('~~~~~~~~~~~~~~~~~~~~~~~~~')
 	print('Moonrise\t\t', times[8])
 	print('Moonset\t\t\t',times[9])
+	print('~~~~~~~~~~~~~~~~~~~~~~~~~')
+	print('Current (UTC):\t\t',current_time)
+	current_time.format = 'jd'
+	sa_local_time = Time(current_time.value+(2/24.0), format = 'jd')
+	sa_local_time.format = 'iso'
+	print('Current (SAST):\t\t', sa_local_time)
+	
+	current_time.location = create_earth_loc()
+	sid_time = current_time.sidereal_time(kind ='mean').value
+	print('Current ST:\t\t', deg2str(sid_time))
 
 	
 if __name__ == '__main__':

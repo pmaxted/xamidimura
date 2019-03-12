@@ -192,12 +192,17 @@ def send_command_get_response(command, port_name, response_wait_time=0,
 		
 			port_name.write(command.encode('utf-8'))
 
-			time.sleep(response_wait_time)
+			#time.sleep(response_wait_time)
 			# some functions take longer to respond than others
-			while port_name.in_waiting == 0:
-				
+			time_waited =0
+			while port_name.in_waiting == 0 and time_waited<25:
+				time.sleep(response_wait_time)
 				time.sleep(sleep_time) #in seconds
-				#print('sleeping...')
+				time_waited += sleep_time + response_wait_time
+			
+			if time_waited >= 25:
+				logger.error('No response from filterwheel after 25 secs')
+				print('No response from filterwheel after 25 secs')
 
 			message_bytes1 = port_name.in_waiting
 			message_bytes2 = port_name.in_waiting
