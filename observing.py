@@ -98,7 +98,7 @@ import autoflat
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 fileHand = logging.FileHandler(filename = \
-	set_err_codes.LOGFILES_DIRECTORY+'observingScript.log', mode = 'w')
+	set_err_codes.LOGFILES_DIRECTORY+'observingScript.log', mode = 'a')
 fileHand.setLevel(logging.INFO)
 logging.Formatter.converter = time.gmtime
 formatter = logging.Formatter('%(asctime)s [%(name)s] %(levelname)s - '\
@@ -285,12 +285,10 @@ def get_fits_header_info(focuser_config,focuser_position, weather_list,
 		'IMAG-DEC': ("Calculate", 'Nominal image position, pxl (1024,1024) J2000'),
 	
 		'EQUINOX' :(2000, 'Used coordinate system'),
-		'DATE-OBS': (expose_info.date_obs.value, \
-									'Exp start CCYY-MM-DDTHH:MM:SS.sss(UTC)'),
-		'MID_EXP' : (expose_info.mid_exp.value, \
-									'Exp middle CCYY-MM-DDTHH:MM:SS.sss(UTC)'),
-		'MJD_OBS' : (expose_info.mjd_obs, 'MJD at start'),
-		'MJD_MID' : (expose_info.mjd_mid, 'MJD at mid-point'),
+		'REQ-OBS': (expose_info.date_obs.value, \
+									'Requested CCYY-MM-DDTHH:MM:SS.sss(UTC)'),
+		'REQ_MJD' : (expose_info.mjd_obs, 'MJD when request made'),
+
 		'EXPTIME' : (expose_info.exptime, 'Integration time (s)'),
 	
 		'FILT_NAM': (expose_info.filter, 'Rx/Gx/Bx/Wx/Ix'),
@@ -310,7 +308,7 @@ def get_fits_header_info(focuser_config,focuser_position, weather_list,
 									'Temperature compensation (ON=1/OFF=0)'),
 		'TCOMSTRT':	(focuser_config['TC@Start'], \
 								'Temperature compensation @ start (ON=1/OFF=0)'),
-		'TCOMMODE': (focuser_config['TCMode']  , \
+		'TCOMMODE': (focuser_config['TC Mode']  , \
 											'Temperature compensation mode'),
 		'TCOM_COA': (focuser_config['TempCo A'], \
 									'Temperature compensation coefficient A'),
@@ -374,8 +372,7 @@ def get_obslog_info(fits_info_dict, CCDno, IMAGE_ID,target_info,datestr,status,
 	'TAR_NAME': target_info.name,#"OBJECT from FITS header", Need the [0] to
 		#get value not comment
 	'TAR_TYPE': target_info.type,
-	'DATE_OBS': fits_info_dict['DATE-OBS'][0],#"FITS header",
-	'MJD_OBS' : fits_info_dict['MJD_OBS'][0],#"FITS header",
+	'DATE_OBS': fits_info_dict['REQ-OBS'][0],#"FITS header",
 	'IMAGETYP': fits_info_dict['IMAGETYP'][0],#"FITS header",
 	'FILT_NAM': fits_info_dict['FILT_NAM'][0],#"FITS header",
 	'EXPTIME' : fits_info_dict['EXPTIME'][0],#"FITS header",
@@ -383,8 +380,6 @@ def get_obslog_info(fits_info_dict, CCDno, IMAGE_ID,target_info,datestr,status,
 	'OBJ_DEC' : fits_info_dict['OBJ-DEC'][0],#"FITS header",
 	'TEL_RA'  : target_info.ra_dec[0],#"FITS header",
 	'TEL_DEC' : target_info.ra_dec[1],#"FITS header",
-	'IMAG_RA'  : fits_info_dict['IMAG-RA'][0],#"FITS header",
-	'IMAG_DEC' : fits_info_dict['IMAG-DEC'][0],#"FITS header",
 	'INSTRUME': fits_info_dict['INSTRUME'][0],#"FITS header",
 	'FOCUSER' : fits_info_dict['FOCUSER'][0],#"FITS header",
 	'STATUS'  : status,
@@ -419,8 +414,17 @@ def sort_all_logging_info(exposure_class, target_class, focuser_info, conn,
 	
 	"""
 	#focus_status_dict = dict({'Temp(C)':'+21.7','Curr Pos':108085,'Targ Pos':000000,'IsMoving': 1,'IsHoming':1,'IsHomed':0,'FFDetect': 0,'TmpProbe':1, 'RemoteIO':0,'Hnd Ctlr':0})
-	focus_status_dict = fc.get_focuser_status(focuser_info[0],focuser_info[1],
-		return_dict=True)
+	try:
+		focus_status_dict = fc.get_focuser_status(focuser_info[1],return_dict=True)
+	except:
+		try:
+			focus_status_dict = fc.get_focuser_status(focuser_info[1],return_dict=True)
+		except:
+			logger.error('Unable to get up to date focuser status using place holders')
+			focus_status_dict = dict({'Temp(C)':'+--.-','Curr Pos':-999999,
+				'Targ Pos':-999999,'IsMoving': 0,'IsHoming':0,'IsHomed':0,
+				'FFDetect': 0,'TmpProbe':0, 'RemoteIO':0,'Hnd Ctlr':0})
+
 
 	try:
 		current_tel_pointing = tcs.get_tel_pointing()
@@ -701,13 +705,15 @@ def change_filter_loop(filter1, filter2):
 		#Change the filters if need be, don't want to have to wait for one
 		#  filter to change before starting on the second, so the asyncio
 		#  module will allow the to be change simultaneously
-		filter_loop1 = asyncio.get_event_loop()
-		filterS = filter_loop1.create_task(fwc.change_filter(
-				filter1, ifw1_port, ifw1_config))
-		filterN = filter_loop1.create_task(fwc.change_filter(
-			filter2, ifw2_port, ifw2_config))
+		#filter_loop1 = asyncio.get_event_loop()
+		#filterS = filter_loop1.create_task(change_filter(
+		#		filter1, ifw1_port, ifw1_config))
+		#filterN = filter_loop1.create_task(change_filter(
+		#	filter2, ifw2_port, ifw2_config))
+		fwc.change_filter(filter1, ifw1_port, ifw1_config)
+		fwc.change_filter(filter2, ifw2_port, ifw2_config)
 	
-		filter_loop1.run_until_complete(asyncio.gather(filterS,filterN))
+		#filter_loop1.run_until_complete(asyncio.gather(filterS,filterN))
 	
 	except:
 		statusN = set_err_codes.STATUS_CODE_FILTER_WHEEL_TIMEOUT
@@ -878,7 +884,7 @@ def exposure_TCS_response(expObN, expObS):
 	expObS.set_start_time()
 	
 	#SEND EXPOSURE COMMAND TO TCS - get status depending on response
-	print('Pretending to take exposure: Exposure time -',expObN.exptime)
+	#print('Pretending to take exposure: Exposure time -',expObN.exptime)
 	#response_stat = 0
 	response_stat = tcs.tcs_exposure_request(expObN.image_type,
 			duration=expObN.exptime)
@@ -1093,9 +1099,10 @@ def connect_to_instruments():
 	#  log. Might need to update this if the config setting get updated during
 	#  the night but this probably unlikely
 
-	focuser1_config_dict = fc.get_focuser_stored_config(focuser1_port, x=focuser_no1, return_dict = False)
+	focuser1_config_dict = fc.get_focuser_stored_config(focuser1_port, 
+		x=focuser_no1, return_dict = True)
 	focuser2_config_dict = fc.get_focuser_stored_config(focuser2_port,
-		x=focuser_no2, return_dict = False)
+		x=focuser_no2, return_dict = True)
 	"""
 	focuser1_config_dict = {'Nickname': 'FocusLynx FocSOUTH', 'Max Pos': '125440', 'DevTyp': 'OE', 'TComp ON': '0', 'TempCo A': '+0086', 'TempCo B': '+0086', 'TempCo C': '+0086', 'TempCo D': '+0000', 'TempCo E': '+0000', 'TCMode': 'A', 'BLC En': '0', 'BLC Stps': '+40', 'LED Brt': '075', 'TC@Start': '0'} #Just temporary
 	focuser2_config_dict = {'Nickname': 'FocusLynx FocNORTH', 'Max Pos': '125440', 'DevTyp': 'OE', 'TComp ON': '0', 'TempCo A': '+0086', 'TempCo B': '+0086', 'TempCo C': '+0086', 'TempCo D': '+0000', 'TempCo E': '+0000', 'TCMode': 'A', 'BLC En': '0', 'BLC Stps': '+40', 'LED Brt': '075', 'TC@Start': '0'} #Just temporary
@@ -1332,10 +1339,11 @@ def wait_function(wait_time):
 	A function that will wait for a time specified by 'wait_time', then run
 	 the almanaac time checker to see if the situation has changed
 	"""
-
+	
 	time.sleep(wait_time)
 	#Find out what time it is, and what we should be doing
 	time_mess, t_remain, k_time = getAlmanac.decide_observing_time()
+	print(time_mess)
 
 	return time_mess, t_remain, k_time
 
@@ -1400,7 +1408,7 @@ def main():
 		prepare to take flats by going to a blank field
 		wait for twilight
 		"""
-		take_bias_frames()
+		take_bias_frames(datestr,file_dir)
 		
 		#roof_dict = plc_get_roof_status()
 		"""
@@ -1505,13 +1513,13 @@ def main():
 			"""
 			Move telescope to the target
 			"""
-			go_to_target(next_target.ra_dec)
-	
+			#go_to_target(next_target.ra_dec)
+			print('Mock going to target')
 
 			# while conditions ok for observing this target are true?
 
-			take_exposure(obs_recipe,image_type,next_target, datestr=datestr,
-				fits_folder = file_dir)
+			#take_exposure(obs_recipe,image_type,next_target, datestr=datestr,
+			#	fits_folder = file_dir)
 
 
 			time_mess, t_remain , k_time = wait_function(0)
@@ -1542,7 +1550,7 @@ def main():
 			best_ra = best_field['RA(hms)']
 			best_dec = best_field['DEC(dms)']
 		
-			go_to_target([best_ra,best_dec])
+			go_to_target([best_ra,best_dec],track_targat = False)
 		
 			autoflat.do_flats_morning(k_time, best_field, datestr, file_dir)
 		elif t_remain < five_mins:

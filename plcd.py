@@ -631,7 +631,7 @@ def close_roof_instructions(port):
 				# status
 				time.sleep(5)
 				response = rcf.plc_command_response_port_open(
-					rcf.PLC_Request_Roof_Status)
+					rcf.PLC_Request_Roof_Status, port)
 					
 				roof_status = rcf.plc_status_status_code(response)
 				roof_moving = rcf.int_bit_is_set(roof_status,
@@ -642,7 +642,8 @@ def close_roof_instructions(port):
 	
 					logger.info('Roof is still moving...')
 					time.sleep(2)
-					response = rcf.plc_command_response_port_open(rcf.PLC_Request_Roof_Status)
+					response = rcf.plc_command_response_port_open(
+						rcf.PLC_Request_Roof_Status, port)
 					
 					roof_status = rcf.plc_status_status_code(response)
 					roof_moving = rcf.int_bit_is_set(roof_status,
@@ -651,6 +652,7 @@ def close_roof_instructions(port):
 				else:
 				
 					logger.info('ROOF CLOSED')
+					print('ROOF CLOSED')
 
 			return set_err_codes.PLC_CODE_OK
 
@@ -812,7 +814,7 @@ def open_roof_instructions(port):
 				# status
 				time.sleep(5)
 				response = rcf.plc_command_response_port_open(
-					rcf.PLC_Request_Roof_Status)
+					rcf.PLC_Request_Roof_Status, port)
 					
 				roof_status = rcf.plc_status_status_code(response)
 				roof_moving = rcf.int_bit_is_set(roof_status,
@@ -822,7 +824,8 @@ def open_roof_instructions(port):
 				while roof_moving == True:
 					logger.info('Roof is still moving...')
 					time.sleep(2)
-					response = rcf.plc_command_response_port_open(rcf.PLC_Request_Roof_Status)
+					response = rcf.plc_command_response_port_open(
+						rcf.PLC_Request_Roof_Status, port)
 					
 					roof_status = rcf.plc_status_status_code(response)
 					roof_moving = rcf.int_bit_is_set(roof_status,
@@ -831,6 +834,7 @@ def open_roof_instructions(port):
 
 				else:
 					logger.info('ROOF OPENED')
+					print('ROOF OPENED')
 
 				return set_err_codes.PLC_CODE_OK
 
@@ -894,7 +898,8 @@ def main():
 		
 				logger.info('Detected status change request: '+
 					new_char.decode('utf-8')+' from '+old_char.decode('utf-8'))
-			
+				print('Detected status change request: '+
+                    new_char.decode('utf-8')+' from '+old_char.decode('utf-8'))
 				if new_char == b's':
 					#print('Do stuff to stop roof')
 					ok_code = stop_roof_instructions(plc_port)
@@ -910,7 +915,7 @@ def main():
 					if ok_code != set_err_codes.PLC_CODE_OK:
 						logger.critical('Unable to CLOSE roof')
 					else:
-						print('ROOF CLOSED')
+						print('ROOF stopped closing')
 					
 				elif new_char == b'o':
 					#print('Do stuff to check roof can open')
@@ -918,10 +923,11 @@ def main():
 					if ok_code != set_err_codes.PLC_CODE_OK:
 						logger.error('Unable to OPEN roof')
 					else:
-						print('ROOF OPEN')
+						print('ROOF stopped opening')
 					
 				else:
 					logger.error('Invalid character received')
+					print('Invalid character received')
 					
 				old_char = new_char
 				time.sleep(2)
@@ -929,11 +935,12 @@ def main():
 			
 			elif new_char != old_char and old_char == None:
 				logger.debug('update new char')
+				print('Update')
 				old_char = new_char
 				time.sleep(2)
 			
 			else:
-				
+				print('Nothing')
 				logger.debug('Nothing changed')
 				time.sleep(2)
 				continue
