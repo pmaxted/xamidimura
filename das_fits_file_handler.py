@@ -74,7 +74,7 @@ def get_last_fits_header(das,dir = set_err_codes.DATA_FILE_DIRECTORY):
 		
 		else:
 			file = max(out.stdout.decode('utf-8').strip().split('\n'))
-			#print(file)
+			#print('last fits_head: ', file)
 		
 		return file, date_folder
 		
@@ -95,14 +95,20 @@ def get_last_files(das):
 
 def new_header_dict(das_header):
 
+	dateobs = Time(das_header['DATE-OBS']+'T'+das_header['UTSTART'],
+		format='isot')
+	mid_exp = Time(das_header['DATE-OBS']+'T'+das_header['UTMIDDLE'],
+		format='isot')
+	   
 	new_header_info = dict({
 		'XFACTOR' : (das_header['XFACTOR'],'Camera x binning factor'),
 		'YFACTOR' : (das_header['YFACTOR'],'Camera y binning factor'),
+		'DAS_NO'  :	(das_header['RUN'], 'Image no. from das machine'),
 		'LST'  : (das_header['LST'], 'Local sidereal time'),
-		'DASSTART':(Time(das_header['DATE-OBS']+'T'+das_header['UTSTART'],
-			 format='isot').value, 'Start time from DAS machine'),
-		'DASMIDD':(Time(das_header['DATE-OBS']+'T'+das_header['UTMIDDLE'], 
-				format='isot').value, 'Exposure midpoint from DAS machine'),
+		'DATE-OBS':(dateobs.value, 'Exp start CCYY-MM-DDTHH:MM:SS.sss(UTC)'),
+		'MID_EXP':(mid_exp.value, 'Exp middle CCYY-MM-DDTHH:MM:SS.sss(UTC)'),
+		'MJD_OBS':(dateobs.mjd, 'MJD at start'),
+		'MJD_MID':(mid_exp.mjd, 'MJD at mid-point'),
 		'IMAG-RA':(das_header['RA'], 'Nominal image center J2000 RA'),
 		'IMAG-DEC': (das_header['DEC'], 'Nominal image center J2000 Dec'),
 		'CCDSPDH' : (das_header['CCDSPDH'],'CCD Readout time / pixel (usecs)'),
@@ -164,7 +170,7 @@ def sort_data_output_dir(imagetype, dir = set_err_codes.FINAL_DATA_DIRECTORY):
 	return path
 
 def copy_over_file(das_no,new_header_file,new_date_folder,last_file_dict, 
-	attempt_count_limit =10):
+	attempt_count_limit =120):
 	
 	ok_das = [1,2,'1','2']
 
@@ -172,7 +178,7 @@ def copy_over_file(das_no,new_header_file,new_date_folder,last_file_dict,
 		raise ValueError('Invalid number supplied for DAS machine, use '\
 			'1 or 2')
 
-	else:
+	elif new_header_file != None:
 		das_no = str(das_no)
 
 		#open the header to see what type of image (flat/bias/object)
@@ -190,7 +196,7 @@ def copy_over_file(das_no,new_header_file,new_date_folder,last_file_dict,
 		while new_das_file == last_file_dict[imagetyp] and \
 								attempt_count<attempt_count_limit:
 			print('Waiting for new das file')
-			time.sleep(1)
+			time.sleep(0.2)
 			new_das_file = check_file_process(imagetyp, das_no)
 			attempt_count += 1
 
@@ -202,17 +208,17 @@ def copy_over_file(das_no,new_header_file,new_date_folder,last_file_dict,
 		else:
 			#only executed if while condition become false
 #			print('Copying file to tempory location to access header')
-			out3 = subprocess.run(["scp","wasp@das"+das_no+":"\
-				+new_das_file,"."], capture_output=True,
-					cwd=set_err_codes.FINAL_DATA_DIRECTORY+'/temporary')
+			out3 = subprocess.run(["scp wasp@das"+das_no+":"\
+				+str(new_das_file)+" ."], shell=True, capture_output=True,
+					cwd=set_err_codes.FINAL_DATA_DIRECTORY+'/temp_images')
 			#data/das1/NORMAL/DAS1_001651075.fts","."],capture_output=True)
 			if out3.returncode != 0:
-				raise RuntimeError('Could not copy file: '+out3.stderr)
+				raise RuntimeError('Could not copy file: '+out3.stderr.decode('utf-8'))
 		
 			else:
 				das_file = new_das_file.split('/')[-1]
 				#Open the newly copied fits
-				with fits.open(set_err_codes.FINAL_DATA_DIRECTORY+'/temporary/'\
+				with fits.open(set_err_codes.FINAL_DATA_DIRECTORY+'/temp_images/'\
 					+das_file) as das_hdu:
 					image_data = das_hdu[0].data
 					das_header = das_hdu[0].header
@@ -238,11 +244,13 @@ def copy_over_file(das_no,new_header_file,new_date_folder,last_file_dict,
 
 				#print('Removing temporary...')
 				out4 = subprocess.run(['rm',
-					 set_err_codes.FINAL_DATA_DIRECTORY+'/temporary/'+das_file],
+					 set_err_codes.FINAL_DATA_DIRECTORY+'/temp_images/'+das_file],
 					 capture_output=True)
 				
 				if out4.returncode !=0:
-					print('Issue removing temporary file:', dasfile)
+					print('Issue removing temporary file:', das_file)
+	else:
+		pass
 
 def do_the_comparisons(das_no, last_fits_header, last_date_folder,
 	last_dict_file):
@@ -250,7 +258,7 @@ def do_the_comparisons(das_no, last_fits_header, last_date_folder,
 
 	# Check the fits header files again to see if there is a new file
 	new_header_file, new_date_folder = get_last_fits_header(das_no)
-	if new_header_file != last_fits_header and last_fits_header != None:
+	if new_header_file != last_fits_header and last_fits_header != None:# and new_header_file!=None:
 		
 		#print('option1')
 		copy_over_file(das_no,new_header_file,new_date_folder,last_dict_file)

@@ -509,6 +509,7 @@ def apply_offset_to_tele(ra_alt_off, dec_az_off, units='arcsec',
 	command_str += str(ra_alt_off)+' '
 	command_str += str(dec_az_off)
 	
+	print(command_str)
 	respond = send_command(command_str)
 
 	return respond
@@ -517,7 +518,7 @@ def apply_offset_to_tele(ra_alt_off, dec_az_off, units='arcsec',
 # Functions to send exposure commands - not sure how these work with new system
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-def tcs_exposure_request(type, duration = 0, number = 1):
+def tcs_exposure_request(image_type, duration = 0, number = 1):
 	"""
 	Send the expose command to the TCS, along with the exposure type number of 
 	 exposures and their duration. The supplied 'type' will be checked to make 
@@ -544,7 +545,7 @@ def tcs_exposure_request(type, duration = 0, number = 1):
 	
 	PARAMETERS:
 	
-		type = the type of exposures wanted. A valid list includes 'thermal', 
+		image_type = the type of exposures wanted. A valid list includes 'thermal', 
 		 'dark', 'bias', 'flat', and 'object'
 			
 		duration = the length of the exposure in seconds.
@@ -554,14 +555,14 @@ def tcs_exposure_request(type, duration = 0, number = 1):
 	"""
 
 	valid_types = ['THERMAL','DARK', 'BIAS', 'FLAT','OBJECT']
-	valid = type in valid_types
+	valid = image_type in valid_types
 
 	if valid:
-		type = type.lower()
-		if type == 'dark':
-			type = 'thermal'
+		image_type = image_type.lower()
+		if image_type == 'dark':
+			image_type = 'thermal'
 
-		if number <= 1:
+		if number < 1:
 			logger.error('Invalid number of exposures requested')
 			respond = set_err_codes.STATUS_CODE_EXPOSURE_NOT_STARTED
 			return respond
@@ -571,32 +572,37 @@ def tcs_exposure_request(type, duration = 0, number = 1):
 			respond = set_err_codes.STATUS_CODE_EXPOSURE_NOT_STARTED
 			return respond
 
-		command_str = 'expose ' + type
+		command_str = 'expose ' + image_type
 		if number != 1:
 			command_str += ' '+str(number)
-		if type != 'bias':
+		if image_type != 'bias':
 			command_str += ' ' + str(duration)
 		
+		try:
+			tcs_respond = send_command(command_str)
 		
-		respond = send_command(command_str)
-		good_response = respond == 0
-
-		if good_response:
-			respond = set_err_codes.STATUS_CODE_OK
-
-		cam_temp = get_camera_status[2]
-		if good_repsonse and cam_temp>-20:
-			respond = set_err_codes.STATUS_CODE_CCD_WARM
-	
-		else:
+		except:
 			respond = set_err_codes.STATUS_CODE_EXPOSURE_NOT_STARTED
+		else:
+			
+			cam_temp = get_camera_status()[2]
+			#if good_response and cam_temp>-20:
+			if float(cam_temp)>-20:
+				respond = set_err_codes.STATUS_CODE_CCD_WARM
+	
+			else:
+				respond = set_err_codes.STATUS_CODE_OK
+			
+		return respond
 
 	else:
-		logger.error('Invalid image type provided to exposure request'+str(type))
-		print('Invalid image type provided to exposure request'+str(type))
+		logger.error('Invalid image type provided to exposure request '+str(
+				image_type))
+		print('Invalid image type provided to exposure request'+str(
+			image_type))
 
 
-	return respond
+#	return respond
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Functions for the cameras
@@ -681,7 +687,7 @@ def scratchmode(state = 'off'):
 	"""
 
 	validState = ['on','off']
-	if scratchmode not in validState:
+	if state not in validState:
 		raise ValueError('Invalid state enter for sctratchmode. Use "on" or "off"')
 
 	else:

@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """
 find_best_blank_sky.py
 Jessica A. Evans
@@ -21,6 +22,7 @@ from astropy.coordinates import EarthLocation
 import astropy.units as units
 import logging
 import time
+import os
 
 logger_bsky = logging.getLogger('find_blank_sky')
 
@@ -73,15 +75,8 @@ def convert_RAs_DECs(tab):
 		ra_arr = numpy array containing the decimal values for ra
 		de_arr - numpy array contain the decimal values for dec
 	"""
-
-	ra_arr = numpy.array([])
-	dec_arr = numpy.array([])
-	for i in range(len(tab)):
-		converted_ra = str2deg(tab['RA(hms)'][i])
-		converted_dec = str2deg(tab['DEC(dms)'][i])
-		
-		ra_arr = numpy.append(converted_ra, ra_arr)
-		dec_arr = numpy.append(converted_dec, dec_arr)
+	ra_arr = numpy.array([str2deg(i) for i in tab['RA(hms)']])
+	dec_arr = numpy.array([str2deg(i) for i in tab['DEC(dms)']])
 
 	return ra_arr, dec_arr
 
@@ -98,7 +93,8 @@ def deg2str(degs):
 	mm = (degs % 1)*60
 	ss = (mm % 1)*60
 
-	str_ans = str(hh)+':'+str(math.floor(mm))+':'+str(ss)
+	str_ans = format(hh, '02n')+':'+format(math.floor(mm),'02n')+':'+\
+			format(ss, '03.3f')
 
 	return str_ans
 
@@ -136,7 +132,6 @@ def get_sidereal_time():
 	#  time object.
 
 	current_time =  Time.now()
-	#print(current_time)
 	current_time.location = create_earth_loc()
 	sid_time = current_time.sidereal_time(kind ='mean').value
 
@@ -154,7 +149,7 @@ def calc_zenith_distance(lat,dec,ha):
 	Based on the equation 23 on page 57 of "The CCD photometric calibration
 		cookbook" http://starlink.rl.ac.uk/star/docs/sc6.pdf
 		
-		sec(z) = 1/(sin(phi)*sin(delta) + cos(phi)*cos(delta)*cos(h)
+		sec(z) = 1/(sin(phi)*sin(delta) + cos(phi)*cos(delta)*cos(h))
 		
 	where:
 	phi = latitude of observation,
@@ -163,7 +158,7 @@ def calc_zenith_distance(lat,dec,ha):
 	
 	then as sec(z) = 1/cos(z), cos(z) = 1/sec(z) and
 	
-	cos(z) = (sin(phi)*sin(delta) + cos(phi)*cos(delta)*cos(h)
+	cos(z) = (sin(phi)*sin(delta) + cos(phi)*cos(delta)*cos(h))
 	
 	PARAMETERS:
 	
@@ -180,7 +175,7 @@ def calc_zenith_distance(lat,dec,ha):
 	cosDelta = numpy.cos(numpy.radians(dec))
 	cosH = numpy.cos(numpy.radians(ha))
 
-	denom = (sinPhi*sinDelta + cosPhi*cosDelta*cosH)
+	denom = (sinPhi*sinDelta) + (cosPhi*cosDelta*cosH)
 
 	z = numpy.arccos(denom)
 
@@ -200,18 +195,26 @@ def one_row_cal(row):
 def find_best_field():
 
 	# Get the csv file as a table
-	tab = ascii.read(set_err_codes.BLANK_SKY_REGION_CSV, format='csv',
+	tab = ascii.read(os.path.join(set_err_codes.SOFTWARE_FOLDER_PATH,
+			set_err_codes.BLANK_SKY_REGION_CSV), format='csv',
 		header_start=7)
 		
 	ra, dec = convert_RAs_DECs(tab)
-	sid = get_sidereal_time()
-	
-	ha_arr = numpy.remainder((sid - ra), 20)
+	#print(ra)
+	sid = get_sidereal_time() #in hours
+
+	print('Current Sidereal Time:\t', deg2str(sid))
+
+
+	ha_arr = numpy.remainder(((sid) - ra), 24)
+#	print(ha_arr)
+	ha_arr = numpy.remainder((sid - ra)*(360/24),360)
+
 	lat = str2deg(set_err_codes.LATITUDE)
 	
 	zen_dist_rad = calc_zenith_distance(lat, dec, ha_arr)
-
 	zen_dist_ang = numpy.degrees(zen_dist_rad)
+#	print(zen_dist_ang)
 	min_dist_ele = numpy.where(zen_dist_ang == min(zen_dist_ang))[0][0]
 	
 	best_field = tab[min_dist_ele]

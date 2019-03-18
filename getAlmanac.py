@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 """
 getAlmanac.py
 Jessica A. Evans
@@ -48,7 +49,8 @@ def deg2str(degs):
 	mm = (degs % 1)*60
 	ss = (mm % 1)*60
 
-	str_ans = format(hh, '02n')+':'+format(math.floor(mm),'02n')+':'+format(ss, '03.3f')
+	str_ans = format(hh, '02n')+':'+format(math.floor(mm),'02n')+':'+\
+			format(ss, '03.3f')
 
 	return str_ans
 
@@ -376,7 +378,7 @@ def main():
 	If this script is run rom the command line, it will print the current 
 	 sunset, sunrise, twilight timings in UTC.
 	"""
-
+	print('Fetching almanac times......')
 	saao = set_up_observer()
 	current_time = Time.now()
 	current_time.format = 'iso'
@@ -409,7 +411,7 @@ def main():
 	
 	current_time.location = create_earth_loc()
 	sid_time = current_time.sidereal_time(kind ='mean').value
-	print('Current ST:\t\t', deg2str(sid_time))
+	print('Current LST:\t\t', deg2str(sid_time))
 
 	
 if __name__ == '__main__':
