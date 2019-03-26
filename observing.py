@@ -1550,7 +1550,7 @@ def main():
 			best_ra = best_field['RA(hms)']
 			best_dec = best_field['DEC(dms)']
 		
-			go_to_target([best_ra,best_dec],track_targat = False)
+			go_to_target([best_ra,best_dec])
 		
 			autoflat.do_flats_morning(k_time, best_field, datestr, file_dir)
 		elif t_remain < five_mins:
