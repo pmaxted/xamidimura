@@ -422,7 +422,7 @@ def end_relative_move(port, x=1):
 	else:
 		focus_logger.error('Response:'+message)
 
-def get_focuser_status(port, x=1, return_dict=False):
+def get_focuser_status(port, x=1, return_dict=True):
 	"""
 	Will get focuser 'x' to display its current status. Should start with the 
 	 line 'STATUSx' where x will be the focuser number, and finish with the 

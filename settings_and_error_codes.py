@@ -22,7 +22,7 @@ WEATHER_LOG_FILE = 'cloud2_oneline2.dat'
 WEATHER_LOG_LOC = '/home/wasp/cloud2/weather/'
 
 LOGFILES_DIRECTORY = '/home/wasp/logs/'
-DATA_FILE_DIRECTORY = '/data/fits_file_header/'
+DATA_FILE_DIRECTORY = '/data/fits_file_headers/'
 FINAL_DATA_DIRECTORY = '/data/'
 
 BLANK_SKY_REGION_CSV = 'database/Blank_sky_regions.csv'

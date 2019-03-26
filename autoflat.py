@@ -43,7 +43,7 @@ from astropy.time import Time
 logger_flat = logging.getLogger(__name__)
 logger_flat.setLevel(logging.INFO)
 fileHand = logging.FileHandler(filename = \
-	set_err_codes.LOGFILES_DIRECTORY+'observingScript.log', mode = 'w')
+	set_err_codes.LOGFILES_DIRECTORY+'observingScript.log', mode = 'a')
 fileHand.setLevel(logging.INFO)
 logging.Formatter.converter = time.gmtime
 formatter = logging.Formatter('%(asctime)s [%(name)s] %(levelname)s - '\
@@ -62,9 +62,9 @@ max_exp = 20 #secs
 approx_readout = 10 #secs
 quick_test = 0.1
 
-saturation = 55000#60000
-ideal_counts= 20000
-min_count = 18000
+saturation = 40000#60000
+ideal_counts= 10000#20000
+min_count = 10000 #18000
 bias_level = 1000
 
 exposure_attempts = 3
@@ -160,7 +160,7 @@ def take_flat(exp = quick_test):
 			exp_attempts+=1
 			exp_success = False
 		else:
-			observing.tcs.wait_till_read_out()
+			#observing.tcs.wait_till_read_out()
 			exp_success = True
 
 	return exp_success
@@ -263,9 +263,12 @@ def get_sky_count():
 	
 	"""
 	# Get the sky count estimate for the last image taken
-	sky_count_arr = observing.tcs.lastsky()
+	sky_count_arr = observing.tcs.lastsky().split(' ')
+	sky_count_arr = np.array([float(i.strip()) for i in sky_count_arr])
 	# average the values from the two cameras
-	av_sky = np.mean(sky_count_arr[0],sky_count_arr[2])
+	print(sky_count_arr)
+	
+	av_sky = np.mean([sky_count_arr[0],sky_count_arr[2]])
 	return av_sky
 
 def get_filter_sequence(morning=False):
@@ -372,7 +375,7 @@ def get_exposure_estimate(count_no):
 		
 	"""
 	if	count_no < ideal_counts:
-		min_factor = observing.math.ceil(ideal_counts/count_no)
+		min_factor = observing.math.ceil((ideal_counts/count_no)*10)/10
 		exp_est = quick_test * min_factor * (min_exp/quick_test)
 		return exp_est
 
@@ -405,8 +408,10 @@ def get_exposure_estimate_morning(count_no):
 		
 	"""
 	if	count_no > saturation:
-		min_factor = (observing.math.ceil((saturation/count_no)*10))/10
+		min_factor = (observing.math.ceil((ideal_counts/count_no)*10))/10
+		print(min_factor)
 		exp_est = quick_test * min_factor * (max_exp/quick_test)
+		print(exp_est, (max_exp/quick_test))
 		return exp_est
 
 	elif count_no > ideal_counts and count_no < saturation:
@@ -557,13 +562,13 @@ def do_flats_evening(key_time, best_field_row, datestr,
 			est_exp = est_exp * min_factor
 			logger_flat.info('Exposure time for next image: '+str(est_exp))
 			# Offset the telescope
-			do_telescope_offset()
+			#do_telescope_offset()
 		
 		if est_exp > max_exp:
 			logger_flat.info('Next exposure longer than maximum allowed '\
 				'exposure')
 		if no_of_flats_for_filter> max_flats:
-			logger_flat.info('Taken the max number of flats for thi filter')
+			logger_flat.info('Taken the max number of flats for this filter')
 		
 		logger_flat.info(str(no_of_good_flats)+'/'+str(no_of_flats_for_filter)\
 			+' good flats (with counts between '+str(min_count)+' and ' \
@@ -634,7 +639,7 @@ def do_flats_morning(key_time, best_field_row, datestr,
 		observing.tcs.scratchmode('on')
 	
 		#do test exposures and get average sky count from two images
-		one_sec_count_est = get_sky_outcome_morning(exp=quick_test)
+		one_sec_count_est = get_sky_outcome_morning(exp=max_exp)
 
 	
 		# If evening and already into flat taking region, estimate time needed
@@ -690,7 +695,7 @@ def do_flats_morning(key_time, best_field_row, datestr,
 			est_exp = est_exp * min_factor
 			logger_flat.info('Exposure time for next image: '+str(est_exp))
 			# Offset the telescope
-			do_telescope_offset()
+			#do_telescope_offset()
 		
 
 		if est_exp < min_exp:
@@ -700,7 +705,7 @@ def do_flats_morning(key_time, best_field_row, datestr,
 			logger_flat.info('Next exposure longer than maximum allowed '\
 				'exposure')
 		if no_of_flats_for_filter> max_flats:
-			logger_flat.info('Taken the max number of flats for thi filter')
+			logger_flat.info('Taken the max number of flats for this filter')
 		
 		logger_flat.info(str(no_of_good_flats)+'/'+str(no_of_flats_for_filter)\
 			+' good flats (with counts between '+str(min_count)+' and ' \

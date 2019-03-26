@@ -49,24 +49,26 @@ import sys
  
 """
 
-target_name = 'test_target_single_Texp'
-target_coords = ['10:46:04','-46:08:06']
+target_name = 'test_target_single_Texp2'
+target_coords = ['10 50 31', '-32 20 43']#['10:46:04','-46:08:06']
 target_type = 'TEST'
 
 def startup():
 
 	print('Starting up instruments and cameras')
-	if obs.set_err_codes.run_camera_cooling == True:
+	if observing.set_err_codes.run_camera_cooling == True:
 		observing.tcs.camstart()
 	observing.connect_to_instruments()
 
 def expose():
 	print('Exposing...')
 	observing.basic_exposure(target_name,target_coords,target_type)
+	
 
 def shutdown():
 	print('Shutting down instruments and cameras')
 	observing.disconnect_database()
 	observing.shutdown_instruments()
-	if obs.set_err_codes.run_camera_cooling == True:
+	if observing.set_err_codes.run_camera_cooling == True:
 		observing.tcs.stopwasp()
+	print('Done')

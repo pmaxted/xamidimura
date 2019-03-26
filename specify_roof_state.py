@@ -4,14 +4,17 @@ import mmap
 import os
 import struct
 import sys
-import settings_error_codes as set_err_codes
+import settings_and_error_codes as set_err_codes
 
 new_char = str(sys.argv[1])
 
 def main():
+	
+	#print('New char:', new_char)
+	
 	# Create new empty file to back memory map on disk
 	#
-	fd = os.open(set_err_code.PLC_MEMORY_MAP_FILE_LOC, os.O_CREAT | os.O_RDWR)
+	fd = os.open(set_err_codes.PLC_MEMORY_MAP_FILE_LOC, os.O_CREAT | os.O_RDWR)
 
 
 	try:
@@ -36,10 +39,11 @@ def main():
 	#new_i = input('Enter a new value for i: ')
 	#i.value = int(new_i)
 
+	print('Roof state input value recieved:', new_char)
 	s.raw = bytes(new_char, 'utf-8')#input('Enter a value for s:'), 'utf-8')
 
-	os.close()
-
+	os.close(fd)
+	
 
 if __name__ == '__main__':
     main()

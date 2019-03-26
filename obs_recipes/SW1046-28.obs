@@ -1,11 +1,11 @@
 TAR_NAME test_target
-IMG-RA  ???  # Nominal image center J2000 RA
-IMG-DEC	???  # Nominal image center J2000 DEC
+IMG-RA  -  # Nominal image center J2000 RA
+IMG-DEC	-  # Nominal image center J2000 DEC
 
-FILTERS  WX,WX,BX # Filters used to observed for north Tele
+FILTERS  BX,GX,WX # Filters used to observed for north Tele
 FOCUS_POS 50000,50000,50000 #Focuser position for each filter
 
-EXPTIME 4,4#,0.02,0.04,0.04,0.04,0.06,0.06,0.06 # Exposure time to match pattern, use float
+EXPTIME 30,30#,0.02,0.04,0.04,0.04,0.06,0.06,0.06 # Exposure time to match pattern, use float
 
 N_PATT  0,0#,0,1,1,1,2,2,2 #Refers to the index for the filter name
 S_PATT	1,1#,1,2,2,2,0,0,0 # Breaks if only one index is use e.g. 1
